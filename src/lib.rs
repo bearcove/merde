@@ -1,11 +1,9 @@
 #![deny(missing_docs)]
 
-//! `merde_json` adds convenient extension traits to the [jiter](https://crates.io/crates/jiter) crate,
-//! along with a few declarative macros that allow "deriving" traits like [`JsonSerialize`], [`JsonDeserialize`],
-//! and [`ToStatic`], covering the 90% use case for manipulating JSON in Rust.
+//! `merde_json` covers the "90% use case" for JSON manipulation via traits, declarative macros, and a bit of discipline.
 //!
 //! It optimizes for low compile-times and avoiding copies (but not all allocations). It's well-suited
-//! for use in web servers, if you're willing to give up some of the convenience of [serde](https://crates.io/crates/serde).
+//! for use in web servers, if you're willing to give up some of the comforts of [proc macros](https://crates.io/crates/serde).
 //!
 //! The underlying JSON parser is [jiter](https://crates.io/crates/jiter), which provides an event-based interface
 //! you can choose to use when merde_json's performance simply isn't enough.
@@ -52,7 +50,7 @@
 //!  * All structs have exactly two lifetimes parameters: 'src and 'val
 //!  * All structs have a `_boo` field, for structs that don't use their lifetime parameter
 //!  * Field names are listed twice: in the struct and in the macro (limitation of declarative macros)
-//!  * Use `Cow<'a, str>` for everything, instead of choosing between `&str` and `String` on a case-by-case basis
+//!  * Use `Cow<'val, str>` for all your strings, instead of choosing between `&str` and `String` on a case-by-case basis
 //!
 //! Read [The Secret Life Of Cows](https://deterministic.space/secret-life-of-cows.html) for a good introduction to Rust's "Copy-on-Write" types.
 //!
@@ -268,6 +266,12 @@
 //!     Ok(())
 //! }
 //! ```
+//!
+//! _Note: that's why we need both lifetimes: `JsonValue<'s>` is invariant over `'s`. `JsonValue<'val>` is not
+//! a subtype of `JsonValue<'src>` even when `'src: 'val`._
+//!
+//! Other options here would have been to keep `items` as a [JsonArray], or even a [JsonValue]. Or, `items` could
+//! be of type `Items` which has a manual implementation of [JsonDeserialize]. See the `mixed` example for inspiration.
 //!
 //! ## Serializing
 //!
