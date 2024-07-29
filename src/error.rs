@@ -51,6 +51,14 @@ pub enum MerdeJsonError {
     /// We expected an object to have a certain property, but it was missing.
     MissingProperty(&'static str),
 
+    /// We tried to access an array index that was out of bounds.
+    IndexOutOfBounds {
+        /// The index we tried to access.
+        index: usize,
+        /// The length of the array.
+        len: usize,
+    },
+
     /// We encountered a property that we didn't expect.
     UnknownProperty(String),
 
@@ -81,6 +89,13 @@ impl std::fmt::Display for MerdeJsonError {
             }
             MerdeJsonError::MissingProperty(prop) => {
                 write!(f, "Missing property: {}", prop)
+            }
+            MerdeJsonError::IndexOutOfBounds { index, len: length } => {
+                write!(
+                    f,
+                    "Index out of bounds: index {} is not valid for length {}",
+                    index, length
+                )
             }
             MerdeJsonError::UnknownProperty(prop) => {
                 write!(f, "Unknown property: {}", prop)
