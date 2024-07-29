@@ -1122,7 +1122,7 @@ impl<V: JsonSerialize> JsonSerialize for &[(&str, V)] {
 }
 
 /// Extension trait to provide `must_get` on `JsonObject<'_>`
-pub trait JsonObjectExt<'val, 'src, T>
+pub trait JsonObjectExt<'src, 'val, T>
 where
     'src: 'val,
     T: JsonDeserialize<'src, 'val> + 'val,
@@ -1136,7 +1136,7 @@ where
     fn must_get(&'val self, key: &'static str) -> Result<T, MerdeJsonError>;
 }
 
-impl<'val, 'src, T> JsonObjectExt<'val, 'src, T> for JsonObject<'src>
+impl<'src, 'val, T> JsonObjectExt<'src, 'val, T> for JsonObject<'src>
 where
     'src: 'val,
     T: JsonDeserialize<'src, 'val> + 'val,
