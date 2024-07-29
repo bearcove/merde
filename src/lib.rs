@@ -228,18 +228,16 @@
 //! until you know what to do with them:
 //!
 //! ```rust
-//! use merde_json::{JsonDeserialize, JsonSerialize, ToRustValue, JsonValue};
+//! use merde_json::{JsonDeserialize, JsonSerialize, ToRustValue, JsonValue, MerdeJsonError};
 //! use std::{borrow::Cow, marker::PhantomData};
 //!
 //! #[derive(Debug, PartialEq)]
-//! struct MixedArray<'a> {
-//!     items: Vec<JsonValue<'a>>,
+//! struct MixedArray<'a, 'inner> {
+//!     items: JsonValue<'inner>,
 //!     _phantom: PhantomData<&'a ()>,
 //! }
 //!
-//! merde_json::derive! {
-//!     impl(JsonSerialize, JsonDeserialize) for MixedArray { items }
-//! }
+//! merde_json::derive! { impl(JsonDeserialize) for MixedArray { items } }
 //!
 //! fn main() -> Result<(), merde_json::MerdeJsonError> {
 //!     let input = r#"[1, "two", true, null, {"key": "value"}]"#;
@@ -249,7 +247,7 @@
 //!     println!("Mixed array: {:?}", mixed_array);
 //!
 //!     // You can then process each item based on its type
-//!     for (index, item) in mixed_array.items.iter().enumerate() {
+//!     for (index, item) in mixed_array.items.as_array()?.iter().enumerate() {
 //!         match item {
 //!             JsonValue::Int(i) => println!("Item {} is an integer: {}", index, i),
 //!             JsonValue::Str(s) => println!("Item {} is a string: {}", index, s),
@@ -659,8 +657,20 @@ where
     }
 }
 
+impl<'inner, 'borrow> JsonDeserialize<'inner, 'borrow> for JsonValue<'inner>
+where
+    'inner: 'borrow,
+{
+    fn json_deserialize(value: Option<&'borrow JsonValue<'inner>>) -> Result<Self, MerdeJsonError> {
+        match value {
+            Some(json_value) => Ok(json_value.clone()),
+            None => Err(MerdeJsonError::MissingValue),
+        }
+    }
+}
+
 /// Provides various methods useful when implementing `JsonDeserialize`.
-pub trait JsonValueExt<'borrow, 'inner>
+pub trait JsonValueExt<'inner, 'borrow>
 where
     'inner: 'borrow,
     Self: 'inner,
@@ -678,9 +688,10 @@ where
     fn as_i64(&'borrow self) -> Result<i64, MerdeJsonError>;
 }
 
-impl<'borrow, 'inner> JsonValueExt<'borrow, 'inner> for JsonValue<'inner>
+impl<'inner, 'borrow> JsonValueExt<'inner, 'borrow> for JsonValue<'inner>
 where
     'inner: 'borrow,
+    Self: 'inner,
 {
     fn as_object(&'borrow self) -> Result<&'borrow JsonObject<'inner>, MerdeJsonError> {
         match self {
@@ -1091,10 +1102,7 @@ pub fn from_str(s: &str) -> Result<jiter::JsonValue<'_>, MerdeJsonError> {
 /// returned, moved, etc.
 ///
 /// This usually involves allocating buffers for `Cow<'a, str>`, etc.
-pub trait ToStatic<'a, T>
-where
-    T: 'a,
-{
+pub trait ToStatic {
     /// The "owned" variant of the type. For `Cow<'a, str>`, this is `Cow<'static, str>`, for example.
     type Output: 'static;
 
@@ -1104,7 +1112,7 @@ where
     fn to_static(&self) -> Self::Output;
 }
 
-impl<'a, T> ToStatic<'a, Cow<'a, T>> for Cow<'a, T>
+impl<'a, T> ToStatic for Cow<'a, T>
 where
     T: ToOwned + ?Sized + 'static,
 {
@@ -1118,7 +1126,7 @@ where
     }
 }
 
-impl<'a> ToStatic<'a, u8> for u8 {
+impl ToStatic for u8 {
     type Output = u8;
 
     fn to_static(&self) -> Self::Output {
@@ -1126,7 +1134,7 @@ impl<'a> ToStatic<'a, u8> for u8 {
     }
 }
 
-impl<'a> ToStatic<'a, u16> for u16 {
+impl ToStatic for u16 {
     type Output = u16;
 
     fn to_static(&self) -> Self::Output {
@@ -1134,7 +1142,7 @@ impl<'a> ToStatic<'a, u16> for u16 {
     }
 }
 
-impl<'a> ToStatic<'a, u32> for u32 {
+impl ToStatic for u32 {
     type Output = u32;
 
     fn to_static(&self) -> Self::Output {
@@ -1142,7 +1150,7 @@ impl<'a> ToStatic<'a, u32> for u32 {
     }
 }
 
-impl<'a> ToStatic<'a, u64> for u64 {
+impl ToStatic for u64 {
     type Output = u64;
 
     fn to_static(&self) -> Self::Output {
@@ -1150,7 +1158,7 @@ impl<'a> ToStatic<'a, u64> for u64 {
     }
 }
 
-impl<'a> ToStatic<'a, i8> for i8 {
+impl ToStatic for i8 {
     type Output = i8;
 
     fn to_static(&self) -> Self::Output {
@@ -1158,7 +1166,7 @@ impl<'a> ToStatic<'a, i8> for i8 {
     }
 }
 
-impl<'a> ToStatic<'a, i16> for i16 {
+impl ToStatic for i16 {
     type Output = i16;
 
     fn to_static(&self) -> Self::Output {
@@ -1166,7 +1174,7 @@ impl<'a> ToStatic<'a, i16> for i16 {
     }
 }
 
-impl<'a> ToStatic<'a, i32> for i32 {
+impl ToStatic for i32 {
     type Output = i32;
 
     fn to_static(&self) -> Self::Output {
@@ -1174,7 +1182,7 @@ impl<'a> ToStatic<'a, i32> for i32 {
     }
 }
 
-impl<'a> ToStatic<'a, i64> for i64 {
+impl ToStatic for i64 {
     type Output = i64;
 
     fn to_static(&self) -> Self::Output {
@@ -1182,7 +1190,7 @@ impl<'a> ToStatic<'a, i64> for i64 {
     }
 }
 
-impl<'a> ToStatic<'a, usize> for usize {
+impl ToStatic for usize {
     type Output = usize;
 
     fn to_static(&self) -> Self::Output {
@@ -1190,7 +1198,7 @@ impl<'a> ToStatic<'a, usize> for usize {
     }
 }
 
-impl<'a> ToStatic<'a, isize> for isize {
+impl ToStatic for isize {
     type Output = isize;
 
     fn to_static(&self) -> Self::Output {
@@ -1198,7 +1206,7 @@ impl<'a> ToStatic<'a, isize> for isize {
     }
 }
 
-impl<'a> ToStatic<'a, bool> for bool {
+impl ToStatic for bool {
     type Output = bool;
 
     fn to_static(&self) -> Self::Output {
@@ -1259,7 +1267,7 @@ where
 #[macro_export]
 macro_rules! impl_json_deserialize {
     ($struct_name:ident { $($field:ident),+ }) => {
-        impl<'inner, 'borrow> $crate::JsonDeserialize<'inner, 'borrow> for $struct_name<'borrow>
+        impl<'inner, 'borrow> $crate::JsonDeserialize<'inner, 'borrow> for $struct_name<'inner, 'borrow>
         where
             'inner: 'borrow,
         {
@@ -1283,7 +1291,7 @@ macro_rules! impl_json_deserialize {
 #[macro_export]
 macro_rules! impl_json_serialize {
     ($struct_name:ident { $($field:ident),+ }) => {
-        impl $crate::JsonSerialize for $struct_name<'_> {
+        impl<'inner, 'borrow> $crate::JsonSerialize for $struct_name<'inner, 'borrow> {
             fn json_serialize(&self, serializer: &mut $crate::JsonSerializer) {
                 #[allow(unused_imports)]
                 use $crate::{JsonObjectExt, JsonValueExt, MerdeJsonError, ToRustValue};
@@ -1301,7 +1309,7 @@ macro_rules! impl_json_serialize {
 #[macro_export]
 macro_rules! impl_to_static {
     ($struct_name:ident { $($field:ident),+ }) => {
-        impl<'a> $crate::ToStatic<'a, $struct_name<'a>> for $struct_name<'a> {
+        impl<'inner, 'borrow> $crate::ToStatic<$struct_name<'inner, 'borrow>> for $struct_name<'inner, 'borrow> {
             type Output = $struct_name<'static>;
 
             fn to_static(&self) -> Self::Output {
@@ -1404,10 +1412,10 @@ mod tests {
         use std::marker::PhantomData;
 
         #[derive(Debug, PartialEq)]
-        struct SecondStruct<'a> {
-            string_field: Cow<'a, str>,
+        struct SecondStruct<'inner, 'borrow> {
+            string_field: Cow<'borrow, str>,
             int_field: i32,
-            _phantom: PhantomData<&'a ()>,
+            _phantom: PhantomData<(&'inner (), &'borrow ())>,
         }
 
         derive! {
@@ -1418,8 +1426,8 @@ mod tests {
         }
 
         #[derive(Debug, PartialEq)]
-        struct ComplexStruct<'a> {
-            string_field: Cow<'a, str>,
+        struct ComplexStruct<'inner, 'borrow> {
+            string_field: Cow<'borrow, str>,
             u8_field: u8,
             u16_field: u16,
             u32_field: u32,
@@ -1433,8 +1441,8 @@ mod tests {
             option_field: Option<i32>,
             vec_field: Vec<i32>,
             hashmap_field: HashMap<String, i32>,
-            second_struct_field: SecondStruct<'a>,
-            _phantom: PhantomData<&'a ()>,
+            second_struct_field: SecondStruct<'inner, 'borrow>,
+            _phantom: PhantomData<(&'inner (), &'borrow ())>,
         }
 
         derive! {

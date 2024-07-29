@@ -35,13 +35,13 @@ fn main() {
 
 #[allow(dead_code)]
 #[derive(Debug, PartialEq, Eq)]
-struct Address<'a> {
-    street: Cow<'a, str>,
-    city: Cow<'a, str>,
-    state: Cow<'a, str>,
+struct Address<'inner, 'borrow> {
+    street: Cow<'borrow, str>,
+    city: Cow<'borrow, str>,
+    state: Cow<'borrow, str>,
     zip: u16,
 
-    _phantom: PhantomData<&'a ()>,
+    _phantom: PhantomData<(&'borrow (), &'inner ())>,
 }
 
 merde_json::derive! {
@@ -55,12 +55,12 @@ merde_json::derive! {
 
 #[allow(dead_code)]
 #[derive(Debug, PartialEq, Eq)]
-struct Person<'a> {
-    name: Cow<'a, str>,
+struct Person<'inner, 'borrow> {
+    name: Cow<'borrow, str>,
     age: u8,
-    address: Address<'a>,
+    address: Address<'inner, 'borrow>,
 
-    _phantom: PhantomData<&'a ()>,
+    _phantom: PhantomData<(&'inner (), &'borrow ())>,
 }
 
 merde_json::derive! {
