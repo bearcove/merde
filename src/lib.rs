@@ -28,11 +28,12 @@
 //! By contrast, merde_json provides declarative macros:
 //!
 //! ```rust
+//! use merde_json::Fantome;
 //! use std::borrow::Cow;
 //!
 //! #[derive(Debug, PartialEq)]
 //! struct MyStruct<'src, 'val> {
-//!     _boo: Fantom<'src, 'val>,
+//!     _boo: Fantome<'src, 'val>,
 //!
 //!     name: Cow<'val, str>,
 //!     age: u8,
@@ -62,12 +63,12 @@
 //! via the [JsonDeserialize] trait:
 //!
 //! ```rust
-//! # use merde_json::{JsonDeserialize, JsonSerialize, ToRustValue};
+//! # use merde_json::{Fantome, JsonDeserialize, JsonSerialize, ToRustValue};
 //! # use std::borrow::Cow;
 //! #
 //! # #[derive(Debug, PartialEq)]
 //! # struct MyStruct<'src, 'val> {
-//! #     _boo: Fantom<'src, 'val>,
+//! #     _boo: Fantome<'src, 'val>,
 //! #
 //! #     name: Cow<'val, str>,
 //! #     age: u8,
@@ -1306,24 +1307,27 @@ impl ToStatic for bool {
 /// Which allows you to do something like:
 ///
 /// ```rust
-/// use merde_json::{JsonDeserialize, JsonSerialize, ToRustValue};
-/// use std::{borrow::Cow, marker::PhantomData};
+/// use merde_json::{Fantome, JsonDeserialize, JsonSerialize, ToRustValue};
+/// use std::borrow::Cow;
 ///
 /// #[derive(Debug, PartialEq, Eq)]
-/// struct MyStruct<'a> {
-///     name: Cow<'a, str>,
+/// struct MyStruct<'src, 'val> {
+///     _boo: Fantome<'src, 'val>,
+///     name: Cow<'val, str>,
 ///     age: u8,
-///     _phantom: PhantomData<&'a ()>,
 /// }
 ///
 /// merde_json::derive! {
 ///     impl (JsonSerialize, JsonDeserialize) for MyStruct { name, age }
 /// }
 ///
+/// # fn main() -> Result<(), merde_json::MerdeJsonError> {
 /// let input = r#"{"name": "John Doe", "age": 30}"#;
-/// let value: merde_json::JsonValue = merde_json::from_str(input).unwrap();
-/// let my_struct: MyStruct = value.to_rust_value().unwrap();
+/// let value: merde_json::JsonValue = merde_json::from_str(input)?;
+/// let my_struct: MyStruct = value.to_rust_value()?;
 /// println!("{:?}", my_struct);
+/// # Ok(())
+/// # }
 /// ```
 pub trait ToRustValue<'src, 'val, T>
 where
@@ -1421,16 +1425,16 @@ macro_rules! impl_to_static {
 /// # Usage
 ///
 /// ```rust
-/// use merde_json::{JsonSerialize, JsonDeserialize};
-/// use std::{borrow::Cow, marker::PhantomData};
+/// use merde_json::{Fantome, JsonSerialize, JsonDeserialize};
+/// use std::borrow::Cow;
 ///
 /// #[derive(Debug, PartialEq)]
-/// struct MyStruct<'a> {
-///     field1: Cow<'a, str>,
+/// struct MyStruct<'src, 'val> {
+///     _boo: Fantome<'src, 'val>,
+///
+///     field1: Cow<'val, str>,
 ///     field2: i32,
 ///     field3: bool,
-///
-///     _phantom: PhantomData<&'a ()>,
 /// }
 ///
 /// merde_json::derive! {
