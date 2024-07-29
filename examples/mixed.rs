@@ -7,40 +7,40 @@ use merde_json::{
 };
 
 #[derive(Debug, PartialEq)]
-struct MixedArray<'inner, 'borrow> {
-    _boo: Fantome<'inner, 'borrow>,
+struct MixedArray<'src, 'val> {
+    _boo: Fantome<'src, 'val>,
 
-    items: Vec<&'borrow JsonValue<'inner>>,
+    items: Vec<&'val JsonValue<'src>>,
 }
 merde_json::derive! {
     impl(JsonSerialize, JsonDeserialize) for MixedArray { items }
 }
 
 #[derive(Debug, PartialEq)]
-struct MixedArray2<'inner, 'borrow> {
-    _boo: Fantome<'inner, 'borrow>,
+struct MixedArray2<'src, 'val> {
+    _boo: Fantome<'src, 'val>,
 
-    items: &'borrow JsonArray<'inner>,
+    items: &'val JsonArray<'src>,
 }
 merde_json::derive! {
     impl(JsonSerialize, JsonDeserialize) for MixedArray2 { items }
 }
 
 #[derive(Debug, PartialEq)]
-struct Items<'inner, 'borrow> {
-    _boo: Fantome<'inner, 'borrow>,
+struct Items<'src, 'val> {
+    _boo: Fantome<'src, 'val>,
 
     number: u32,
-    string: Cow<'borrow, str>,
+    string: Cow<'val, str>,
     boolean: bool,
 }
 
-impl<'inner, 'borrow> JsonDeserialize<'inner, 'borrow> for Items<'inner, 'borrow>
+impl<'src, 'val> JsonDeserialize<'src, 'val> for Items<'src, 'val>
 where
-    'inner: 'borrow,
+    'src: 'val,
 {
     fn json_deserialize(
-        value: Option<&'borrow JsonValue<'inner>>,
+        value: Option<&'val JsonValue<'src>>,
     ) -> Result<Self, merde_json::MerdeJsonError> {
         let arr = value
             .ok_or(merde_json::MerdeJsonError::MissingValue)?
@@ -67,10 +67,10 @@ impl JsonSerialize for Items<'_, '_> {
 }
 
 #[derive(Debug, PartialEq)]
-struct MixedArray3<'inner, 'borrow> {
-    _boo: Fantome<'inner, 'borrow>,
+struct MixedArray3<'src, 'val> {
+    _boo: Fantome<'src, 'val>,
 
-    items: Items<'inner, 'borrow>,
+    items: Items<'src, 'val>,
 }
 merde_json::derive! {
     impl(JsonSerialize, JsonDeserialize) for MixedArray3 { items }
