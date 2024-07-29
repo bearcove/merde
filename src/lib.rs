@@ -32,10 +32,10 @@
 //! use std::marker::PhantomData;
 //!
 //! #[derive(Debug, PartialEq)]
-//! struct MyStruct<'a> {
-//!     name: Cow<'a, str>,
+//! struct MyStruct<'inner, 'borrow> {
+//!     name: Cow<'borrow, str>,
 //!     age: u8,
-//!     _phantom: PhantomData<&'a ()>,
+//!     _boo: Fantom<'inner, 'borrow>,
 //! }
 //!
 //! merde_json::derive! {
@@ -48,8 +48,8 @@
 //!
 //! Declarative macros = less work to do at compile-time, as long as we follow a couple rules:
 //!
-//!  * All structs have a lifetime parameter
-//!  * All structs have a `_phantom` field, for structs that don't use their lifetime parameter
+//!  * All structs have exactly two lifetimes parameters: 'inner and 'borrow
+//!  * All structs have a `_boo` field, for structs that don't use their lifetime parameter
 //!  * Field names are listed twice: in the struct and in the macro (limitation of declarative macros)
 //!  * Use `Cow<'a, str>` for everything, instead of choosing between `&str` and `String` on a case-by-case basis
 //!
@@ -66,10 +66,11 @@
 //! # use std::{borrow::Cow, marker::PhantomData};
 //! #
 //! # #[derive(Debug, PartialEq)]
-//! # struct MyStruct<'a> {
-//! #     name: Cow<'a, str>,
+//! # struct MyStruct<'inner, 'borrow> {
+//! #     _boo: Fantom<'inner, 'borrow>,
+//! #
+//! #     name: Cow<'borrow, str>,
 //! #     age: u8,
-//! #     _phantom: PhantomData<&'a ()>,
 //! # }
 //! #
 //! # merde_json::derive! {
@@ -657,13 +658,45 @@ where
     }
 }
 
-impl<'inner, 'borrow> JsonDeserialize<'inner, 'borrow> for JsonValue<'inner>
+impl<'inner, 'borrow> JsonDeserialize<'inner, 'borrow> for &'borrow JsonValue<'inner>
 where
     'inner: 'borrow,
 {
     fn json_deserialize(value: Option<&'borrow JsonValue<'inner>>) -> Result<Self, MerdeJsonError> {
         match value {
-            Some(json_value) => Ok(json_value.clone()),
+            Some(json_value) => Ok(json_value),
+            None => Err(MerdeJsonError::MissingValue),
+        }
+    }
+}
+
+impl<'inner, 'borrow> JsonDeserialize<'inner, 'borrow> for &'borrow JsonArray<'inner>
+where
+    'inner: 'borrow,
+{
+    fn json_deserialize(value: Option<&'borrow JsonValue<'inner>>) -> Result<Self, MerdeJsonError> {
+        match value {
+            Some(JsonValue::Array(arr)) => Ok(arr),
+            Some(v) => Err(MerdeJsonError::MismatchedType {
+                expected: JsonFieldType::Array,
+                found: v.into(),
+            }),
+            None => Err(MerdeJsonError::MissingValue),
+        }
+    }
+}
+
+impl<'inner, 'borrow> JsonDeserialize<'inner, 'borrow> for &'borrow JsonObject<'inner>
+where
+    'inner: 'borrow,
+{
+    fn json_deserialize(value: Option<&'borrow JsonValue<'inner>>) -> Result<Self, MerdeJsonError> {
+        match value {
+            Some(JsonValue::Object(obj)) => Ok(obj),
+            Some(v) => Err(MerdeJsonError::MismatchedType {
+                expected: JsonFieldType::Object,
+                found: v.into(),
+            }),
             None => Err(MerdeJsonError::MissingValue),
         }
     }
@@ -921,19 +954,37 @@ impl JsonSerialize for JsonValue<'_> {
             JsonValue::BigInt(bi) => serializer.write_str(&bi.to_string()),
             JsonValue::Float(f) => serializer.write_f64(*f),
             JsonValue::Str(s) => serializer.write_str(s),
-            JsonValue::Array(arr) => {
-                let mut guard = serializer.write_arr();
-                for value in arr.iter() {
-                    guard.elem(value);
-                }
-            }
-            JsonValue::Object(obj) => {
-                let mut guard = serializer.write_obj();
-                for (key, value) in obj.iter() {
-                    guard.pair(key, value);
-                }
-            }
+            JsonValue::Array(arr) => arr.json_serialize(serializer),
+            JsonValue::Object(obj) => obj.json_serialize(serializer),
         }
+    }
+}
+
+impl JsonSerialize for JsonObject<'_> {
+    fn json_serialize(&self, serializer: &mut JsonSerializer) {
+        let mut guard = serializer.write_obj();
+        for (key, value) in self.iter() {
+            guard.pair(key, value);
+        }
+    }
+}
+
+impl JsonSerialize for JsonArray<'_> {
+    fn json_serialize(&self, serializer: &mut JsonSerializer) {
+        let mut guard = serializer.write_arr();
+        for value in self.iter() {
+            guard.elem(value);
+        }
+    }
+}
+
+impl<T> JsonSerialize for &T
+where
+    T: ?Sized + JsonSerialize,
+{
+    fn json_serialize(&self, serializer: &mut JsonSerializer) {
+        let this: &T = self;
+        JsonSerialize::json_serialize(this, serializer)
     }
 }
 
@@ -1083,6 +1134,37 @@ where
     fn must_get(&'borrow self, key: &'static str) -> Result<T, MerdeJsonError> {
         T::json_deserialize(self.get(key)).map_err(|e| match e {
             MerdeJsonError::MissingValue => MerdeJsonError::MissingProperty(key),
+            _ => e,
+        })
+    }
+}
+
+/// Extension trait to provide `must_get` on `JsonArray<'_>`
+pub trait JsonArrayExt<'borrow, 'inner, T>
+where
+    'inner: 'borrow,
+    T: JsonDeserialize<'inner, 'borrow> + 'borrow,
+{
+    /// Gets a value from the array, returning an error if the index is out of bounds.
+    ///
+    /// Because this method knows the index, it transforms [MerdeJsonError::MissingValue] into [MerdeJsonError::IndexOutOfBounds].
+    ///
+    /// It does not by itself throw an error if `self.get()` returns `None`, to allow
+    /// for optional fields (via the [JsonDeserialize] implementation on the [Option] type).
+    fn must_get(&'borrow self, index: usize) -> Result<T, MerdeJsonError>;
+}
+
+impl<'borrow, 'inner, T> JsonArrayExt<'borrow, 'inner, T> for JsonArray<'inner>
+where
+    'inner: 'borrow,
+    T: JsonDeserialize<'inner, 'borrow> + 'borrow,
+{
+    fn must_get(&'borrow self, index: usize) -> Result<T, MerdeJsonError> {
+        T::json_deserialize(self.get(index)).map_err(|e| match e {
+            MerdeJsonError::MissingValue => MerdeJsonError::IndexOutOfBounds {
+                index,
+                len: self.len(),
+            },
             _ => e,
         })
     }
@@ -1279,8 +1361,8 @@ macro_rules! impl_json_deserialize {
 
                 let obj = value.ok_or(MerdeJsonError::MissingValue)?.as_object()?;
                 Ok($struct_name {
+                    _boo: Default::default(),
                     $($field: obj.must_get(stringify!($field))?,)+
-                    _phantom: Default::default()
                 })
             }
         }
@@ -1317,8 +1399,8 @@ macro_rules! impl_to_static {
                 use $crate::ToStatic;
 
                 $struct_name {
+                    _boo: Default::default(),
                     $($field: self.$field.to_static(),)+
-                    _phantom: std::marker::PhantomData,
                 }
             }
         }
@@ -1393,6 +1475,18 @@ macro_rules! impl_trait {
     };
 }
 
+/// A type you can use instead of `PhantomData`
+#[derive(Default, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct Fantome<'inner, 'borrow> {
+    _boo: std::marker::PhantomData<(&'inner (), &'borrow ())>,
+}
+
+impl std::fmt::Debug for Fantome<'_, '_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Boo!")
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1409,13 +1503,13 @@ mod tests {
     fn test_complex_structs() {
         use std::borrow::Cow;
         use std::collections::HashMap;
-        use std::marker::PhantomData;
 
         #[derive(Debug, PartialEq)]
         struct SecondStruct<'inner, 'borrow> {
+            _boo: Fantome<'inner, 'borrow>,
+
             string_field: Cow<'borrow, str>,
             int_field: i32,
-            _phantom: PhantomData<(&'inner (), &'borrow ())>,
         }
 
         derive! {
@@ -1427,6 +1521,8 @@ mod tests {
 
         #[derive(Debug, PartialEq)]
         struct ComplexStruct<'inner, 'borrow> {
+            _boo: Fantome<'inner, 'borrow>,
+
             string_field: Cow<'borrow, str>,
             u8_field: u8,
             u16_field: u16,
@@ -1442,7 +1538,6 @@ mod tests {
             vec_field: Vec<i32>,
             hashmap_field: HashMap<String, i32>,
             second_struct_field: SecondStruct<'inner, 'borrow>,
-            _phantom: PhantomData<(&'inner (), &'borrow ())>,
         }
 
         derive! {
@@ -1484,11 +1579,12 @@ mod tests {
             vec_field: vec![1, 2, 3],
             hashmap_field: hashmap,
             second_struct_field: SecondStruct {
+                _boo: Default::default(),
+
                 string_field: Cow::Borrowed("nested string"),
                 int_field: 100,
-                _phantom: PhantomData,
             },
-            _phantom: PhantomData,
+            _boo: Default::default(),
         };
 
         let serialized = original.to_json_string();

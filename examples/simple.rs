@@ -1,6 +1,6 @@
 use std::{borrow::Cow, marker::PhantomData};
 
-use merde_json::{JsonSerialize, ToRustValue};
+use merde_json::{Fantome, JsonSerialize, ToRustValue};
 
 fn main() {
     let input = r#"
@@ -36,12 +36,12 @@ fn main() {
 #[allow(dead_code)]
 #[derive(Debug, PartialEq, Eq)]
 struct Address<'inner, 'borrow> {
+    _boo: Fantome<'inner, 'borrow>,
+
     street: Cow<'borrow, str>,
     city: Cow<'borrow, str>,
     state: Cow<'borrow, str>,
     zip: u16,
-
-    _phantom: PhantomData<(&'borrow (), &'inner ())>,
 }
 
 merde_json::derive! {
@@ -56,11 +56,11 @@ merde_json::derive! {
 #[allow(dead_code)]
 #[derive(Debug, PartialEq, Eq)]
 struct Person<'inner, 'borrow> {
+    _boo: Fantome<'inner, 'borrow>,
+
     name: Cow<'borrow, str>,
     age: u8,
     address: Address<'inner, 'borrow>,
-
-    _phantom: PhantomData<(&'inner (), &'borrow ())>,
 }
 
 merde_json::derive! {
