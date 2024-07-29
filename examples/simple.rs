@@ -1,4 +1,4 @@
-use std::{borrow::Cow, marker::PhantomData};
+use std::borrow::Cow;
 
 use merde_json::{Fantome, JsonSerialize, ToRustValue};
 
