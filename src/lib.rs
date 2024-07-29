@@ -29,7 +29,6 @@
 //!
 //! ```rust
 //! use std::borrow::Cow;
-//! use std::marker::PhantomData;
 //!
 //! #[derive(Debug, PartialEq)]
 //! struct MyStruct<'src, 'val> {
@@ -64,7 +63,7 @@
 //!
 //! ```rust
 //! # use merde_json::{JsonDeserialize, JsonSerialize, ToRustValue};
-//! # use std::{borrow::Cow, marker::PhantomData};
+//! # use std::borrow::Cow;
 //! #
 //! # #[derive(Debug, PartialEq)]
 //! # struct MyStruct<'src, 'val> {
@@ -90,8 +89,8 @@
 //! For convenience, you can use [ToRustValue::to_rust_value]:
 //!
 //! ```rust
-//! # use merde_json::{JsonDeserialize, JsonSerialize, ToRustValue, Fantome};
-//! # use std::{borrow::Cow, marker::PhantomData};
+//! # use merde_json::{Fantome, JsonDeserialize, JsonSerialize, ToRustValue};
+//! # use std::borrow::Cow;
 //! #
 //! # #[derive(Debug, PartialEq)]
 //! # struct MyStruct<'src, 'val> {
@@ -121,8 +120,8 @@
 //! inline one of them. This fails to compile with a "temporary value dropped while borrowed" error:
 //!
 //! ```compile_fail
-//! # use merde_json::{JsonDeserialize, JsonSerialize, ToRustValue};
-//! # use std::{borrow::Cow, marker::PhantomData};
+//! # use merde_json::{Fantome, JsonDeserialize, JsonSerialize, ToRustValue};
+//! # use std::borrow::Cow;
 //! #
 //! # #[derive(Debug, PartialEq)]
 //! # struct MyStruct<'src, 'val> {
@@ -146,11 +145,17 @@
 //!
 //! ## Moving deserialized values around
 //!
-//! If you try to return a freshly-deserialized value, the compiler will stop you:
+//! How do you return a freshly-deserialized value, with those two annoying lifetimes?
+//!
+//! Set them both to `'static`! However, this fails because the deserialized value is
+//! not `T<'static, 'static>` — it still borrows from the source (`'src`) and the
+//! `JsonValue` that was deserialized (`'val`).
+//!
+//! This code fails to compile:
 //!
 //! ```compile_fail
-//! # use merde_json::{JsonDeserialize, JsonSerialize, ToRustValue};
-//! # use std::{borrow::Cow, marker::PhantomData};
+//! # use merde_json::{Fantome, JsonDeserialize, JsonSerialize, ToRustValue};
+//! # use std::borrow::Cow;
 //! #
 //! # #[derive(Debug, PartialEq)]
 //! # struct MyStruct<'src, 'val> {
@@ -163,7 +168,7 @@
 //! #     impl(JsonSerialize, JsonDeserialize) for MyStruct { name, age }
 //! # }
 //! #
-//! fn return_my_struct() -> MyStruct {
+//! fn return_my_struct() -> MyStruct<'static, 'static> {
 //!     let input = String::from(r#"{"name": "John Doe", "age": 30}"#);
 //!     let value = merde_json::from_str(&input).unwrap();
 //!     let my_struct: MyStruct = value.to_rust_value().unwrap();
@@ -176,41 +181,41 @@
 //! # }
 //! ```
 //!
-//! This fails with:
+//! ...with:
 //!
 //! ```text
-//! error[E0515]: cannot return value referencing local variable `input`
-//!   --> src/lib.rs:163:5
+//! ---- src/lib.rs - (line 157) stdout ----
+//! error[E0515]: cannot return value referencing local variable `value`
+//!   --> src/lib.rs:177:5
 //!    |
-//! 20 |     let value = merde_json::from_str(&input).unwrap();
-//!    |                                      ------ `input` is borrowed here
 //! 21 |     let my_struct: MyStruct = value.to_rust_value().unwrap();
+//!    |                               ----- `value` is borrowed here
 //! 22 |     my_struct
 //!    |     ^^^^^^^^^ returns a value referencing data owned by the current function
 //! ```
 //!
-//! And some may be thinking "self-referential types!", but I'm thinking "heap allocations":
+//! Deriving the [ToStatic] trait lets you go from `MyStruct<'src, 'val>` to `MyStruct<'static, 'static>`:
 //!
 //! ```rust
-//! # use merde_json::{JsonDeserialize, JsonSerialize, ToRustValue, ToStatic};
-//! # use std::{borrow::Cow, marker::PhantomData};
+//! # use merde_json::{Fantome, JsonDeserialize, JsonSerialize, ToRustValue, ToStatic};
+//! # use std::borrow::Cow;
 //! #
 //! # #[derive(Debug, PartialEq)]
-//! # struct MyStruct<'a> {
-//! #     name: Cow<'a, str>,
+//! # struct MyStruct<'src, 'val> {
+//! #     _boo: Fantome<'src, 'val>,
+//! #     name: Cow<'val, str>,
 //! #     age: u8,
-//! #     _phantom: PhantomData<&'a ()>,
 //! # }
 //! #
-//! # merde_json::derive! {
-//! #     impl(JsonSerialize, JsonDeserialize, ToStatic) for MyStruct { name, age }
-//! # }
-//! #
-//! fn return_my_struct() -> MyStruct<'static> {
+//! merde_json::derive! {
+//!     //                                     👇
+//!     impl(JsonSerialize, JsonDeserialize, ToStatic) for MyStruct { name, age }
+//! }
+//!
+//! fn return_my_struct() -> MyStruct<'static, 'static> {
 //!     let input = String::from(r#"{"name": "John Doe", "age": 30}"#);
 //!     let value = merde_json::from_str(&input).unwrap();
 //!     let my_struct: MyStruct = value.to_rust_value().unwrap();
-//!     //           👇
 //!     my_struct.to_static()
 //! }
 //! # fn main() -> Result<(), merde_json::MerdeJsonError> {
@@ -220,42 +225,41 @@
 //! # }
 //! ```
 //!
-//! [ToStatic::to_static] lets you go from `MyStruct<'a>` to `MyStruct<'static>`. A default implementation
-//! is provided for on `Cow<'a, T>` and a bunch of other primitive types. It can be derived via the [derive!]
-//! macro.
+//! Of course, [ToStatic::to_static] often involves heap allocations. If you're just temporarily
+//! processing some JSON payload, consider accepting a callback instead and passing it a shared
+//! reference to your value — that works more often than you'd think!
 //!
 //! ## Deserializing mixed-type arrays
 //!
-//! Real-world JSON payloads have arrays with mixed types. You can keep them as [Vec] of [JsonValue]
+//! Real-world JSON payloads can have arrays with mixed types. You can keep them as [Vec] of [JsonValue]
 //! until you know what to do with them:
 //!
 //! ```rust
-//! use merde_json::{JsonDeserialize, JsonSerialize, ToRustValue, JsonValue, MerdeJsonError};
-//! use std::{borrow::Cow, marker::PhantomData};
+//! use merde_json::{Fantome, JsonDeserialize, JsonSerialize, ToRustValue, JsonValue, MerdeJsonError};
 //!
 //! #[derive(Debug, PartialEq)]
-//! struct MixedArray<'a, 'src> {
-//!     items: JsonValue<'src>,
-//!     _phantom: PhantomData<&'a ()>,
+//! struct MixedArray<'src, 'val> {
+//!     _boo: Fantome<'src, 'val>,
+//!     items: Vec<&'val JsonValue<'src>>,
 //! }
 //!
 //! merde_json::derive! { impl(JsonDeserialize) for MixedArray { items } }
 //!
 //! fn main() -> Result<(), merde_json::MerdeJsonError> {
-//!     let input = r#"[1, "two", true, null, {"key": "value"}]"#;
+//!     let input = r#"{
+//!         "items": [42, "two", true]
+//!     }"#;
 //!     let value = merde_json::from_str(input)?;
 //!     let mixed_array: MixedArray = value.to_rust_value()?;
 //!
 //!     println!("Mixed array: {:?}", mixed_array);
 //!
 //!     // You can then process each item based on its type
-//!     for (index, item) in mixed_array.items.as_array()?.iter().enumerate() {
+//!     for (index, item) in mixed_array.items.iter().enumerate() {
 //!         match item {
 //!             JsonValue::Int(i) => println!("Item {} is an integer: {}", index, i),
 //!             JsonValue::Str(s) => println!("Item {} is a string: {}", index, s),
 //!             JsonValue::Bool(b) => println!("Item {} is a boolean: {}", index, b),
-//!             JsonValue::Null => println!("Item {} is null", index),
-//!             JsonValue::Object(obj) => println!("Item {} is an object: {:?}", index, obj),
 //!             _ => println!("Item {} is of another type", index),
 //!         }
 //!     }
@@ -269,14 +273,14 @@
 //! Serializing typically looks like:
 //!
 //! ```rust
-//! # use merde_json::{JsonSerialize, JsonDeserialize, ToRustValue};
-//! # use std::{borrow::Cow, marker::PhantomData};
+//! # use merde_json::{Fantome, JsonSerialize, JsonDeserialize, ToRustValue};
+//! # use std::borrow::Cow;
 //! #
 //! # #[derive(Debug, PartialEq)]
-//! # struct MyStruct<'a> {
-//! #     name: Cow<'a, str>,
+//! # struct MyStruct<'src, 'val> {
+//! #     _boo: Fantome<'src, 'val>,
+//! #     name: Cow<'val, str>,
 //! #     age: u8,
-//! #     _phantom: PhantomData<&'a ()>,
 //! # }
 //! #
 //! # merde_json::derive! {
@@ -285,9 +289,9 @@
 //! #
 //! # fn main() -> Result<(), merde_json::MerdeJsonError> {
 //! let original = MyStruct {
-//!     name: Cow::Borrowed("John Doe"),
+//!     _boo: Default::default(),
+//!     name: "John Doe".into(),
 //!     age: 30,
-//!     _phantom: PhantomData
 //! };
 //!
 //! let serialized = original.to_json_string();
@@ -306,14 +310,14 @@
 //! `Vec<u8>` for multiple serializations, you can use [JsonSerializer::from_vec]:
 //!
 //! ```rust
-//! # use merde_json::{JsonSerialize, JsonDeserialize, ToRustValue};
-//! # use std::{borrow::Cow, marker::PhantomData};
+//! # use merde_json::{Fantome, JsonSerialize, JsonDeserialize, ToRustValue};
+//! # use std::borrow::Cow;
 //! #
 //! # #[derive(Debug, PartialEq)]
-//! # struct MyStruct<'a> {
-//! #     name: Cow<'a, str>,
+//! # struct MyStruct<'src, 'val> {
+//! #     _boo: Fantome<'src, 'val>,
+//! #     name: Cow<'val, str>,
 //! #     age: u8,
-//! #     _phantom: PhantomData<&'a ()>,
 //! # }
 //! #
 //! # merde_json::derive! {
@@ -322,9 +326,9 @@
 //! #
 //! # fn main() -> Result<(), merde_json::MerdeJsonError> {
 //! let original = MyStruct {
-//!     name: Cow::Borrowed("John Doe"),
+//!     _boo: Default::default(),
+//!     name: "John Doe".into(),
 //!     age: 30,
-//!     _phantom: PhantomData
 //! };
 //!
 //! let mut buffer = Vec::new();
