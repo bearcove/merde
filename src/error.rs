@@ -7,27 +7,63 @@ use jiter::JsonValue;
 /// A content-less variant of the [JsonValue] enum, used for reporting errors, see [MerdeJsonError::MismatchedType].
 #[derive(Debug)]
 pub enum JsonFieldType {
+    /// The JSON value is `null`.
     Null,
+
+    /// The JSON value is `true` or `false`.
     Bool,
+
+    /// The JSON value fits in an `i64`.
     Int,
+
+    /// The JSON value no longer fits in an `i64`.
     BigInt,
+
+    /// The JSON value has decimal places.
     Float,
+
+    /// The JSON value is a string.
     String,
+
+    /// The JSON value is an array.
     Array,
+
+    /// The JSON value is an object. Keys must be strings.
     Object,
 }
 
+/// A grab-bag of errors that can occur when deserializing JSON.
+/// This isn't super clean, not my proudest moment.
 #[derive(Debug)]
 pub enum MerdeJsonError {
+    /// We expected a certain type but got a different one.
+    ///
+    /// Note that the default implementation of [JsonDeserialize] have tolerances:
+    /// if we expect a `u32` but get a floating-point number, we'll round it.
     MismatchedType {
+        /// The expected type.
         expected: JsonFieldType,
+
+        /// The type we got.
         found: JsonFieldType,
     },
+
+    /// We expected an object to have a certain property, but it was missing.
     MissingProperty(&'static str),
+
+    /// We encountered a property that we didn't expect.
     UnknownProperty(String),
+
+    /// We encountered an error in the underlying JSON parser.
     JsonError(jiter::JsonError),
+
+    /// For example, we had a `u8` field but the JSON value was bigger than `u8::MAX`.
     OutOfRange,
+
+    /// A field was missing (but we don't know its name)
     MissingValue,
+
+    /// While calling out to [FromStr::from_str] to build a [HashMap], we got an error.
     InvalidKey,
 }
 

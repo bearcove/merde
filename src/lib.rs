@@ -1,3 +1,5 @@
+#![deny(missing_docs)]
+
 //! `merde_json` adds convenient extension traits to the [jiter](https://crates.io/crates/jiter) crate,
 //! along with a few declarative macros that allow "deriving" traits like [`JsonSerialize`], [`JsonDeserialize`],
 //! and [`ToStatic`], covering the 90% use case for manipulating JSON in Rust.
@@ -220,6 +222,48 @@
 //! is provided for on `Cow<'a, T>` and a bunch of other primitive types. It can be derived via the [derive!]
 //! macro.
 //!
+//! ## Deserializing mixed-type arrays
+//!
+//! Real-world JSON payloads have arrays with mixed types. You can keep them as [Vec] of [JsonValue]
+//! until you know what to do with them:
+//!
+//! ```rust
+//! use merde_json::{JsonDeserialize, JsonSerialize, ToRustValue};
+//! use std::{borrow::Cow, marker::PhantomData};
+//!
+//! #[derive(Debug, PartialEq)]
+//! struct MixedArray<'a> {
+//!     items: Vec<JsonValue<'a>>,
+//!     _phantom: PhantomData<&'a ()>,
+//! }
+//!
+//! merde_json::derive! {
+//!     impl(JsonSerialize, JsonDeserialize) for MixedArray { items }
+//! }
+//!
+//! fn main() -> Result<(), merde_json::MerdeJsonError> {
+//!     let input = r#"[1, "two", true, null, {"key": "value"}]"#;
+//!     let value = merde_json::from_str(input)?;
+//!     let mixed_array: MixedArray = value.to_rust_value()?;
+//!
+//!     println!("Mixed array: {:?}", mixed_array);
+//!
+//!     // You can then process each item based on its type
+//!     for (index, item) in mixed_array.items.iter().enumerate() {
+//!         match item {
+//!             JsonValue::Int(i) => println!("Item {} is an integer: {}", index, i),
+//!             JsonValue::Str(s) => println!("Item {} is a string: {}", index, s),
+//!             JsonValue::Bool(b) => println!("Item {} is a boolean: {}", index, b),
+//!             JsonValue::Null => println!("Item {} is null", index),
+//!             JsonValue::Object(obj) => println!("Item {} is an object: {:?}", index, obj),
+//!             _ => println!("Item {} is of another type", index),
+//!         }
+//!     }
+//!
+//!     Ok(())
+//! }
+//! ```
+//!
 //! ## Serializing
 //!
 //! Serializing typically looks like:
@@ -315,10 +359,21 @@
 //! cycles, and if it shows up in your profiles, it's time to move on to jiter's event-based parser,
 //! [jiter::Jiter].
 //!
-//! Serialization can't be pretty: it never produces unnecessary spaces, newlines, etc.
+//! If you expect an `u32` but the JSON payload has a floating-point number, it'll get rounded.
+//!
+//! If you expect a `u32` but the JSON payload is greater than `u32::MAX`, you'll get a
+//! [MerdeJsonError::OutOfRange] error.
 //!
 //! There's no control over allowing Infinity/NaN in JSON numbers: you can work around that
 //! by calling [jiter::JsonValue::parse] yourself.
+//!
+//! Serialization can't be pretty: it never produces unnecessary spaces, newlines, etc.
+//! If your performance characteristics allow it, you may look into [formatjson](https://crates.io/crates/formatjson)
+//!
+//! Serialization may produce JSON payloads that other parsers will reject or parse incorrectly,
+//! specifically for numbers above 2^53 or below -2^53.
+//!
+//! There is no built-in facility for serializing/deserializing strings from numbers.
 //!
 //! If `merde_json` doesn't work for you, it's very likely that your use case is not supported, and
 //! you should look at [serde](https://crates.io/crates/serde) instead.
@@ -340,6 +395,7 @@
 //!
 //! That's the default and only mode — use `Cow<'a, str>` for all strings, do `.to_static()`
 //! if you need to move the struct.
+
 mod error;
 pub use error::*;
 
@@ -366,6 +422,7 @@ pub trait JsonDeserialize<'borrow>
 where
     Self: Sized + 'borrow,
 {
+    /// Destructures a JSON value into a Rust value
     fn json_deserialize<'inner: 'borrow>(
         value: Option<&'borrow JsonValue<'inner>>,
     ) -> Result<Self, MerdeJsonError>;
@@ -666,61 +723,66 @@ where
 /// get the buffer back.
 #[derive(Default)]
 pub struct JsonSerializer {
-    writer: Vec<u8>,
+    buffer: Vec<u8>,
 }
 
 impl JsonSerializer {
+    /// Uses the provided buffer as the target for serialization.
     pub fn from_vec(vec: Vec<u8>) -> Self {
-        JsonSerializer { writer: vec }
+        JsonSerializer { buffer: vec }
     }
 
+    /// Allocates a new buffer for serialization.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Writes the JSON `null` value.
     pub fn write_null(&mut self) {
-        self.writer.extend_from_slice(b"null");
+        self.buffer.extend_from_slice(b"null");
     }
 
+    /// Writes the JSON `true` or `false` value.
     pub fn write_bool(&mut self, value: bool) {
-        self.writer
+        self.buffer
             .extend_from_slice(if value { b"true" } else { b"false" });
     }
 
     /// Write a number as a JSON number. Numbers bigger than 2**53 might
     /// not be parsed correctly by other implementations.
     pub fn write_i64(&mut self, value: i64) {
-        let _ = write!(self.writer, "{}", value);
+        let _ = write!(self.buffer, "{}", value);
     }
 
+    /// Write a floating-point number as a JSON number.
     pub fn write_f64(&mut self, value: f64) {
-        let _ = write!(self.writer, "{}", value);
+        let _ = write!(self.buffer, "{}", value);
     }
 
     /// Write a string, with escaping.
     pub fn write_str(&mut self, value: &str) {
-        self.writer.push(b'"');
+        self.buffer.push(b'"');
         for c in value.chars() {
             match c {
-                '"' => self.writer.extend_from_slice(b"\\\""),
-                '\\' => self.writer.extend_from_slice(b"\\\\"),
-                '\n' => self.writer.extend_from_slice(b"\\n"),
-                '\r' => self.writer.extend_from_slice(b"\\r"),
-                '\t' => self.writer.extend_from_slice(b"\\t"),
+                '"' => self.buffer.extend_from_slice(b"\\\""),
+                '\\' => self.buffer.extend_from_slice(b"\\\\"),
+                '\n' => self.buffer.extend_from_slice(b"\\n"),
+                '\r' => self.buffer.extend_from_slice(b"\\r"),
+                '\t' => self.buffer.extend_from_slice(b"\\t"),
                 c if c.is_control() => {
-                    let _ = write!(self.writer, "\\u{:04x}", c as u32);
+                    let _ = write!(self.buffer, "\\u{:04x}", c as u32);
                 }
-                c => self.writer.extend_from_slice(c.to_string().as_bytes()),
+                c => self.buffer.extend_from_slice(c.to_string().as_bytes()),
             }
         }
-        self.writer.push(b'"');
+        self.buffer.push(b'"');
     }
 
     /// This writes the opening brace of an object, and gives you
     /// a guard object to write the key-value pairs. When the guard
     /// is dropped, the closing brace is written.
     pub fn write_obj(&mut self) -> ObjectGuard<'_> {
-        self.writer.push(b'{');
+        self.buffer.push(b'{');
         ObjectGuard {
             serializer: self,
             first: true,
@@ -731,7 +793,7 @@ impl JsonSerializer {
     /// a guard object to write the elements. When the guard
     /// is dropped, the closing bracket is written.
     pub fn write_arr(&mut self) -> ArrayGuard<'_> {
-        self.writer.push(b'[');
+        self.buffer.push(b'[');
         ArrayGuard {
             serializer: self,
             first: true,
@@ -740,31 +802,35 @@ impl JsonSerializer {
 
     /// Get back the internal buffer
     pub fn into_inner(self) -> Vec<u8> {
-        self.writer
+        self.buffer
     }
 }
 
+/// Allows writing JSON objects
 pub struct ObjectGuard<'a> {
     serializer: &'a mut JsonSerializer,
     first: bool,
 }
 
 impl<'a> ObjectGuard<'a> {
+    /// Writes a key-value pair to the object.
+    #[inline]
     pub fn pair(&mut self, key: &str, value: &dyn JsonSerialize) -> &mut Self {
         if !self.first {
-            self.serializer.writer.push(b',');
+            self.serializer.buffer.push(b',');
         }
         self.first = false;
         self.serializer.write_str(key);
-        self.serializer.writer.push(b':');
+        self.serializer.buffer.push(b':');
         value.json_serialize(self.serializer);
         self
     }
 }
 
 impl<'a> Drop for ObjectGuard<'a> {
+    #[inline]
     fn drop(&mut self) {
-        self.serializer.writer.push(b'}');
+        self.serializer.buffer.push(b'}');
     }
 }
 
@@ -776,9 +842,10 @@ pub struct ArrayGuard<'a> {
 
 impl<'a> ArrayGuard<'a> {
     /// Writes an element to the array.
+    #[inline]
     pub fn elem(&mut self, value: &dyn JsonSerialize) -> &mut Self {
         if !self.first {
-            self.serializer.writer.push(b',');
+            self.serializer.buffer.push(b',');
         }
         self.first = false;
         value.json_serialize(self.serializer);
@@ -787,8 +854,9 @@ impl<'a> ArrayGuard<'a> {
 }
 
 impl<'a> Drop for ArrayGuard<'a> {
+    #[inline]
     fn drop(&mut self) {
-        self.serializer.writer.push(b']');
+        self.serializer.buffer.push(b']');
     }
 }
 
@@ -974,11 +1042,18 @@ impl<V: JsonSerialize> JsonSerialize for &[(&str, V)] {
     }
 }
 
+/// Extension trait to provide `must_get` on `JsonObject<'_>`
 pub trait JsonObjectExt<'borrow, 'inner, T>
 where
     'inner: 'borrow,
     T: JsonDeserialize<'borrow> + 'borrow,
 {
+    /// Gets a value from the object, returning an error if the key is missing.
+    ///
+    /// Because this method knows the key name, it transforms [MerdeJsonError::MissingValue] into [MerdeJsonError::MissingProperty].
+    ///
+    /// It does not by itself throw an error if `self.get()` returns `None`, to allow
+    /// for optional fields (via the [JsonDeserialize] implementation on the [Option] type).
     fn must_get(&'borrow self, key: &'static str) -> Result<T, MerdeJsonError>;
 }
 
@@ -995,24 +1070,30 @@ where
     }
 }
 
+/// Parses a JSON byte string into a [JsonValue].
 pub fn from_slice(data: &[u8]) -> Result<jiter::JsonValue<'_>, MerdeJsonError> {
     Ok(jiter::JsonValue::parse(data, false)?)
 }
 
+/// Parses a JSON string into a [JsonValue].
 pub fn from_str(s: &str) -> Result<jiter::JsonValue<'_>, MerdeJsonError> {
     from_slice(s.as_bytes())
 }
 
-// -------------------------------------------------------------------------
-// ToStatic Trait and Implementation
-// -------------------------------------------------------------------------
-
+/// Allow turning a value into an "owned" variant, which can then be
+/// returned, moved, etc.
+///
+/// This usually involves allocating buffers for `Cow<'a, str>`, etc.
 pub trait ToStatic<'a, T>
 where
     T: 'a,
 {
+    /// The "owned" variant of the type. For `Cow<'a, str>`, this is `Cow<'static, str>`, for example.
     type Output: 'static;
 
+    /// Turns the value into an "owned" variant, which can then be returned, moved, etc.
+    ///
+    /// This allocates, for all but the most trivial types.
     fn to_static(&self) -> Self::Output;
 }
 
@@ -1147,6 +1228,9 @@ where
     'inner: 'borrow,
     T: JsonDeserialize<'borrow> + 'borrow,
 {
+    /// Flips the calling convention of [JsonDeserialize::json_deserialize] to turn a [JsonValue] into a Rust value.
+    ///
+    /// Fallible, since the `JsonValue` might not match the structure we expect.
     fn to_rust_value(&'borrow self) -> Result<T, MerdeJsonError>;
 }
 
