@@ -12,11 +12,5 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
       - name: Run tests (including doctests)
         run: cargo test
