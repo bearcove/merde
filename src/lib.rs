@@ -228,7 +228,7 @@
 //! until you know what to do with them:
 //!
 //! ```rust
-//! use merde_json::{JsonDeserialize, JsonSerialize, ToRustValue};
+//! use merde_json::{JsonDeserialize, JsonSerialize, ToRustValue, JsonValue};
 //! use std::{borrow::Cow, marker::PhantomData};
 //!
 //! #[derive(Debug, PartialEq)]
@@ -418,20 +418,20 @@ use std::str::FromStr;
 ///
 /// A field of type `HashMap<K, V>` or `Vec<T>` is required! If you want to make it optional,
 /// wrap it in an `Option<T>` explicitly, e.g. `Option<HashMap<K, V>>` or `Option<Vec<T>>`.
-pub trait JsonDeserialize<'borrow>
+pub trait JsonDeserialize<'inner, 'borrow>
 where
     Self: Sized + 'borrow,
+    'inner: 'borrow,
 {
     /// Destructures a JSON value into a Rust value
-    fn json_deserialize<'inner: 'borrow>(
-        value: Option<&'borrow JsonValue<'inner>>,
-    ) -> Result<Self, MerdeJsonError>;
+    fn json_deserialize(value: Option<&'borrow JsonValue<'inner>>) -> Result<Self, MerdeJsonError>;
 }
 
-impl<'borrow> JsonDeserialize<'borrow> for &'borrow str {
-    fn json_deserialize<'inner: 'borrow>(
-        value: Option<&'borrow JsonValue<'inner>>,
-    ) -> Result<Self, MerdeJsonError> {
+impl<'inner, 'borrow> JsonDeserialize<'inner, 'borrow> for &'borrow str
+where
+    'inner: 'borrow,
+{
+    fn json_deserialize(value: Option<&'borrow JsonValue<'inner>>) -> Result<Self, MerdeJsonError> {
         match value {
             Some(JsonValue::Str(s)) => match s {
                 Cow::Borrowed(s) => Ok(s),
@@ -446,10 +446,11 @@ impl<'borrow> JsonDeserialize<'borrow> for &'borrow str {
     }
 }
 
-impl<'borrow> JsonDeserialize<'borrow> for Cow<'borrow, str> {
-    fn json_deserialize<'inner: 'borrow>(
-        value: Option<&'borrow JsonValue<'inner>>,
-    ) -> Result<Self, MerdeJsonError> {
+impl<'inner, 'borrow> JsonDeserialize<'inner, 'borrow> for Cow<'borrow, str>
+where
+    'inner: 'borrow,
+{
+    fn json_deserialize(value: Option<&'borrow JsonValue<'inner>>) -> Result<Self, MerdeJsonError> {
         match value {
             Some(JsonValue::Str(s)) => Ok(s.clone()),
             Some(v) => Err(MerdeJsonError::MismatchedType {
@@ -461,40 +462,44 @@ impl<'borrow> JsonDeserialize<'borrow> for Cow<'borrow, str> {
     }
 }
 
-impl<'borrow> JsonDeserialize<'borrow> for u8 {
-    fn json_deserialize<'inner: 'borrow>(
-        value: Option<&'borrow JsonValue<'inner>>,
-    ) -> Result<Self, MerdeJsonError> {
+impl<'inner, 'borrow> JsonDeserialize<'inner, 'borrow> for u8
+where
+    'inner: 'borrow,
+{
+    fn json_deserialize(value: Option<&'borrow JsonValue<'inner>>) -> Result<Self, MerdeJsonError> {
         u64::json_deserialize(value)?
             .try_into()
             .map_err(|_| MerdeJsonError::OutOfRange)
     }
 }
 
-impl<'borrow> JsonDeserialize<'borrow> for u16 {
-    fn json_deserialize<'inner: 'borrow>(
-        value: Option<&'borrow JsonValue<'inner>>,
-    ) -> Result<Self, MerdeJsonError> {
+impl<'inner, 'borrow> JsonDeserialize<'inner, 'borrow> for u16
+where
+    'inner: 'borrow,
+{
+    fn json_deserialize(value: Option<&'borrow JsonValue<'inner>>) -> Result<Self, MerdeJsonError> {
         u64::json_deserialize(value)?
             .try_into()
             .map_err(|_| MerdeJsonError::OutOfRange)
     }
 }
 
-impl<'borrow> JsonDeserialize<'borrow> for u32 {
-    fn json_deserialize<'inner: 'borrow>(
-        value: Option<&'borrow JsonValue<'inner>>,
-    ) -> Result<Self, MerdeJsonError> {
+impl<'inner, 'borrow> JsonDeserialize<'inner, 'borrow> for u32
+where
+    'inner: 'borrow,
+{
+    fn json_deserialize(value: Option<&'borrow JsonValue<'inner>>) -> Result<Self, MerdeJsonError> {
         u64::json_deserialize(value)?
             .try_into()
             .map_err(|_| MerdeJsonError::OutOfRange)
     }
 }
 
-impl<'borrow> JsonDeserialize<'borrow> for u64 {
-    fn json_deserialize<'inner: 'borrow>(
-        value: Option<&'borrow JsonValue<'inner>>,
-    ) -> Result<Self, MerdeJsonError> {
+impl<'inner, 'borrow> JsonDeserialize<'inner, 'borrow> for u64
+where
+    'inner: 'borrow,
+{
+    fn json_deserialize(value: Option<&'borrow JsonValue<'inner>>) -> Result<Self, MerdeJsonError> {
         match value {
             Some(JsonValue::Int(n)) => (*n).try_into().map_err(|_| MerdeJsonError::OutOfRange),
             Some(JsonValue::Float(f)) => Ok((*f).round() as u64),
@@ -508,40 +513,44 @@ impl<'borrow> JsonDeserialize<'borrow> for u64 {
     }
 }
 
-impl<'borrow> JsonDeserialize<'borrow> for i8 {
-    fn json_deserialize<'inner: 'borrow>(
-        value: Option<&'borrow JsonValue<'inner>>,
-    ) -> Result<Self, MerdeJsonError> {
+impl<'inner, 'borrow> JsonDeserialize<'inner, 'borrow> for i8
+where
+    'inner: 'borrow,
+{
+    fn json_deserialize(value: Option<&'borrow JsonValue<'inner>>) -> Result<Self, MerdeJsonError> {
         i64::json_deserialize(value)?
             .try_into()
             .map_err(|_| MerdeJsonError::OutOfRange)
     }
 }
 
-impl<'borrow> JsonDeserialize<'borrow> for i16 {
-    fn json_deserialize<'inner: 'borrow>(
-        value: Option<&'borrow JsonValue<'inner>>,
-    ) -> Result<Self, MerdeJsonError> {
+impl<'inner, 'borrow> JsonDeserialize<'inner, 'borrow> for i16
+where
+    'inner: 'borrow,
+{
+    fn json_deserialize(value: Option<&'borrow JsonValue<'inner>>) -> Result<Self, MerdeJsonError> {
         i64::json_deserialize(value)?
             .try_into()
             .map_err(|_| MerdeJsonError::OutOfRange)
     }
 }
 
-impl<'borrow> JsonDeserialize<'borrow> for i32 {
-    fn json_deserialize<'inner: 'borrow>(
-        value: Option<&'borrow JsonValue<'inner>>,
-    ) -> Result<Self, MerdeJsonError> {
+impl<'inner, 'borrow> JsonDeserialize<'inner, 'borrow> for i32
+where
+    'inner: 'borrow,
+{
+    fn json_deserialize(value: Option<&'borrow JsonValue<'inner>>) -> Result<Self, MerdeJsonError> {
         i64::json_deserialize(value)?
             .try_into()
             .map_err(|_| MerdeJsonError::OutOfRange)
     }
 }
 
-impl<'borrow> JsonDeserialize<'borrow> for i64 {
-    fn json_deserialize<'inner: 'borrow>(
-        value: Option<&'borrow JsonValue<'inner>>,
-    ) -> Result<Self, MerdeJsonError> {
+impl<'inner, 'borrow> JsonDeserialize<'inner, 'borrow> for i64
+where
+    'inner: 'borrow,
+{
+    fn json_deserialize(value: Option<&'borrow JsonValue<'inner>>) -> Result<Self, MerdeJsonError> {
         match value {
             Some(JsonValue::Int(n)) => Ok(*n),
             Some(JsonValue::Float(f)) => Ok((*f).round() as i64),
@@ -555,10 +564,11 @@ impl<'borrow> JsonDeserialize<'borrow> for i64 {
     }
 }
 
-impl<'borrow> JsonDeserialize<'borrow> for usize {
-    fn json_deserialize<'inner: 'borrow>(
-        value: Option<&'borrow JsonValue<'inner>>,
-    ) -> Result<Self, MerdeJsonError> {
+impl<'inner, 'borrow> JsonDeserialize<'inner, 'borrow> for usize
+where
+    'inner: 'borrow,
+{
+    fn json_deserialize(value: Option<&'borrow JsonValue<'inner>>) -> Result<Self, MerdeJsonError> {
         match value {
             Some(JsonValue::Int(n)) => (*n).try_into().map_err(|_| MerdeJsonError::OutOfRange),
             Some(JsonValue::Float(f)) => ((*f).round() as i64)
@@ -573,10 +583,11 @@ impl<'borrow> JsonDeserialize<'borrow> for usize {
     }
 }
 
-impl<'borrow> JsonDeserialize<'borrow> for bool {
-    fn json_deserialize<'inner: 'borrow>(
-        value: Option<&'borrow JsonValue<'inner>>,
-    ) -> Result<Self, MerdeJsonError> {
+impl<'inner, 'borrow> JsonDeserialize<'inner, 'borrow> for bool
+where
+    'inner: 'borrow,
+{
+    fn json_deserialize(value: Option<&'borrow JsonValue<'inner>>) -> Result<Self, MerdeJsonError> {
         match value {
             Some(JsonValue::Bool(b)) => Ok(*b),
             Some(v) => Err(MerdeJsonError::MismatchedType {
@@ -587,14 +598,12 @@ impl<'borrow> JsonDeserialize<'borrow> for bool {
         }
     }
 }
-
-impl<'borrow, T> JsonDeserialize<'borrow> for Option<T>
+impl<'inner, 'borrow, T> JsonDeserialize<'inner, 'borrow> for Option<T>
 where
-    T: JsonDeserialize<'borrow>,
+    T: JsonDeserialize<'inner, 'borrow>,
+    'inner: 'borrow,
 {
-    fn json_deserialize<'inner: 'borrow>(
-        value: Option<&'borrow JsonValue<'inner>>,
-    ) -> Result<Self, MerdeJsonError> {
+    fn json_deserialize(value: Option<&'borrow JsonValue<'inner>>) -> Result<Self, MerdeJsonError> {
         match value {
             Some(JsonValue::Null) => Ok(None),
             Some(v) => T::json_deserialize(Some(v)).map(Some),
@@ -603,13 +612,12 @@ where
     }
 }
 
-impl<'borrow, T> JsonDeserialize<'borrow> for Vec<T>
+impl<'inner, 'borrow, T> JsonDeserialize<'inner, 'borrow> for Vec<T>
 where
-    T: JsonDeserialize<'borrow>,
+    T: JsonDeserialize<'inner, 'borrow>,
+    'inner: 'borrow,
 {
-    fn json_deserialize<'inner: 'borrow>(
-        value: Option<&'borrow JsonValue<'inner>>,
-    ) -> Result<Self, MerdeJsonError> {
+    fn json_deserialize(value: Option<&'borrow JsonValue<'inner>>) -> Result<Self, MerdeJsonError> {
         match value {
             Some(JsonValue::Array(arr)) => arr
                 .iter()
@@ -624,15 +632,14 @@ where
     }
 }
 
-impl<'borrow, K, V> JsonDeserialize<'borrow> for HashMap<K, V>
+impl<'inner, 'borrow, K, V> JsonDeserialize<'inner, 'borrow> for HashMap<K, V>
 where
+    'inner: 'borrow,
     K: FromStr + Eq + Hash + 'borrow,
-    V: JsonDeserialize<'borrow>,
+    V: JsonDeserialize<'inner, 'borrow>,
     K::Err: std::fmt::Debug,
 {
-    fn json_deserialize<'inner: 'borrow>(
-        value: Option<&'borrow JsonValue<'inner>>,
-    ) -> Result<Self, MerdeJsonError> {
+    fn json_deserialize(value: Option<&'borrow JsonValue<'inner>>) -> Result<Self, MerdeJsonError> {
         match value {
             Some(JsonValue::Object(obj)) => {
                 let mut map = HashMap::new();
@@ -1046,7 +1053,7 @@ impl<V: JsonSerialize> JsonSerialize for &[(&str, V)] {
 pub trait JsonObjectExt<'borrow, 'inner, T>
 where
     'inner: 'borrow,
-    T: JsonDeserialize<'borrow> + 'borrow,
+    T: JsonDeserialize<'inner, 'borrow> + 'borrow,
 {
     /// Gets a value from the object, returning an error if the key is missing.
     ///
@@ -1060,7 +1067,7 @@ where
 impl<'borrow, 'inner, T> JsonObjectExt<'borrow, 'inner, T> for JsonObject<'inner>
 where
     'inner: 'borrow,
-    T: JsonDeserialize<'borrow> + 'borrow,
+    T: JsonDeserialize<'inner, 'borrow> + 'borrow,
 {
     fn must_get(&'borrow self, key: &'static str) -> Result<T, MerdeJsonError> {
         T::json_deserialize(self.get(key)).map_err(|e| match e {
@@ -1226,7 +1233,7 @@ impl<'a> ToStatic<'a, bool> for bool {
 pub trait ToRustValue<'inner, 'borrow, T>
 where
     'inner: 'borrow,
-    T: JsonDeserialize<'borrow> + 'borrow,
+    T: JsonDeserialize<'inner, 'borrow> + 'borrow,
 {
     /// Flips the calling convention of [JsonDeserialize::json_deserialize] to turn a [JsonValue] into a Rust value.
     ///
@@ -1237,7 +1244,7 @@ where
 impl<'inner, 'borrow, T> ToRustValue<'inner, 'borrow, T> for JsonValue<'inner>
 where
     'inner: 'borrow,
-    T: JsonDeserialize<'borrow> + 'borrow,
+    T: JsonDeserialize<'inner, 'borrow> + 'borrow,
 {
     fn to_rust_value(&'borrow self) -> Result<T, MerdeJsonError> {
         JsonDeserialize::json_deserialize(Some(self))
@@ -1252,8 +1259,11 @@ where
 #[macro_export]
 macro_rules! impl_json_deserialize {
     ($struct_name:ident { $($field:ident),+ }) => {
-        impl<'borrow> $crate::JsonDeserialize<'borrow> for $struct_name<'borrow> {
-            fn json_deserialize<'inner: 'borrow>(
+        impl<'inner, 'borrow> $crate::JsonDeserialize<'inner, 'borrow> for $struct_name<'borrow>
+        where
+            'inner: 'borrow,
+        {
+            fn json_deserialize(
                 value: Option<&'borrow $crate::JsonValue<'inner>>,
             ) -> Result<Self, $crate::MerdeJsonError> {
                 #[allow(unused_imports)]
