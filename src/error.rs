@@ -38,7 +38,7 @@ pub enum JsonFieldType {
 pub enum MerdeJsonError {
     /// We expected a certain type but got a different one.
     ///
-    /// Note that the default implementation of [JsonDeserialize] have tolerances:
+    /// Note that the default implementations of [crate::JsonDeserialize] have tolerances:
     /// if we expect a `u32` but get a floating-point number, we'll round it.
     MismatchedType {
         /// The expected type.
@@ -71,7 +71,7 @@ pub enum MerdeJsonError {
     /// A field was missing (but we don't know its name)
     MissingValue,
 
-    /// While calling out to [FromStr::from_str] to build a [HashMap], we got an error.
+    /// While calling out to [FromStr::from_str](std::str::FromStr::from_str) to build a [HashMap](std::collections::HashMap), we got an error.
     InvalidKey,
 }
 
