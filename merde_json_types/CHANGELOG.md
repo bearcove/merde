@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.1](https://github.com/bearcove/merde_json/compare/merde_json_types-v2.1.0...merde_json_types-v2.1.1) - 2024-07-31
+
+### Other
+- Use public URL, hopefully works on crates too?
+- Add @2x asset
+- Add logo
+
 ## [2.1.0](https://github.com/bearcove/merde_json/compare/merde_json_types-v2.0.0...merde_json_types-v2.1.0) - 2024-07-31
 
 ### Added
