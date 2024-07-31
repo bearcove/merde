@@ -178,3 +178,81 @@ where
         ))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{from_str, JsonSerialize, ToRustValue};
+
+    use super::*;
+    use time::macros::{date, datetime, time};
+
+    #[test]
+    fn test_rfc3339_date_roundtrip() {
+        let original = Rfc3339(date!(2023 - 05 - 15));
+        let serialized = original.to_json_string();
+        let deserialized: Rfc3339<time::Date> =
+            from_str(&serialized).unwrap().to_rust_value().unwrap();
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn test_rfc3339_time_roundtrip() {
+        let original = Rfc3339(time!(14:30:00));
+        let serialized = original.to_json_string();
+        let deserialized: Rfc3339<time::Time> =
+            from_str(&serialized).unwrap().to_rust_value().unwrap();
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn test_rfc3339_offset_date_time_roundtrip() {
+        let original = Rfc3339(datetime!(2023-05-15 14:30:00 UTC));
+        let serialized = original.to_json_string();
+        let deserialized: Rfc3339<time::OffsetDateTime> =
+            from_str(&serialized).unwrap().to_rust_value().unwrap();
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn test_rfc3339_date_serialization() {
+        let date = Rfc3339(date!(2023 - 05 - 15));
+        let serialized = date.to_json_string();
+        assert_eq!(serialized, r#""2023-05-15""#);
+    }
+
+    #[test]
+    fn test_rfc3339_time_serialization() {
+        let time = Rfc3339(time!(14:30:00));
+        let serialized = time.to_json_string();
+        assert_eq!(serialized, r#""14:30:00""#);
+    }
+
+    #[test]
+    fn test_rfc3339_offset_date_time_serialization() {
+        let dt = Rfc3339(datetime!(2023-05-15 14:30:00 UTC));
+        let serialized = dt.to_json_string();
+        assert_eq!(serialized, r#""2023-05-15T14:30:00Z""#);
+    }
+
+    #[test]
+    fn test_rfc3339_date_deserialization() {
+        let json = r#""2023-05-15""#;
+        let deserialized: Rfc3339<time::Date> = from_str(json).unwrap().to_rust_value().unwrap();
+        assert_eq!(deserialized, Rfc3339(date!(2023 - 05 - 15)));
+    }
+
+    #[test]
+    fn test_rfc3339_time_deserialization() {
+        let json = r#""14:30:00""#;
+        let deserialized: Rfc3339<time::Time> = from_str(json).unwrap().to_rust_value().unwrap();
+        assert_eq!(deserialized, Rfc3339(time!(14:30:00)));
+    }
+
+    #[test]
+    fn test_rfc3339_offset_date_time_deserialization() {
+        let json = r#""2023-05-15T14:30:00Z""#;
+        let deserialized: Rfc3339<time::OffsetDateTime> =
+            from_str(json).unwrap().to_rust_value().unwrap();
+        assert_eq!(deserialized, Rfc3339(datetime!(2023-05-15 14:30:00 UTC)));
+    }
+}
