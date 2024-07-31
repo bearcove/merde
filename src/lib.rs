@@ -440,7 +440,7 @@ pub trait JsonDeserialize<'src> {
         'src: 'val;
 }
 
-impl<'src> JsonDeserialize<'src> for str {
+impl<'src, 'any> JsonDeserialize<'src> for &'any str {
     type Output<'val> = &'val str where 'src: 'val;
 
     fn json_deserialize<'val>(
@@ -484,7 +484,7 @@ impl<'any, 'src> JsonDeserialize<'src> for Cow<'any, str> {
 }
 
 impl<'src> JsonDeserialize<'src> for u8 {
-    type Output<'val> = u8;
+    type Output<'val> = u8 where 'src: 'val;
 
     fn json_deserialize<'val>(
         value: Option<&'val JsonValue<'src>>,
@@ -1227,7 +1227,9 @@ where
     fn must_get<'val>(
         &'val self,
         key: &'static str,
-    ) -> Result<<T as JsonDeserialize<'src>>::Output<'val>, MerdeJsonError>;
+    ) -> Result<<T as JsonDeserialize<'src>>::Output<'val>, MerdeJsonError>
+    where
+        'src: 'val;
 }
 
 impl<'src, T> JsonObjectExt<'src, T> for JsonObject<'src>
@@ -1482,7 +1484,9 @@ where
     /// Fallible, since the `JsonValue` might not match the structure we expect.
     fn to_rust_value<'val>(
         &'val self,
-    ) -> Result<<T as JsonDeserialize<'src>>::Output<'val>, MerdeJsonError>;
+    ) -> Result<<T as JsonDeserialize<'src>>::Output<'val>, MerdeJsonError>
+    where
+        'src: 'val;
 }
 
 impl<'src, T> ToRustValue<'src, T> for JsonValue<'src>
@@ -1491,7 +1495,10 @@ where
 {
     fn to_rust_value<'val>(
         &'val self,
-    ) -> Result<<T as JsonDeserialize<'src>>::Output<'val>, MerdeJsonError> {
+    ) -> Result<<T as JsonDeserialize<'src>>::Output<'val>, MerdeJsonError>
+    where
+        'src: 'val,
+    {
         JsonDeserialize::json_deserialize(Some(self))
     }
 }
@@ -1510,7 +1517,10 @@ macro_rules! impl_json_deserialize {
 
             fn json_deserialize<'val>(
                 value: Option<&'val $crate::JsonValue<'src>>,
-            ) -> Result<<Self as $crate::JsonDeserialize<'src>>::Output<'val>, $crate::MerdeJsonError> {
+            ) -> Result<<Self as $crate::JsonDeserialize<'src>>::Output<'val>, $crate::MerdeJsonError>
+            where
+                'src: 'val
+            {
                 #[allow(unused_imports)]
                 use $crate::{JsonObjectExt, JsonValueExt, MerdeJsonError, ToRustValue};
 
