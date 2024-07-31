@@ -427,25 +427,28 @@ use std::str::FromStr;
 ///
 /// A field of type `HashMap<K, V>` or `Vec<T>` is required! If you want to make it optional,
 /// wrap it in an `Option<T>` explicitly, e.g. `Option<HashMap<K, V>>` or `Option<Vec<T>>`.
-pub trait JsonDeserialize<'src> {
-    type Output<'val>
-    where
-        'src: 'val;
-
+pub trait JsonDeserialize<'a> {
     /// Destructures a JSON value into a Rust value
-    fn json_deserialize<'val>(
+    fn json_deserialize<'src, 'val>(
         value: Option<&'val JsonValue<'src>>,
-    ) -> Result<Self::Output<'val>, MerdeJsonError>
+    ) -> Result<Self, MerdeJsonError>
     where
-        'src: 'val;
+        Self: Sized,
+        'src: 'val,
+        'val: 'a,
+        'a: 'val;
 }
 
-impl<'src, 'any> JsonDeserialize<'src> for &'any str {
-    type Output<'val> = &'val str where 'src: 'val;
-
-    fn json_deserialize<'val>(
+impl<'a> JsonDeserialize<'a> for &'a str {
+    fn json_deserialize<'src, 'val>(
         value: Option<&'val JsonValue<'src>>,
-    ) -> Result<Self::Output<'val>, MerdeJsonError> {
+    ) -> Result<Self, MerdeJsonError>
+    where
+        Self: Sized,
+        'src: 'val,
+        'val: 'a,
+        'a: 'val,
+    {
         match value {
             Some(JsonValue::Str(s)) => match s {
                 Cow::Borrowed(s) => Ok(s),
