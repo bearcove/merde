@@ -1195,7 +1195,7 @@ pub fn from_slice(data: &[u8]) -> Result<JsonValue<'_>, MerdeJsonError> {
 }
 
 /// Deserialize an instance of type `T` from a string of JSON text.
-pub fn from_str<'src>(s: &'src str) -> Result<JsonValue<'src>, MerdeJsonError> {
+pub fn from_str(s: &str) -> Result<JsonValue<'_>, MerdeJsonError> {
     from_slice(s.as_bytes())
 }
 
