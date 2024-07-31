@@ -1,7 +1,6 @@
 [![license: MIT/Apache-2.0](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](LICENSE-MIT)
 [![crates.io](https://img.shields.io/crates/v/merde_json.svg)](https://crates.io/crates/merde_json)
 [![docs.rs](https://docs.rs/merde_json/badge.svg)](https://docs.rs/merde_json)
-[![cursed? mildly](https://img.shields.io/badge/cursed%3F-not%20really-b56f1b.svg)](https://github.com/bearcove/merde_json)
 
 # merde_json
 
@@ -9,16 +8,12 @@ Do you want to deal with JSON data? Are you not _that_ worried about the
 performance overhead? (ie. you're writing a backend in Rust, but if it was
 written in Node.js nobody would bat an eye).
 
-Are you tired of waiting for proc macros to compile, and dealing with super
-generic traits?
+Do you value short build times at the expense of some comfort?
 
-Do you not care about any formats other than JSON?
+Then head over to the crate documentations:
 
-Are you ready to give up the comforts of `#[serde(rename_all)]`, `#[serde(flatten)]`, etc.?
-
-Then the bag of compromises known as `merde_json` might just work for you!
-
-Head over to the [Rust docs](https://docs.rs/merde_json) to learn more.
+  * [merde_json](./merde_json/README.md)
+  * [merde_json_types](./merde_json_types/README.md)
 
 ## FAQ
 
