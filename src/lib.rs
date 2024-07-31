@@ -742,8 +742,6 @@ impl<'val, 'src2> JsonDeserialize<'val> for &'val JsonValue<'src2> {
     where
         Self: Sized,
         'src: 'val,
-        'src2: 'src,
-        'src: 'src2,
     {
         match value {
             Some(json_value) => Ok(json_value),
@@ -1487,8 +1485,6 @@ macro_rules! impl_json_deserialize {
             ) -> Result<Self, $crate::MerdeJsonError>
             where
                 'src: 'val,
-                'src_outer: 'src,
-                'src: 'src_outer,
             {
                 #[allow(unused_imports)]
                 use $crate::{JsonObjectExt, JsonValueExt, MerdeJsonError, ToRustValue};
