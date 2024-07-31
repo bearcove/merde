@@ -76,7 +76,7 @@ pub enum MerdeJsonError {
     /// While calling out to [FromStr::from_str](std::str::FromStr::from_str) to build a [HashMap](std::collections::HashMap), we got an error.
     InvalidKey,
 
-    /// While parsing a [time::Date] or [time::Time], we got an error.
+    /// While parsing a datetime, we got an error
     InvalidDateTimeValue,
 
     /// An I/O error occurred.
