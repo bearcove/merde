@@ -1189,14 +1189,41 @@ where
     }
 }
 
-/// Parses a JSON byte string into a [JsonValue].
-pub fn from_slice(data: &[u8]) -> Result<jiter::JsonValue<'_>, MerdeJsonError> {
+/// Deserialize an instance of type `T` from bytes of JSON text.
+pub fn from_slice(data: &[u8]) -> Result<JsonValue<'_>, MerdeJsonError> {
     Ok(jiter::JsonValue::parse(data, false)?)
 }
 
-/// Parses a JSON string into a [JsonValue].
-pub fn from_str(s: &str) -> Result<jiter::JsonValue<'_>, MerdeJsonError> {
+/// Deserialize an instance of type `T` from a string of JSON text.
+pub fn from_str<'src>(s: &'src str) -> Result<JsonValue<'src>, MerdeJsonError> {
     from_slice(s.as_bytes())
+}
+
+/// Interpret a `JsonValue` as an instance of type `T`.
+pub fn from_value<'src: 'val, 'val, T>(value: &'val JsonValue<'src>) -> Result<T, MerdeJsonError>
+where
+    T: JsonDeserialize<'src, 'val>,
+{
+    T::json_deserialize(Some(value))
+}
+
+/// Serialize the given data structure as a String of JSON.
+pub fn to_string<T: JsonSerialize>(value: &T) -> String {
+    value.to_json_string()
+}
+
+/// Serialize the given data structure as a JSON byte vector.
+pub fn to_vec<T: JsonSerialize>(value: &T) -> Vec<u8> {
+    value.to_json_bytes()
+}
+
+/// Serialize the given data structure as JSON into the I/O stream.
+pub fn to_writer<W, T>(mut writer: impl std::io::Write, value: &T) -> std::io::Result<()>
+where
+    T: JsonSerialize,
+{
+    let bytes = value.to_json_bytes();
+    writer.write_all(&bytes)
 }
 
 /// Allow turning a value into an "owned" variant, which can then be
