@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0](https://github.com/bearcove/merde_json/compare/merde_json_types-v2.0.0...merde_json_types-v2.1.0) - 2024-07-31
+
+### Added
+- Add From<T> for Rfc3339 wrapper
+
 ## [2.0.0](https://github.com/bearcove/merde_json/releases/tag/merde_json_types-v2.0.0) - 2024-07-31
 
 ### Added
