@@ -427,27 +427,19 @@ use std::str::FromStr;
 ///
 /// A field of type `HashMap<K, V>` or `Vec<T>` is required! If you want to make it optional,
 /// wrap it in an `Option<T>` explicitly, e.g. `Option<HashMap<K, V>>` or `Option<Vec<T>>`.
-pub trait JsonDeserialize<'a> {
+pub trait JsonDeserialize<'val> {
     /// Destructures a JSON value into a Rust value
-    fn json_deserialize<'src, 'val>(
-        value: Option<&'val JsonValue<'src>>,
-    ) -> Result<Self, MerdeJsonError>
+    fn json_deserialize<'src>(value: Option<&'val JsonValue<'src>>) -> Result<Self, MerdeJsonError>
     where
         Self: Sized,
-        'src: 'val,
-        'val: 'a,
-        'a: 'val;
+        'src: 'val;
 }
 
-impl<'a> JsonDeserialize<'a> for &'a str {
-    fn json_deserialize<'src, 'val>(
-        value: Option<&'val JsonValue<'src>>,
-    ) -> Result<Self, MerdeJsonError>
+impl<'val> JsonDeserialize<'val> for &'val str {
+    fn json_deserialize<'src>(value: Option<&'val JsonValue<'src>>) -> Result<Self, MerdeJsonError>
     where
         Self: Sized,
         'src: 'val,
-        'val: 'a,
-        'a: 'val,
     {
         match value {
             Some(JsonValue::Str(s)) => match s {
@@ -463,20 +455,14 @@ impl<'a> JsonDeserialize<'a> for &'a str {
     }
 }
 
-impl<'any, 'src> JsonDeserialize<'src> for Cow<'any, str> {
-    type Output<'val> = Cow<'val, str> where 'src: 'val;
-
-    fn json_deserialize<'val>(
-        value: Option<&'val JsonValue<'src>>,
-    ) -> Result<Self::Output<'val>, MerdeJsonError>
+impl<'val> JsonDeserialize<'val> for Cow<'val, str> {
+    fn json_deserialize<'src>(value: Option<&'val JsonValue<'src>>) -> Result<Self, MerdeJsonError>
     where
+        Self: Sized,
         'src: 'val,
     {
         match value {
-            Some(JsonValue::Str(s)) => match s {
-                Cow::Borrowed(s) => Ok(Cow::Borrowed(s)),
-                Cow::Owned(s) => Ok(Cow::Borrowed(s)),
-            },
+            Some(JsonValue::Str(s)) => Ok(s.clone()),
             Some(v) => Err(MerdeJsonError::MismatchedType {
                 expected: JsonFieldType::String,
                 found: v.into(),
@@ -486,64 +472,17 @@ impl<'any, 'src> JsonDeserialize<'src> for Cow<'any, str> {
     }
 }
 
-impl<'src> JsonDeserialize<'src> for u8 {
-    type Output<'val> = u8 where 'src: 'val;
-
-    fn json_deserialize<'val>(
-        value: Option<&'val JsonValue<'src>>,
-    ) -> Result<Self::Output<'val>, MerdeJsonError>
+impl<'val> JsonDeserialize<'val> for u8 {
+    fn json_deserialize<'src>(value: Option<&'val JsonValue<'src>>) -> Result<Self, MerdeJsonError>
     where
-        'src: 'val,
-    {
-        u64::json_deserialize(value)?
-            .try_into()
-            .map_err(|_| MerdeJsonError::OutOfRange)
-    }
-}
-
-impl<'src> JsonDeserialize<'src> for u16 {
-    type Output<'val> = u16 where 'src: 'val;
-
-    fn json_deserialize<'val>(
-        value: Option<&'val JsonValue<'src>>,
-    ) -> Result<Self::Output<'val>, MerdeJsonError>
-    where
-        'src: 'val,
-    {
-        u64::json_deserialize(value)?
-            .try_into()
-            .map_err(|_| MerdeJsonError::OutOfRange)
-    }
-}
-
-impl<'src> JsonDeserialize<'src> for u32 {
-    type Output<'val> = u32 where 'src: 'val;
-
-    fn json_deserialize<'val>(
-        value: Option<&'val JsonValue<'src>>,
-    ) -> Result<Self::Output<'val>, MerdeJsonError>
-    where
-        'src: 'val,
-    {
-        u64::json_deserialize(value)?
-            .try_into()
-            .map_err(|_| MerdeJsonError::OutOfRange)
-    }
-}
-
-impl<'src> JsonDeserialize<'src> for u64 {
-    type Output<'val> = u64 where 'src: 'val;
-
-    fn json_deserialize<'val>(
-        value: Option<&'val JsonValue<'src>>,
-    ) -> Result<Self::Output<'val>, MerdeJsonError>
-    where
+        Self: Sized,
         'src: 'val,
     {
         match value {
             Some(JsonValue::Int(n)) => (*n).try_into().map_err(|_| MerdeJsonError::OutOfRange),
-            Some(JsonValue::Float(f)) => Ok((*f).round() as u64),
-            Some(JsonValue::BigInt(bi)) => bi.try_into().map_err(|_| MerdeJsonError::OutOfRange),
+            Some(JsonValue::Float(f)) => (*f as u64)
+                .try_into()
+                .map_err(|_| MerdeJsonError::OutOfRange),
             Some(v) => Err(MerdeJsonError::MismatchedType {
                 expected: JsonFieldType::Int,
                 found: v.into(),
@@ -553,64 +492,17 @@ impl<'src> JsonDeserialize<'src> for u64 {
     }
 }
 
-impl<'src> JsonDeserialize<'src> for i8 {
-    type Output<'val> = i8 where 'src: 'val;
-
-    fn json_deserialize<'val>(
-        value: Option<&'val JsonValue<'src>>,
-    ) -> Result<Self::Output<'val>, MerdeJsonError>
+impl<'val> JsonDeserialize<'val> for u16 {
+    fn json_deserialize<'src>(value: Option<&'val JsonValue<'src>>) -> Result<Self, MerdeJsonError>
     where
-        'src: 'val,
-    {
-        i64::json_deserialize(value)?
-            .try_into()
-            .map_err(|_| MerdeJsonError::OutOfRange)
-    }
-}
-
-impl<'src> JsonDeserialize<'src> for i16 {
-    type Output<'val> = i16 where 'src: 'val;
-
-    fn json_deserialize<'val>(
-        value: Option<&'val JsonValue<'src>>,
-    ) -> Result<Self::Output<'val>, MerdeJsonError>
-    where
-        'src: 'val,
-    {
-        i64::json_deserialize(value)?
-            .try_into()
-            .map_err(|_| MerdeJsonError::OutOfRange)
-    }
-}
-
-impl<'src> JsonDeserialize<'src> for i32 {
-    type Output<'val> = i32 where 'src: 'val;
-
-    fn json_deserialize<'val>(
-        value: Option<&'val JsonValue<'src>>,
-    ) -> Result<Self::Output<'val>, MerdeJsonError>
-    where
-        'src: 'val,
-    {
-        i64::json_deserialize(value)?
-            .try_into()
-            .map_err(|_| MerdeJsonError::OutOfRange)
-    }
-}
-
-impl<'src> JsonDeserialize<'src> for i64 {
-    type Output<'val> = i64 where 'src: 'val;
-
-    fn json_deserialize<'val>(
-        value: Option<&'val JsonValue<'src>>,
-    ) -> Result<Self::Output<'val>, MerdeJsonError>
-    where
+        Self: Sized,
         'src: 'val,
     {
         match value {
-            Some(JsonValue::Int(n)) => Ok(*n),
-            Some(JsonValue::Float(f)) => Ok((*f).round() as i64),
-            Some(JsonValue::BigInt(bi)) => bi.try_into().map_err(|_| MerdeJsonError::OutOfRange),
+            Some(JsonValue::Int(n)) => (*n).try_into().map_err(|_| MerdeJsonError::OutOfRange),
+            Some(JsonValue::Float(f)) => (*f as u64)
+                .try_into()
+                .map_err(|_| MerdeJsonError::OutOfRange),
             Some(v) => Err(MerdeJsonError::MismatchedType {
                 expected: JsonFieldType::Int,
                 found: v.into(),
@@ -620,13 +512,10 @@ impl<'src> JsonDeserialize<'src> for i64 {
     }
 }
 
-impl<'src> JsonDeserialize<'src> for usize {
-    type Output<'val> = usize where 'src: 'val;
-
-    fn json_deserialize<'val>(
-        value: Option<&'val JsonValue<'src>>,
-    ) -> Result<Self::Output<'val>, MerdeJsonError>
+impl<'val> JsonDeserialize<'val> for u32 {
+    fn json_deserialize<'src>(value: Option<&'val JsonValue<'src>>) -> Result<Self, MerdeJsonError>
     where
+        Self: Sized,
         'src: 'val,
     {
         match value {
@@ -643,13 +532,128 @@ impl<'src> JsonDeserialize<'src> for usize {
     }
 }
 
-impl<'src> JsonDeserialize<'src> for bool {
-    type Output<'val> = bool where 'src: 'val;
-
-    fn json_deserialize<'val>(
-        value: Option<&'val JsonValue<'src>>,
-    ) -> Result<Self::Output<'val>, MerdeJsonError>
+impl<'val> JsonDeserialize<'val> for u64 {
+    fn json_deserialize<'src>(value: Option<&'val JsonValue<'src>>) -> Result<Self, MerdeJsonError>
     where
+        Self: Sized,
+        'src: 'val,
+    {
+        match value {
+            Some(JsonValue::Int(n)) => (*n).try_into().map_err(|_| MerdeJsonError::OutOfRange),
+            Some(JsonValue::Float(f)) => Ok((*f).round() as u64),
+            Some(JsonValue::BigInt(bi)) => bi.try_into().map_err(|_| MerdeJsonError::OutOfRange),
+            Some(v) => Err(MerdeJsonError::MismatchedType {
+                expected: JsonFieldType::Int,
+                found: v.into(),
+            }),
+            None => Err(MerdeJsonError::MissingValue),
+        }
+    }
+}
+
+impl<'val> JsonDeserialize<'val> for i8 {
+    fn json_deserialize<'src>(value: Option<&'val JsonValue<'src>>) -> Result<Self, MerdeJsonError>
+    where
+        Self: Sized,
+        'src: 'val,
+    {
+        match value {
+            Some(JsonValue::Int(n)) => (*n).try_into().map_err(|_| MerdeJsonError::OutOfRange),
+            Some(JsonValue::Float(f)) => (*f as i64)
+                .try_into()
+                .map_err(|_| MerdeJsonError::OutOfRange),
+            Some(v) => Err(MerdeJsonError::MismatchedType {
+                expected: JsonFieldType::Int,
+                found: v.into(),
+            }),
+            None => Err(MerdeJsonError::MissingValue),
+        }
+    }
+}
+
+impl<'val> JsonDeserialize<'val> for i16 {
+    fn json_deserialize<'src>(value: Option<&'val JsonValue<'src>>) -> Result<Self, MerdeJsonError>
+    where
+        Self: Sized,
+        'src: 'val,
+    {
+        match value {
+            Some(JsonValue::Int(n)) => (*n).try_into().map_err(|_| MerdeJsonError::OutOfRange),
+            Some(JsonValue::Float(f)) => (*f as i64)
+                .try_into()
+                .map_err(|_| MerdeJsonError::OutOfRange),
+            Some(v) => Err(MerdeJsonError::MismatchedType {
+                expected: JsonFieldType::Int,
+                found: v.into(),
+            }),
+            None => Err(MerdeJsonError::MissingValue),
+        }
+    }
+}
+
+impl<'val> JsonDeserialize<'val> for i32 {
+    fn json_deserialize<'src>(value: Option<&'val JsonValue<'src>>) -> Result<Self, MerdeJsonError>
+    where
+        Self: Sized,
+        'src: 'val,
+    {
+        match value {
+            Some(JsonValue::Int(n)) => (*n).try_into().map_err(|_| MerdeJsonError::OutOfRange),
+            Some(JsonValue::Float(f)) => (*f as i64)
+                .try_into()
+                .map_err(|_| MerdeJsonError::OutOfRange),
+            Some(v) => Err(MerdeJsonError::MismatchedType {
+                expected: JsonFieldType::Int,
+                found: v.into(),
+            }),
+            None => Err(MerdeJsonError::MissingValue),
+        }
+    }
+}
+
+impl<'val> JsonDeserialize<'val> for i64 {
+    fn json_deserialize<'src>(value: Option<&'val JsonValue<'src>>) -> Result<Self, MerdeJsonError>
+    where
+        Self: Sized,
+        'src: 'val,
+    {
+        match value {
+            Some(JsonValue::Int(n)) => Ok(*n),
+            Some(JsonValue::Float(f)) => Ok((*f).round() as i64),
+            Some(JsonValue::BigInt(bi)) => bi.try_into().map_err(|_| MerdeJsonError::OutOfRange),
+            Some(v) => Err(MerdeJsonError::MismatchedType {
+                expected: JsonFieldType::Int,
+                found: v.into(),
+            }),
+            None => Err(MerdeJsonError::MissingValue),
+        }
+    }
+}
+
+impl<'val> JsonDeserialize<'val> for usize {
+    fn json_deserialize<'src>(value: Option<&'val JsonValue<'src>>) -> Result<Self, MerdeJsonError>
+    where
+        Self: Sized,
+        'src: 'val,
+    {
+        match value {
+            Some(JsonValue::Int(n)) => (*n).try_into().map_err(|_| MerdeJsonError::OutOfRange),
+            Some(JsonValue::Float(f)) => ((*f).round() as i64)
+                .try_into()
+                .map_err(|_| MerdeJsonError::OutOfRange),
+            Some(v) => Err(MerdeJsonError::MismatchedType {
+                expected: JsonFieldType::Int,
+                found: v.into(),
+            }),
+            None => Err(MerdeJsonError::MissingValue),
+        }
+    }
+}
+
+impl<'val> JsonDeserialize<'val> for bool {
+    fn json_deserialize<'src>(value: Option<&'val JsonValue<'src>>) -> Result<Self, MerdeJsonError>
+    where
+        Self: Sized,
         'src: 'val,
     {
         match value {
@@ -663,16 +667,13 @@ impl<'src> JsonDeserialize<'src> for bool {
     }
 }
 
-impl<'src, T> JsonDeserialize<'src> for Option<T>
+impl<'val, T> JsonDeserialize<'val> for Option<T>
 where
-    T: JsonDeserialize<'src>,
+    T: JsonDeserialize<'val>,
 {
-    type Output<'val> = Option<T::Output<'val>> where 'src: 'val;
-
-    fn json_deserialize<'val>(
-        value: Option<&'val JsonValue<'src>>,
-    ) -> Result<Self::Output<'val>, MerdeJsonError>
+    fn json_deserialize<'src>(value: Option<&'val JsonValue<'src>>) -> Result<Self, MerdeJsonError>
     where
+        Self: Sized,
         'src: 'val,
     {
         match value {
@@ -683,16 +684,13 @@ where
     }
 }
 
-impl<'src, T> JsonDeserialize<'src> for Vec<T>
+impl<'val, T> JsonDeserialize<'val> for Vec<T>
 where
-    T: JsonDeserialize<'src>,
+    T: JsonDeserialize<'val>,
 {
-    type Output<'val> = Vec<T::Output<'val>> where 'src: 'val;
-
-    fn json_deserialize<'val>(
-        value: Option<&'val JsonValue<'src>>,
-    ) -> Result<Self::Output<'val>, MerdeJsonError>
+    fn json_deserialize<'src>(value: Option<&'val JsonValue<'src>>) -> Result<Self, MerdeJsonError>
     where
+        Self: Sized,
         'src: 'val,
     {
         match value {
@@ -709,18 +707,15 @@ where
     }
 }
 
-impl<'src, K, V> JsonDeserialize<'src> for HashMap<K, V>
+impl<'val, K, V> JsonDeserialize<'val> for HashMap<K, V>
 where
     K: FromStr + Eq + Hash,
-    V: JsonDeserialize<'src>,
+    V: JsonDeserialize<'val>,
     K::Err: std::fmt::Debug,
 {
-    type Output<'val> = HashMap<K, V::Output<'val>> where 'src: 'val;
-
-    fn json_deserialize<'val>(
-        value: Option<&'val JsonValue<'src>>,
-    ) -> Result<Self::Output<'val>, MerdeJsonError>
+    fn json_deserialize<'src>(value: Option<&'val JsonValue<'src>>) -> Result<Self, MerdeJsonError>
     where
+        Self: Sized,
         'src: 'val,
     {
         match value {
@@ -742,14 +737,13 @@ where
     }
 }
 
-impl<'src> JsonDeserialize<'src> for &'_ JsonValue<'src> {
-    type Output<'val> = &'val JsonValue<'src> where 'src: 'val;
-
-    fn json_deserialize<'val>(
-        value: Option<&'val JsonValue<'src>>,
-    ) -> Result<Self::Output<'val>, MerdeJsonError>
+impl<'val, 'src2> JsonDeserialize<'val> for &'val JsonValue<'src2> {
+    fn json_deserialize<'src>(value: Option<&'val JsonValue<'src>>) -> Result<Self, MerdeJsonError>
     where
+        Self: Sized,
         'src: 'val,
+        'src2: 'src,
+        'src: 'src2,
     {
         match value {
             Some(json_value) => Ok(json_value),
@@ -758,14 +752,13 @@ impl<'src> JsonDeserialize<'src> for &'_ JsonValue<'src> {
     }
 }
 
-impl<'src> JsonDeserialize<'src> for &'_ JsonArray<'src> {
-    type Output<'val> = &'val JsonArray<'src> where 'src: 'val;
-
-    fn json_deserialize<'val>(
-        value: Option<&'val JsonValue<'src>>,
-    ) -> Result<Self::Output<'val>, MerdeJsonError>
+impl<'val, 'src2> JsonDeserialize<'val> for &'val JsonArray<'src2> {
+    fn json_deserialize<'src>(value: Option<&'val JsonValue<'src>>) -> Result<Self, MerdeJsonError>
     where
+        Self: Sized,
         'src: 'val,
+        'src2: 'src,
+        'src: 'src2,
     {
         match value {
             Some(JsonValue::Array(arr)) => Ok(arr),
@@ -778,14 +771,13 @@ impl<'src> JsonDeserialize<'src> for &'_ JsonArray<'src> {
     }
 }
 
-impl<'src> JsonDeserialize<'src> for &'_ JsonObject<'src> {
-    type Output<'val> = &'val JsonObject<'src> where 'src: 'val;
-
-    fn json_deserialize<'val>(
-        value: Option<&'val JsonValue<'src>>,
-    ) -> Result<Self::Output<'val>, MerdeJsonError>
+impl<'val, 'src2> JsonDeserialize<'val> for &'val JsonObject<'src2> {
+    fn json_deserialize<'src>(value: Option<&'val JsonValue<'src>>) -> Result<Self, MerdeJsonError>
     where
+        Self: Sized,
         'src: 'val,
+        'src2: 'src,
+        'src: 'src2,
     {
         match value {
             Some(JsonValue::Object(obj)) => Ok(obj),
@@ -1217,9 +1209,9 @@ impl<V: JsonSerialize> JsonSerialize for &[(&str, V)] {
 mod time;
 
 /// Extension trait to provide `must_get` on `JsonObject<'_>`
-pub trait JsonObjectExt<'src, T>
+pub trait JsonObjectExt<'val, T>
 where
-    T: JsonDeserialize<'src>,
+    T: JsonDeserialize<'val>,
 {
     /// Gets a value from the object, returning an error if the key is missing.
     ///
@@ -1227,25 +1219,15 @@ where
     ///
     /// It does not by itself throw an error if `self.get()` returns `None`, to allow
     /// for optional fields (via the [JsonDeserialize] implementation on the [Option] type).
-    fn must_get<'val>(
-        &'val self,
-        key: &'static str,
-    ) -> Result<<T as JsonDeserialize<'src>>::Output<'val>, MerdeJsonError>
-    where
-        'src: 'val;
+    fn must_get(&'val self, key: &'static str) -> Result<T, MerdeJsonError>;
 }
 
-impl<'src, T> JsonObjectExt<'src, T> for JsonObject<'src>
+impl<'src, 'val, T> JsonObjectExt<'val, T> for JsonObject<'src>
 where
-    T: JsonDeserialize<'src>,
+    T: JsonDeserialize<'val>,
+    'src: 'val,
 {
-    fn must_get<'val>(
-        &'val self,
-        key: &'static str,
-    ) -> Result<<T as JsonDeserialize<'src>>::Output<'val>, MerdeJsonError>
-    where
-        'src: 'val,
-    {
+    fn must_get(&'val self, key: &'static str) -> Result<T, MerdeJsonError> {
         T::json_deserialize(self.get(key)).map_err(|e| match e {
             MerdeJsonError::MissingValue => MerdeJsonError::MissingProperty(key),
             _ => e,
@@ -1254,9 +1236,9 @@ where
 }
 
 /// Extension trait to provide `must_get` on `JsonArray<'_>`
-pub trait JsonArrayExt<'src, T>
+pub trait JsonArrayExt<'val, T>
 where
-    T: JsonDeserialize<'src>,
+    T: JsonDeserialize<'val>,
 {
     /// Gets a value from the array, returning an error if the index is out of bounds.
     ///
@@ -1264,20 +1246,15 @@ where
     ///
     /// It does not by itself throw an error if `self.get()` returns `None`, to allow
     /// for optional fields (via the [JsonDeserialize] implementation on the [Option] type).
-    fn must_get<'val>(
-        &'val self,
-        index: usize,
-    ) -> Result<<T as JsonDeserialize<'src>>::Output<'val>, MerdeJsonError>;
+    fn must_get(&'val self, index: usize) -> Result<T, MerdeJsonError>;
 }
 
-impl<'src, T> JsonArrayExt<'src, T> for JsonArray<'src>
+impl<'src, 'val, T> JsonArrayExt<'val, T> for JsonArray<'src>
 where
-    T: JsonDeserialize<'src>,
+    T: JsonDeserialize<'val>,
+    'src: 'val,
 {
-    fn must_get<'val>(
-        &'val self,
-        index: usize,
-    ) -> Result<<T as JsonDeserialize<'src>>::Output<'val>, MerdeJsonError> {
+    fn must_get(&'val self, index: usize) -> Result<T, MerdeJsonError> {
         T::json_deserialize(self.get(index)).map_err(|e| match e {
             MerdeJsonError::MissingValue => MerdeJsonError::IndexOutOfBounds {
                 index,
@@ -1299,11 +1276,9 @@ pub fn from_str(s: &str) -> Result<JsonValue<'_>, MerdeJsonError> {
 }
 
 /// Interpret a `JsonValue` as an instance of type `T`.
-pub fn from_value<'src, 'val, T>(
-    value: &'val JsonValue<'src>,
-) -> Result<<T as JsonDeserialize<'src>>::Output<'val>, MerdeJsonError>
+pub fn from_value<'src, T>(value: &JsonValue<'src>) -> Result<T, MerdeJsonError>
 where
-    T: JsonDeserialize<'src>,
+    T: for<'val> JsonDeserialize<'val>,
 {
     T::json_deserialize(Some(value))
 }
@@ -1478,30 +1453,21 @@ impl<T: ToStatic> ToStatic for Option<T> {
 /// # Ok(())
 /// # }
 /// ```
-pub trait ToRustValue<'src, T>
+pub trait ToRustValue<T>
 where
-    T: JsonDeserialize<'src>,
+    T: for<'val> JsonDeserialize<'val>,
 {
     /// Flips the calling convention of [JsonDeserialize::json_deserialize] to turn a [JsonValue] into a Rust value.
     ///
     /// Fallible, since the `JsonValue` might not match the structure we expect.
-    fn to_rust_value<'val>(
-        &'val self,
-    ) -> Result<<T as JsonDeserialize<'src>>::Output<'val>, MerdeJsonError>
-    where
-        'src: 'val;
+    fn to_rust_value<'val>(&'val self) -> Result<T, MerdeJsonError>;
 }
 
-impl<'src, T> ToRustValue<'src, T> for JsonValue<'src>
+impl<'src, T> ToRustValue<T> for JsonValue<'src>
 where
-    T: JsonDeserialize<'src>,
+    T: for<'val> JsonDeserialize<'val>,
 {
-    fn to_rust_value<'val>(
-        &'val self,
-    ) -> Result<<T as JsonDeserialize<'src>>::Output<'val>, MerdeJsonError>
-    where
-        'src: 'val,
-    {
+    fn to_rust_value<'val>(&'val self) -> Result<T, MerdeJsonError> {
         JsonDeserialize::json_deserialize(Some(self))
     }
 }
@@ -1514,15 +1480,15 @@ where
 #[macro_export]
 macro_rules! impl_json_deserialize {
     ($struct_name:ident { $($field:ident),+ }) => {
-        impl<'src, 'any> $crate::JsonDeserialize<'src> for $struct_name<'src, 'any>
+        impl<'src_outer, 'val> $crate::JsonDeserialize<'val> for $struct_name<'src_outer, 'val>
         {
-            type Output<'val> = $struct_name<'src, 'val> where 'src: 'val;
-
-            fn json_deserialize<'val>(
+            fn json_deserialize<'src>(
                 value: Option<&'val $crate::JsonValue<'src>>,
-            ) -> Result<<Self as $crate::JsonDeserialize<'src>>::Output<'val>, $crate::MerdeJsonError>
+            ) -> Result<Self, $crate::MerdeJsonError>
             where
-                'src: 'val
+                'src: 'val,
+                'src_outer: 'src,
+                'src: 'src_outer,
             {
                 #[allow(unused_imports)]
                 use $crate::{JsonObjectExt, JsonValueExt, MerdeJsonError, ToRustValue};
