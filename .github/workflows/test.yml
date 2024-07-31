@@ -15,3 +15,13 @@ jobs:
       - uses: actions/checkout@v4
       - name: Run tests (including doctests)
         run: cargo test -F full
+      - name: Check a few configurations
+        run: |
+          pushd merde_json_types
+          cargo check -F time-types
+          cargo check -F time-serialize
+          cargo check -F time-deserialize
+          cargo check -F merde_json,time-types
+          cargo check -F merde_json,time-serialize
+          cargo check -F merde_json,time-deserialize
+          popd

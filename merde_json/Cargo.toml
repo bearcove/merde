@@ -1,0 +1,22 @@
+[package]
+name = "merde_json"
+version = "2.0.0"
+edition = "2021"
+authors = ["Amos Wenger <amos@bearcove.net>"]
+description = "Serialize and deserialize JSON with jiter and declarative macros"
+license = "Apache-2.0 OR MIT"
+readme = "README.md"
+repository = "https://github.com/bearcove/merde_json"
+keywords = ["json", "serialization", "deserialization", "jiter"]
+categories = ["encoding", "parser-implementations"]
+
+[dependencies]
+jiter = "0.5.0"
+
+[dev-dependencies]
+serde = { version = "1.0.204", features = ["derive"] }
+serde_json = "1.0.121"
+
+[features]
+default = []
+full = []
