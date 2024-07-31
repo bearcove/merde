@@ -2,6 +2,10 @@
 [![crates.io](https://img.shields.io/crates/v/merde_json_types.svg)](https://crates.io/crates/merde_json_types)
 [![docs.rs](https://docs.rs/merde_json_types/badge.svg)](https://docs.rs/merde_json_types)
 
+![The merde_json logo: a glorious poop floating above a pair of hands](assets/merde-json-banner.png)
+
+_Logo by [Misiasart](https://www.deviantart.com/misiasart)_
+
 # merde_json_types
 
 `merde_json_types` is a companion crate to [merde_json](https://crates.io/crates/merde_json),
