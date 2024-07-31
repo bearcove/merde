@@ -1550,33 +1550,32 @@ impl std::fmt::Debug for Fantome<'_, '_> {
     }
 }
 
-// /// Allows deserializing and interacting with a borrowed JSON value all
-// /// in one go.
-// pub trait WithDeserialized<'src> {
-//     /// Parses as JSON, deserializes as a Rust type `T`, then
-//     /// calls `f` with the deserialized value.
-//     fn with_deserialized<'val, T, R>(
-//         &'src self,
-//         f: impl FnOnce(T) -> R,
-//     ) -> Result<R, MerdeJsonError>
-//     where
-//         T: JsonDeserialize<'src, 'val> + 'val,
-//         'src: 'val;
-// }
+/// Allows deserializing and interacting with a borrowed JSON value all
+/// in one go.
+pub trait WithDeserialized<'src, 'val, T>
+where
+    Self: 'src,
+    T: JsonDeserialize<'src, 'val> + 'val,
+    'src: 'val,
+{
+    /// Parses as JSON, deserializes as a Rust type `T`, then
+    /// calls `f` with the deserialized value.
+    fn with_deserialized(&'val self, f: impl FnOnce(&T)) -> Result<(), MerdeJsonError>;
+}
 
-// impl<'src> WithDeserialized<'src> for &'src str {
-//     fn with_deserialized<'val, T, R>(
-//         &'src self,
-//         f: impl FnOnce(T) -> R,
-//     ) -> Result<R, MerdeJsonError>
-//     where
-//         T: JsonDeserialize<'src, 'val> + 'val,
-//         'src: 'val,
-//     {
-//         let value = from_str(self)?;
-//         JsonDeserialize::json_deserialize(Some(&value)).map(f)
-//     }
-// }
+impl<'src, 'val, T> WithDeserialized<'src, 'val, T> for &'src str
+where
+    Self: 'src,
+    T: JsonDeserialize<'src, 'val> + 'val,
+    'src: 'val,
+{
+    fn with_deserialized(&'val self, f: impl FnOnce(&T)) -> Result<(), MerdeJsonError> {
+        let json_value = from_str(self)?;
+        let deserialized: T = json_value.to_rust_value()?;
+        let _ = f(&deserialized);
+        Ok(())
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -1685,35 +1684,35 @@ mod tests {
         assert_eq!(original, deserialized);
     }
 
-    // #[test]
-    // fn test_with_deserialized() {
-    //     #[derive(Debug, PartialEq)]
-    //     struct TestStruct<'src, 'val> {
-    //         _boo: Fantome<'src, 'val>,
-    //         name: Cow<'val, str>,
-    //         age: u32,
-    //     }
+    #[test]
+    fn test_with_deserialized() {
+        #[derive(Debug, PartialEq)]
+        struct TestStruct<'src, 'val> {
+            _boo: Fantome<'src, 'val>,
+            name: Cow<'val, str>,
+            age: u32,
+        }
 
-    //     derive! {
-    //         impl(JsonDeserialize) for TestStruct {
-    //             name,
-    //             age
-    //         }
-    //     }
+        derive! {
+            impl(JsonDeserialize) for TestStruct {
+                name,
+                age
+            }
+        }
 
-    //     let json = r#"{"name": "John Doe", "age": 30}"#;
+        let json = r#"{"name": "John Doe", "age": 30}"#;
 
-    //     let result = json.with_deserialized(|ts: TestStruct| {
-    //         assert_eq!(ts.name, "John Doe");
-    //         assert_eq!(ts.age, 30);
-    //         "processed"
-    //     });
+        let result = json.with_deserialized(|ts: TestStruct| {
+            assert_eq!(ts.name, "John Doe");
+            assert_eq!(ts.age, 30);
+            "processed"
+        });
 
-    //     assert_eq!(result.unwrap(), "processed");
+        assert_eq!(result.unwrap(), "processed");
 
-    //     // Test with invalid JSON
-    //     let invalid_json = r#"{"name": "John Doe", "age": "thirty"}"#;
-    //     let result: Result<(), _> = invalid_json.with_deserialized(|_: TestStruct| ());
-    //     assert!(result.is_err());
-    // }
+        // Test with invalid JSON
+        let invalid_json = r#"{"name": "John Doe", "age": "thirty"}"#;
+        let result: Result<(), _> = invalid_json.with_deserialized(|_: TestStruct| ());
+        assert!(result.is_err());
+    }
 }
