@@ -5,7 +5,7 @@
 use jiter::JsonValue;
 
 /// A content-less variant of the [JsonValue] enum, used for reporting errors, see [MerdeJsonError::MismatchedType].
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum JsonFieldType {
     /// The JSON value is `null`.
@@ -78,11 +78,20 @@ pub enum MerdeJsonError {
 
     /// While parsing a [time::Date] or [time::Time], we got an error.
     InvalidDateTimeValue,
+
+    /// An I/O error occurred.
+    Io(std::io::Error),
 }
 
 impl From<jiter::JsonError> for MerdeJsonError {
     fn from(e: jiter::JsonError) -> Self {
         MerdeJsonError::JsonError(e)
+    }
+}
+
+impl From<std::io::Error> for MerdeJsonError {
+    fn from(e: std::io::Error) -> Self {
+        MerdeJsonError::Io(e)
     }
 }
 
@@ -119,6 +128,9 @@ impl std::fmt::Display for MerdeJsonError {
             }
             MerdeJsonError::InvalidDateTimeValue => {
                 write!(f, "Invalid date/time value")
+            }
+            MerdeJsonError::Io(e) => {
+                write!(f, "I/O error: {}", e)
             }
         }
     }
