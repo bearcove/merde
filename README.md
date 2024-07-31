@@ -23,9 +23,10 @@ Then head over to the crate documentations:
 
 ### What's with the name?
 
-Tis true "merde" means "poop" in French, but it's also one letter away from "serde".
+It's pronounced "murr-day", because we're merializing and demerializing things.
 
-Just pretending we're merializing and demerializing things.
+It's also someone you may hear a French person yell when they're sick of waiting
+for things to build, just before "j'en ai marre!!"
 
 ### Can we do YAML/TOML/etc.?
 
@@ -34,7 +35,7 @@ Just pretending we're merializing and demerializing things.
 `merde_json` has JSON in the name specifically because it's not interested in solving
 other formats. Use serde for that, or whatever crate is backing the `serde_FORMAT` you're interested in.
 
-Currently, `merde_json` depends on `jiter::JsonValue` and moving away from that would be
+Currently, `merde_json` depends on [jiter::JsonValue](https://docs.rs/jiter/latest/jiter/enum.JsonValue.html) and moving away from that would be
 a whole headache.
 
 ### Small?? That's a lot of deps still
