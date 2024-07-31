@@ -865,6 +865,13 @@ impl JsonSerializer {
     pub fn into_inner(self) -> Vec<u8> {
         self.buffer
     }
+
+    /// Mutably borrow the internal buffer (as a `Vec<u8>` so it's growable).
+    ///
+    /// This is particularly useful when you want to use an interface like format_into that expects a dyn Writer?
+    pub fn as_mut_vec(&mut self) -> &mut Vec<u8> {
+        &mut self.buffer
+    }
 }
 
 /// Allows writing JSON objects
@@ -1120,6 +1127,8 @@ impl<V: JsonSerialize> JsonSerialize for &[(&str, V)] {
         }
     }
 }
+
+mod time;
 
 /// Extension trait to provide `must_get` on `JsonObject<'_>`
 pub trait JsonObjectExt<'src, 'val, T>
@@ -1496,7 +1505,13 @@ macro_rules! impl_trait {
     };
 }
 
-/// A type you can use instead of `PhantomData`
+/// A type you can use instead of `PhantomData` for convenience.
+///
+/// Note: if you're conditionally deriving `JsonSerialize` and `JsonDeserialize` for a type,
+/// and you don't want the `merde_json` dependency  when it's not used, you can use
+/// `PhantomData<(&'src (), &'val ())>` instead — the derive macros will be happy with that.
+///
+/// This type is really just a convenience so you have less to type.
 #[derive(Default, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Fantome<'src, 'val> {
     _boo: std::marker::PhantomData<(&'src (), &'val ())>,
