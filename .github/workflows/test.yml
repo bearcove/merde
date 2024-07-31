@@ -14,4 +14,4 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Run tests (including doctests)
-        run: cargo test
+        run: cargo test --all-features
