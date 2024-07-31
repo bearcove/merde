@@ -134,6 +134,13 @@ dependencies = [
  "jiter",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "merde_json_types"
+version = "2.0.0"
+dependencies = [
+ "merde_json",
  "time",
 ]
 
