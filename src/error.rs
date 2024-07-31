@@ -6,6 +6,7 @@ use jiter::JsonValue;
 
 /// A content-less variant of the [JsonValue] enum, used for reporting errors, see [MerdeJsonError::MismatchedType].
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum JsonFieldType {
     /// The JSON value is `null`.
     Null,
@@ -35,6 +36,7 @@ pub enum JsonFieldType {
 /// A grab-bag of errors that can occur when deserializing JSON.
 /// This isn't super clean, not my proudest moment.
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum MerdeJsonError {
     /// We expected a certain type but got a different one.
     ///
