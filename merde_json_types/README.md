@@ -2,11 +2,11 @@
 [![crates.io](https://img.shields.io/crates/v/merde_json_types.svg)](https://crates.io/crates/merde_json_types)
 [![docs.rs](https://docs.rs/merde_json_types/badge.svg)](https://docs.rs/merde_json_types)
 
-![The merde_json logo: a glorious poop floating above a pair of hands](assets/merde-json-banner@2x.png)
+# merde_json_types
+
+![The merde_json logo: a glorious poop floating above a pair of hands](https://github.com/user-attachments/assets/763d60e0-5101-48af-bc72-f96f516a5d0f)
 
 _Logo by [Misiasart](https://www.deviantart.com/misiasart)_
-
-# merde_json_types
 
 `merde_json_types` is a companion crate to [merde_json](https://crates.io/crates/merde_json),
 providing wrapper types that solve two problems at once.

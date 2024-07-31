@@ -2,11 +2,11 @@
 [![crates.io](https://img.shields.io/crates/v/merde_json.svg)](https://crates.io/crates/merde_json)
 [![docs.rs](https://docs.rs/merde_json/badge.svg)](https://docs.rs/merde_json)
 
-![The merde_json logo: a glorious poop floating above a pair of hands](assets/merde-json-banner@2x.png)
+# merde_json
+
+![The merde_json logo: a glorious poop floating above a pair of hands](https://github.com/user-attachments/assets/763d60e0-5101-48af-bc72-f96f516a5d0f)
 
 _Logo by [Misiasart](https://www.deviantart.com/misiasart)_
-
-# merde_json
 
 `merde_json` covers the "90% use case" for JSON manipulation via traits, declarative macros, and a bit of discipline.
 
