@@ -1,13 +1,13 @@
 [package]
+edition = "2021"
 name = "merde_json_types"
 version = "2.0.0"
-edition = "2021"
 authors = ["Amos Wenger <amos@bearcove.net>"]
-description = "Provide types that can be (de)serialized with `merde_json` if you enable the `merde_json` feature of this crate, but which are otherwise light"
+description = "Wrapper types for merde_json that implement serialization/deserialization"
 license = "Apache-2.0 OR MIT"
 readme = "README.md"
 repository = "https://github.com/bearcove/merde_json"
-keywords = ["json", "serialization", "deserialization", "jiter"]
+keywords = ["json", "serialization", "deserialization", "jiter", "merde"]
 categories = ["encoding", "parser-implementations"]
 
 [dependencies]
