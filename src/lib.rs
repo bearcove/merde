@@ -1306,6 +1306,14 @@ impl ToStatic for bool {
     }
 }
 
+impl<T: ToStatic> ToStatic for Option<T> {
+    type Output = Option<T::Output>;
+
+    fn to_static(&self) -> Self::Output {
+        self.as_ref().map(|v| v.to_static())
+    }
+}
+
 /// Extension trait to provide `to_rust_value` on `JsonValue<'_>`
 ///
 /// Which allows you to do something like:
