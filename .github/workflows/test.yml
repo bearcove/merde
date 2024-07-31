@@ -25,3 +25,10 @@ jobs:
           cargo check -F merde_json,time-serialize
           cargo check -F merde_json,time-deserialize
           popd
+      - name: Run examples
+        run: |
+          pushd merde_json
+          cargo run --example simple
+          cargo run --example mixed
+          cargo run --example to_static
+          popd
