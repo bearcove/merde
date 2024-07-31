@@ -13,6 +13,12 @@ use std::{
 #[repr(transparent)]
 pub struct Rfc3339<T>(pub T);
 
+impl<T> From<T> for Rfc3339<T> {
+    fn from(t: T) -> Self {
+        Rfc3339(t)
+    }
+}
+
 impl<T> Deref for Rfc3339<T> {
     type Target = T;
 
