@@ -1196,7 +1196,7 @@ macro_rules! impl_trait {
 ///
 /// Note: if you're conditionally deriving `JsonSerialize` and `JsonDeserialize` for a type,
 /// and you don't want the `merde_json` dependency  when it's not used, you can use
-/// `PhantomData<(&'src (), &'val ())>` instead — the derive macros will be happy with that.
+/// `merde_json_types::Fantome` instead — the derive macros will be happy with that.
 ///
 /// This type is really just a convenience so you have less to type.
 #[derive(Default, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
