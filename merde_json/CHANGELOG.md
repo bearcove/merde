@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.0](https://github.com/bearcove/merde_json/compare/merde_json-v2.3.1...merde_json-v2.4.0) - 2024-08-16
+
+### Added
+- Implement ToStatic for String
+
 ## [2.3.1](https://github.com/bearcove/merde_json/compare/merde_json-v2.3.0...merde_json-v2.3.1) - 2024-08-16
 
 ### Fixed
