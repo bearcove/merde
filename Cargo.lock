@@ -129,7 +129,7 @@ checksum = "78ca9ab1a0babb1e7d5695e3530886289c18cf2f87ec19a575a0abdce112e3a3"
 
 [[package]]
 name = "merde_json"
-version = "2.2.0"
+version = "2.3.0"
 dependencies = [
  "jiter",
  "serde",
@@ -138,7 +138,7 @@ dependencies = [
 
 [[package]]
 name = "merde_json_types"
-version = "2.1.2"
+version = "2.2.0"
 dependencies = [
  "merde_json",
  "time",
