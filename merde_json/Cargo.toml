@@ -15,7 +15,6 @@ jiter = "0.5.0"
 
 [dev-dependencies]
 serde = { version = "1.0.204", features = ["derive"] }
-serde_json = "1.0.121"
 
 [features]
 default = []
