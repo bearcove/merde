@@ -966,6 +966,50 @@ impl<T: ToStatic> ToStatic for Option<T> {
     }
 }
 
+impl<T: ToStatic> ToStatic for Vec<T> {
+    type Output = Vec<T::Output>;
+
+    fn to_static(&self) -> Self::Output {
+        self.iter().map(|v| v.to_static()).collect()
+    }
+}
+
+impl<K, V> ToStatic for HashMap<K, V>
+where
+    K: ToStatic + Eq + Hash,
+    V: ToStatic,
+    K::Output: Eq + Hash,
+{
+    type Output = HashMap<K::Output, V::Output>;
+
+    fn to_static(&self) -> Self::Output {
+        self.iter()
+            .map(|(k, v)| (k.to_static(), v.to_static()))
+            .collect()
+    }
+}
+
+use std::collections::{HashSet, VecDeque};
+
+impl<T: ToStatic> ToStatic for HashSet<T>
+where
+    T::Output: Eq + Hash,
+{
+    type Output = HashSet<T::Output>;
+
+    fn to_static(&self) -> Self::Output {
+        self.iter().map(|v| v.to_static()).collect()
+    }
+}
+
+impl<T: ToStatic> ToStatic for VecDeque<T> {
+    type Output = VecDeque<T::Output>;
+
+    fn to_static(&self) -> Self::Output {
+        self.iter().map(|v| v.to_static()).collect()
+    }
+}
+
 /// Extension trait to provide `to_rust_value` on `JsonValue<'_>`
 ///
 /// Which allows you to do something like:
