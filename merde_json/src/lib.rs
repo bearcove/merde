@@ -958,6 +958,14 @@ impl ToStatic for bool {
     }
 }
 
+impl ToStatic for String {
+    type Output = String;
+
+    fn to_static(&self) -> Self::Output {
+        self.clone()
+    }
+}
+
 impl<T: ToStatic> ToStatic for Option<T> {
     type Output = Option<T::Output>;
 
