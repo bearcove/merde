@@ -92,3 +92,10 @@ serde ecosystem".
 ### Wouldn't it be a lot more flexible to use a code generator rather than declarative macros?
 
 Yes it would. I'd love that. But this is a nice first step.
+
+## License
+
+This project is primarily distributed under the terms of both the MIT license
+and the Apache License (Version 2.0).
+
+See [LICENSE-APACHE](LICENSE-APACHE) and [LICENSE-MIT](LICENSE-MIT) for details.
