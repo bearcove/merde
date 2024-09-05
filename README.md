@@ -6,7 +6,7 @@
 
 ![The merde_json logo: a glorious poop floating above a pair of hands](https://github.com/user-attachments/assets/763d60e0-5101-48af-bc72-f96f516a5d0f)
 
-_Logo by [MisiasArt](https://www.deviantart.com/misiasart)_
+_Logo by [MisiasArt](https://misiasart.carrd.co)_
 
 Do you want to deal with JSON data? Are you not _that_ worried about the
 performance overhead? (ie. you're writing a backend in Rust, but if it was
