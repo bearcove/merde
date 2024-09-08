@@ -1,6 +1,8 @@
 #![deny(missing_docs)]
 #![doc = include_str!("../README.md")]
 
+mod newtraits;
+
 mod error;
 pub use error::*;
 
