@@ -127,6 +127,7 @@ version = "2.4.1"
 dependencies = [
  "jiter",
  "serde",
+ "smallvec",
 ]
 
 [[package]]
