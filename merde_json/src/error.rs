@@ -2,6 +2,8 @@
 // Error Handling and Field Type
 // -------------------------------------------------------------------------
 
+use std::borrow::Cow;
+
 use jiter::JsonValue;
 
 /// A content-less variant of the [JsonValue] enum, used for reporting errors, see [MerdeJsonError::MismatchedType].
@@ -51,7 +53,7 @@ pub enum MerdeJsonError {
     },
 
     /// We expected an object to have a certain property, but it was missing.
-    MissingProperty(&'static str),
+    MissingProperty(Cow<'static, str>),
 
     /// We tried to access an array index that was out of bounds.
     IndexOutOfBounds {
@@ -137,9 +139,8 @@ impl std::fmt::Display for MerdeJsonError {
 }
 
 impl std::error::Error for MerdeJsonError {}
-
-impl From<&JsonValue<'_>> for JsonFieldType {
-    fn from(value: &JsonValue) -> Self {
+impl JsonFieldType {
+    pub fn for_json_value(value: &JsonValue<'_>) -> Self {
         match value {
             JsonValue::Null => JsonFieldType::Null,
             JsonValue::Bool(_) => JsonFieldType::Bool,
