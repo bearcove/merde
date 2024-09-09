@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use merde_json::{Fantome, JsonSerialize, ToRustValue};
+use merde_json::{Fantome, JsonSerialize};
 
 fn main() {
     let input = r#"
@@ -18,16 +18,14 @@ fn main() {
 
     // Note: those two bindings are necessary — `Person` borrows from `JsonValue`
     // If we wanted a `Person` we can move, we could do `.to_static()`
-    let person = merde_json::from_str(input).unwrap();
-    let person: Person = person.to_rust_value().unwrap();
+    let person: Person = merde_json::from_str(input).unwrap();
     println!("{:#?}", person);
 
     // Round-trip! Again, every binding borrows from the previous one, and
     // everything can be converted from `F<'a>` to `F<'static>` via the
     // `ToStatic` trait.
     let serialized = person.to_json_string();
-    let person2 = merde_json::from_str(&serialized).unwrap();
-    let person2: Person = person2.to_rust_value().unwrap();
+    let person2: Person = merde_json::from_str(&serialized).unwrap();
     println!("{:#?}", person2);
 
     assert_eq!(person, person2);
@@ -35,12 +33,12 @@ fn main() {
 
 #[allow(dead_code)]
 #[derive(Debug, PartialEq, Eq)]
-struct Address<'src, 'val> {
-    _boo: Fantome<'src, 'val>,
+struct Address<'src> {
+    _boo: Fantome<'src>,
 
-    street: Cow<'val, str>,
-    city: Cow<'val, str>,
-    state: Cow<'val, str>,
+    street: Cow<'src, str>,
+    city: Cow<'src, str>,
+    state: Cow<'src, str>,
     zip: u16,
 }
 
@@ -55,12 +53,12 @@ merde_json::derive! {
 
 #[allow(dead_code)]
 #[derive(Debug, PartialEq, Eq)]
-struct Person<'src, 'val> {
-    _boo: Fantome<'src, 'val>,
+struct Person<'src> {
+    _boo: Fantome<'src>,
 
-    name: Cow<'val, str>,
+    name: Cow<'src, str>,
     age: u8,
-    address: Address<'src, 'val>,
+    address: Address<'src>,
 }
 
 merde_json::derive! {

@@ -1,15 +1,15 @@
 use std::borrow::Cow;
 
-use merde_json::{Fantome, ToRustValue, ToStatic};
+use merde_json::{Fantome, ToStatic};
 
 #[allow(dead_code)]
 #[derive(Debug, PartialEq, Eq)]
-struct Address<'src, 'val> {
-    _boo: Fantome<'src, 'val>,
+struct Address<'src> {
+    _boo: Fantome<'src>,
 
-    street: Cow<'val, str>,
-    city: Cow<'val, str>,
-    state: Cow<'val, str>,
+    street: Cow<'src, str>,
+    city: Cow<'src, str>,
+    state: Cow<'src, str>,
     zip: u16,
 }
 
@@ -24,19 +24,19 @@ merde_json::derive! {
 
 #[allow(dead_code)]
 #[derive(Debug, PartialEq, Eq)]
-struct Person<'src, 'val> {
-    _boo: Fantome<'src, 'val>,
+struct Person<'src> {
+    _boo: Fantome<'src>,
 
-    name: Cow<'val, str>,
+    name: Cow<'src, str>,
     age: u8,
-    address: Address<'src, 'val>,
+    address: Address<'src>,
 }
 
 merde_json::derive! {
     impl (JsonDeserialize, ToStatic) for Person { name, age, address }
 }
 
-fn get_person() -> Person<'static, 'static> {
+fn get_person() -> Person<'static> {
     let input = r#"
     {
         "name": "John Doe",
@@ -50,8 +50,7 @@ fn get_person() -> Person<'static, 'static> {
     }
     "#;
 
-    let person = merde_json::from_str(input).unwrap();
-    let person: Person = person.to_rust_value().unwrap();
+    let person: Person = merde_json::from_str(input).unwrap();
     person.to_static()
 }
 

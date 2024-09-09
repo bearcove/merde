@@ -1,6 +1,5 @@
 use std::borrow::Cow;
 
-use jiter::JsonArray;
 use merde_json::{
     Fantome, JsonArrayExt, JsonDeserialize, JsonSerialize, JsonSerializer, JsonValue, JsonValueExt,
 };
