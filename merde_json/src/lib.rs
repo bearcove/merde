@@ -23,173 +23,147 @@ use std::str::FromStr;
 ///
 /// A field of type `HashMap<K, V>` or `Vec<T>` is required! If you want to make it optional,
 /// wrap it in an `Option<T>` explicitly, e.g. `Option<HashMap<K, V>>` or `Option<Vec<T>>`.
-pub trait JsonDeserialize<'src, 'val>
+pub trait JsonDeserialize<'s>
 where
     Self: Sized,
-    'src: 'val,
 {
     /// Destructures a JSON value into a Rust value
-    fn json_deserialize(value: Option<&'val JsonValue<'src>>) -> Result<Self, MerdeJsonError>;
-}
+    fn json_deserialize<'val>(value: Option<&'val JsonValue<'s>>) -> Result<Self, MerdeJsonError>;
 
-impl<'src, 'val> JsonDeserialize<'src, 'val> for &'val str
-where
-    'src: 'val,
-{
-    fn json_deserialize(value: Option<&'val JsonValue<'src>>) -> Result<Self, MerdeJsonError> {
+    /// Destructures a JSON value into a Rust value, while taking ownership of the [JsonValue].
+    /// A default implementation is provided, but some types may want to implement it themselves
+    /// to avoid unnecessary allocations/cloning.
+    #[inline(always)]
+    fn json_deserialize_taking_ownership(
+        value: Option<JsonValue<'s>>,
+    ) -> Result<Self, MerdeJsonError> {
         match value {
-            Some(JsonValue::Str(s)) => match s {
-                Cow::Borrowed(s) => Ok(s),
-                Cow::Owned(s) => Ok(s.as_str()),
-            },
-            Some(v) => Err(MerdeJsonError::MismatchedType {
-                expected: JsonFieldType::String,
-                found: v.into(),
-            }),
-            None => Err(MerdeJsonError::MissingValue),
+            Some(v) => Self::json_deserialize(Some(&v)),
+            None => Self::json_deserialize(None),
         }
     }
 }
 
-impl<'src, 'val> JsonDeserialize<'src, 'val> for Cow<'val, str>
-where
-    'src: 'val,
-{
-    fn json_deserialize(value: Option<&'val JsonValue<'src>>) -> Result<Self, MerdeJsonError> {
+impl<'s> JsonDeserialize<'s> for Cow<'s, str> {
+    fn json_deserialize_taking_ownership(
+        value: Option<JsonValue<'s>>,
+    ) -> Result<Self, MerdeJsonError> {
         match value {
-            Some(JsonValue::Str(s)) => Ok(s.clone()),
+            Some(JsonValue::Str(s)) => Ok(s),
             Some(v) => Err(MerdeJsonError::MismatchedType {
                 expected: JsonFieldType::String,
-                found: v.into(),
+                found: JsonFieldType::for_json_value(&v),
             }),
             None => Err(MerdeJsonError::MissingValue),
         }
     }
+
+    #[inline(always)]
+    fn json_deserialize<'val>(value: Option<&'val JsonValue<'s>>) -> Result<Self, MerdeJsonError> {
+        Self::json_deserialize_taking_ownership(value.cloned())
+    }
 }
 
-impl<'src, 'val> JsonDeserialize<'src, 'val> for String
-where
-    'src: 'val,
-{
-    fn json_deserialize(value: Option<&'val JsonValue<'src>>) -> Result<Self, MerdeJsonError> {
+impl<'s> JsonDeserialize<'s> for String {
+    fn json_deserialize_taking_ownership(
+        value: Option<JsonValue<'s>>,
+    ) -> Result<Self, MerdeJsonError> {
         match value {
-            Some(JsonValue::Str(s)) => Ok(s.to_string()),
+            Some(JsonValue::Str(s)) => Ok(s.into_owned()),
             Some(v) => Err(MerdeJsonError::MismatchedType {
                 expected: JsonFieldType::String,
-                found: v.into(),
+                found: JsonFieldType::for_json_value(&v),
             }),
             None => Err(MerdeJsonError::MissingValue),
         }
     }
+
+    #[inline(always)]
+    fn json_deserialize<'val>(value: Option<&'val JsonValue<'s>>) -> Result<Self, MerdeJsonError> {
+        Self::json_deserialize_taking_ownership(value.cloned())
+    }
 }
 
-impl<'src, 'val> JsonDeserialize<'src, 'val> for u8
-where
-    'src: 'val,
-{
-    fn json_deserialize(value: Option<&'val JsonValue<'src>>) -> Result<Self, MerdeJsonError> {
+impl<'s> JsonDeserialize<'s> for u8 {
+    fn json_deserialize<'val>(value: Option<&'val JsonValue<'s>>) -> Result<Self, MerdeJsonError> {
         u64::json_deserialize(value)?
             .try_into()
             .map_err(|_| MerdeJsonError::OutOfRange)
     }
 }
 
-impl<'src, 'val> JsonDeserialize<'src, 'val> for u16
-where
-    'src: 'val,
-{
-    fn json_deserialize(value: Option<&'val JsonValue<'src>>) -> Result<Self, MerdeJsonError> {
+impl<'s> JsonDeserialize<'s> for u16 {
+    fn json_deserialize<'val>(value: Option<&'val JsonValue<'s>>) -> Result<Self, MerdeJsonError> {
         u64::json_deserialize(value)?
             .try_into()
             .map_err(|_| MerdeJsonError::OutOfRange)
     }
 }
 
-impl<'src, 'val> JsonDeserialize<'src, 'val> for u32
-where
-    'src: 'val,
-{
-    fn json_deserialize(value: Option<&'val JsonValue<'src>>) -> Result<Self, MerdeJsonError> {
+impl<'s> JsonDeserialize<'s> for u32 {
+    fn json_deserialize<'val>(value: Option<&'val JsonValue<'s>>) -> Result<Self, MerdeJsonError> {
         u64::json_deserialize(value)?
             .try_into()
             .map_err(|_| MerdeJsonError::OutOfRange)
     }
 }
 
-impl<'src, 'val> JsonDeserialize<'src, 'val> for u64
-where
-    'src: 'val,
-{
-    fn json_deserialize(value: Option<&'val JsonValue<'src>>) -> Result<Self, MerdeJsonError> {
+impl<'s> JsonDeserialize<'s> for u64 {
+    fn json_deserialize<'val>(value: Option<&'val JsonValue<'s>>) -> Result<Self, MerdeJsonError> {
         match value {
             Some(JsonValue::Int(n)) => (*n).try_into().map_err(|_| MerdeJsonError::OutOfRange),
             Some(JsonValue::Float(f)) => Ok((*f).round() as u64),
             Some(JsonValue::BigInt(bi)) => bi.try_into().map_err(|_| MerdeJsonError::OutOfRange),
             Some(v) => Err(MerdeJsonError::MismatchedType {
                 expected: JsonFieldType::Int,
-                found: v.into(),
+                found: JsonFieldType::for_json_value(v),
             }),
             None => Err(MerdeJsonError::MissingValue),
         }
     }
 }
 
-impl<'src, 'val> JsonDeserialize<'src, 'val> for i8
-where
-    'src: 'val,
-{
-    fn json_deserialize(value: Option<&'val JsonValue<'src>>) -> Result<Self, MerdeJsonError> {
+impl<'s> JsonDeserialize<'s> for i8 {
+    fn json_deserialize<'val>(value: Option<&'val JsonValue<'s>>) -> Result<Self, MerdeJsonError> {
         i64::json_deserialize(value)?
             .try_into()
             .map_err(|_| MerdeJsonError::OutOfRange)
     }
 }
 
-impl<'src, 'val> JsonDeserialize<'src, 'val> for i16
-where
-    'src: 'val,
-{
-    fn json_deserialize(value: Option<&'val JsonValue<'src>>) -> Result<Self, MerdeJsonError> {
+impl<'s> JsonDeserialize<'s> for i16 {
+    fn json_deserialize<'val>(value: Option<&'val JsonValue<'s>>) -> Result<Self, MerdeJsonError> {
         i64::json_deserialize(value)?
             .try_into()
             .map_err(|_| MerdeJsonError::OutOfRange)
     }
 }
 
-impl<'src, 'val> JsonDeserialize<'src, 'val> for i32
-where
-    'src: 'val,
-{
-    fn json_deserialize(value: Option<&'val JsonValue<'src>>) -> Result<Self, MerdeJsonError> {
+impl<'s> JsonDeserialize<'s> for i32 {
+    fn json_deserialize<'val>(value: Option<&'val JsonValue<'s>>) -> Result<Self, MerdeJsonError> {
         i64::json_deserialize(value)?
             .try_into()
             .map_err(|_| MerdeJsonError::OutOfRange)
     }
 }
 
-impl<'src, 'val> JsonDeserialize<'src, 'val> for i64
-where
-    'src: 'val,
-{
-    fn json_deserialize(value: Option<&'val JsonValue<'src>>) -> Result<Self, MerdeJsonError> {
+impl<'s> JsonDeserialize<'s> for i64 {
+    fn json_deserialize<'val>(value: Option<&'val JsonValue<'s>>) -> Result<Self, MerdeJsonError> {
         match value {
             Some(JsonValue::Int(n)) => Ok(*n),
             Some(JsonValue::Float(f)) => Ok((*f).round() as i64),
             Some(JsonValue::BigInt(bi)) => bi.try_into().map_err(|_| MerdeJsonError::OutOfRange),
             Some(v) => Err(MerdeJsonError::MismatchedType {
                 expected: JsonFieldType::Int,
-                found: v.into(),
+                found: JsonFieldType::for_json_value(v),
             }),
             None => Err(MerdeJsonError::MissingValue),
         }
     }
 }
 
-impl<'src, 'val> JsonDeserialize<'src, 'val> for usize
-where
-    'src: 'val,
-{
-    fn json_deserialize(value: Option<&'val JsonValue<'src>>) -> Result<Self, MerdeJsonError> {
+impl<'s> JsonDeserialize<'s> for usize {
+    fn json_deserialize<'val>(value: Option<&'val JsonValue<'s>>) -> Result<Self, MerdeJsonError> {
         match value {
             Some(JsonValue::Int(n)) => (*n).try_into().map_err(|_| MerdeJsonError::OutOfRange),
             Some(JsonValue::Float(f)) => ((*f).round() as i64)
@@ -197,48 +171,51 @@ where
                 .map_err(|_| MerdeJsonError::OutOfRange),
             Some(v) => Err(MerdeJsonError::MismatchedType {
                 expected: JsonFieldType::Int,
-                found: v.into(),
+                found: JsonFieldType::for_json_value(v),
             }),
             None => Err(MerdeJsonError::MissingValue),
         }
     }
 }
 
-impl<'src, 'val> JsonDeserialize<'src, 'val> for bool
-where
-    'src: 'val,
-{
-    fn json_deserialize(value: Option<&'val JsonValue<'src>>) -> Result<Self, MerdeJsonError> {
+impl<'s> JsonDeserialize<'s> for bool {
+    fn json_deserialize<'val>(value: Option<&'val JsonValue<'s>>) -> Result<Self, MerdeJsonError> {
         match value {
             Some(JsonValue::Bool(b)) => Ok(*b),
             Some(v) => Err(MerdeJsonError::MismatchedType {
                 expected: JsonFieldType::Bool,
-                found: v.into(),
+                found: JsonFieldType::for_json_value(v),
             }),
             None => Err(MerdeJsonError::MissingValue),
         }
     }
 }
-impl<'src, 'val, T> JsonDeserialize<'src, 'val> for Option<T>
+
+impl<'s, T> JsonDeserialize<'s> for Option<T>
 where
-    T: JsonDeserialize<'src, 'val>,
-    'src: 'val,
+    T: JsonDeserialize<'s>,
 {
-    fn json_deserialize(value: Option<&'val JsonValue<'src>>) -> Result<Self, MerdeJsonError> {
+    fn json_deserialize_taking_ownership(
+        value: Option<JsonValue<'s>>,
+    ) -> Result<Self, MerdeJsonError> {
         match value {
             Some(JsonValue::Null) => Ok(None),
-            Some(v) => T::json_deserialize(Some(v)).map(Some),
+            Some(v) => T::json_deserialize_taking_ownership(Some(v)).map(Some),
             None => Ok(None),
         }
     }
+
+    #[inline(always)]
+    fn json_deserialize<'val>(value: Option<&'val JsonValue<'s>>) -> Result<Self, MerdeJsonError> {
+        Self::json_deserialize_taking_ownership(value.cloned())
+    }
 }
 
-impl<'src, 'val, T> JsonDeserialize<'src, 'val> for Vec<T>
+impl<'s, T> JsonDeserialize<'s> for Vec<T>
 where
-    T: JsonDeserialize<'src, 'val>,
-    'src: 'val,
+    T: JsonDeserialize<'s>,
 {
-    fn json_deserialize(value: Option<&'val JsonValue<'src>>) -> Result<Self, MerdeJsonError> {
+    fn json_deserialize<'val>(value: Option<&'val JsonValue<'s>>) -> Result<Self, MerdeJsonError> {
         match value {
             Some(JsonValue::Array(arr)) => arr
                 .iter()
@@ -246,21 +223,20 @@ where
                 .collect(),
             Some(v) => Err(MerdeJsonError::MismatchedType {
                 expected: JsonFieldType::Array,
-                found: v.into(),
+                found: JsonFieldType::for_json_value(v),
             }),
             None => Err(MerdeJsonError::MissingValue),
         }
     }
 }
 
-impl<'src, 'val, K, V> JsonDeserialize<'src, 'val> for HashMap<K, V>
+impl<'s, K, V> JsonDeserialize<'s> for HashMap<K, V>
 where
-    'src: 'val,
-    K: FromStr + Eq + Hash + 'val,
-    V: JsonDeserialize<'src, 'val>,
+    K: FromStr + Eq + Hash + 's,
+    V: JsonDeserialize<'s>,
     K::Err: std::fmt::Debug,
 {
-    fn json_deserialize(value: Option<&'val JsonValue<'src>>) -> Result<Self, MerdeJsonError> {
+    fn json_deserialize<'val>(value: Option<&'val JsonValue<'s>>) -> Result<Self, MerdeJsonError> {
         match value {
             Some(JsonValue::Object(obj)) => {
                 let mut map = HashMap::new();
@@ -273,117 +249,125 @@ where
             }
             Some(v) => Err(MerdeJsonError::MismatchedType {
                 expected: JsonFieldType::Object,
-                found: v.into(),
+                found: JsonFieldType::for_json_value(v),
             }),
             None => Err(MerdeJsonError::MissingValue),
         }
     }
 }
 
-impl<'src, 'val> JsonDeserialize<'src, 'val> for &'val JsonValue<'src>
-where
-    'src: 'val,
-{
-    fn json_deserialize(value: Option<&'val JsonValue<'src>>) -> Result<Self, MerdeJsonError> {
+impl<'s> JsonDeserialize<'s> for JsonValue<'s> {
+    fn json_deserialize_taking_ownership(
+        value: Option<JsonValue<'s>>,
+    ) -> Result<Self, MerdeJsonError> {
         match value {
             Some(json_value) => Ok(json_value),
             None => Err(MerdeJsonError::MissingValue),
         }
     }
+
+    #[inline(always)]
+    fn json_deserialize<'val>(value: Option<&'val JsonValue<'s>>) -> Result<Self, MerdeJsonError> {
+        Self::json_deserialize_taking_ownership(value.cloned())
+    }
 }
 
-impl<'src, 'val> JsonDeserialize<'src, 'val> for &'val JsonArray<'src>
-where
-    'src: 'val,
-{
-    fn json_deserialize(value: Option<&'val JsonValue<'src>>) -> Result<Self, MerdeJsonError> {
+impl<'s> JsonDeserialize<'s> for JsonArray<'s> {
+    fn json_deserialize_taking_ownership(
+        value: Option<JsonValue<'s>>,
+    ) -> Result<Self, MerdeJsonError> {
         match value {
             Some(JsonValue::Array(arr)) => Ok(arr),
             Some(v) => Err(MerdeJsonError::MismatchedType {
                 expected: JsonFieldType::Array,
-                found: v.into(),
+                found: JsonFieldType::for_json_value(&v),
             }),
             None => Err(MerdeJsonError::MissingValue),
         }
     }
+
+    #[inline(always)]
+    fn json_deserialize<'val>(value: Option<&'val JsonValue<'s>>) -> Result<Self, MerdeJsonError> {
+        Self::json_deserialize_taking_ownership(value.cloned())
+    }
 }
 
-impl<'src, 'val> JsonDeserialize<'src, 'val> for &'val JsonObject<'src>
-where
-    'src: 'val,
-{
-    fn json_deserialize(value: Option<&'val JsonValue<'src>>) -> Result<Self, MerdeJsonError> {
+impl<'s> JsonDeserialize<'s> for JsonObject<'s> {
+    fn json_deserialize_taking_ownership(
+        value: Option<JsonValue<'s>>,
+    ) -> Result<Self, MerdeJsonError> {
         match value {
             Some(JsonValue::Object(obj)) => Ok(obj),
             Some(v) => Err(MerdeJsonError::MismatchedType {
                 expected: JsonFieldType::Object,
-                found: v.into(),
+                found: JsonFieldType::for_json_value(&v),
             }),
             None => Err(MerdeJsonError::MissingValue),
         }
     }
+
+    #[inline(always)]
+    fn json_deserialize<'val>(value: Option<&'val JsonValue<'s>>) -> Result<Self, MerdeJsonError> {
+        Self::json_deserialize_taking_ownership(value.cloned())
+    }
 }
 
 /// Provides various methods useful when implementing `JsonDeserialize`.
-pub trait JsonValueExt<'src, 'val>
-where
-    'src: 'val,
-    Self: 'src,
-{
+pub trait JsonValueExt<'s> {
     /// Coerce to `JsonObject`, returns `MerdeJsonError::MismatchedType` if not an object.
-    fn as_object(&'val self) -> Result<&'val JsonObject<'src>, MerdeJsonError>;
+    fn as_object(&self) -> Result<&JsonObject<'s>, MerdeJsonError>;
 
     /// Coerce to `JsonArray`, returns `MerdeJsonError::MismatchedType` if not an array.
-    fn as_array(&'val self) -> Result<&'val JsonArray<'src>, MerdeJsonError>;
+    fn as_array(&self) -> Result<&JsonArray<'s>, MerdeJsonError>;
 
-    /// Coerce to `Cow<'src, str>`, returns `MerdeJsonError::MismatchedType` if not a string.
-    fn as_cow_str(&'val self) -> Result<&'val Cow<'src, str>, MerdeJsonError>;
+    /// Coerce to `Cow<'s, str>`, returns `MerdeJsonError::MismatchedType` if not a string.
+    fn as_cow_str(&self) -> Result<&Cow<'s, str>, MerdeJsonError>;
 
     /// Coerce to `i64`, returns `MerdeJsonError::MismatchedType` if not an integer.
-    fn as_i64(&'val self) -> Result<i64, MerdeJsonError>;
+    fn as_i64(&self) -> Result<i64, MerdeJsonError>;
 }
 
-impl<'src, 'val> JsonValueExt<'src, 'val> for JsonValue<'src>
-where
-    'src: 'val,
-    Self: 'src,
-{
-    fn as_object(&'val self) -> Result<&'val JsonObject<'src>, MerdeJsonError> {
+impl<'s> JsonValueExt<'s> for JsonValue<'s> {
+    #[inline(always)]
+    fn as_object(&self) -> Result<&JsonObject<'s>, MerdeJsonError> {
         match self {
             JsonValue::Object(obj) => Ok(obj),
             _ => Err(MerdeJsonError::MismatchedType {
                 expected: JsonFieldType::Object,
-                found: self.into(),
+                found: JsonFieldType::for_json_value(self),
             }),
         }
     }
 
-    fn as_array(&'val self) -> Result<&'val JsonArray<'src>, MerdeJsonError> {
+    #[inline(always)]
+    fn as_array(&self) -> Result<&JsonArray<'s>, MerdeJsonError> {
         match self {
             JsonValue::Array(arr) => Ok(arr),
             _ => Err(MerdeJsonError::MismatchedType {
                 expected: JsonFieldType::Array,
-                found: self.into(),
+                found: JsonFieldType::for_json_value(self),
             }),
         }
     }
 
-    fn as_cow_str(&'val self) -> Result<&'val Cow<'src, str>, MerdeJsonError> {
+    #[inline(always)]
+    fn as_cow_str(&self) -> Result<&Cow<'s, str>, MerdeJsonError> {
         match self {
             JsonValue::Str(s) => Ok(s),
             _ => Err(MerdeJsonError::MismatchedType {
                 expected: JsonFieldType::String,
-                found: self.into(),
+                found: JsonFieldType::for_json_value(self),
             }),
         }
     }
 
-    fn as_i64(&'val self) -> Result<i64, MerdeJsonError> {
+    #[inline(always)]
+    fn as_i64(&self) -> Result<i64, MerdeJsonError> {
         match self {
             JsonValue::Int(n) => Ok(*n),
             _ => Err(MerdeJsonError::MismatchedType {
                 expected: JsonFieldType::Int,
-                found: self.into(),
+                found: JsonFieldType::for_json_value(self),
             }),
         }
     }
@@ -747,10 +731,9 @@ impl<V: JsonSerialize> JsonSerialize for &[(&str, V)] {
 }
 
 /// Extension trait to provide `must_get` on `JsonObject<'_>`
-pub trait JsonObjectExt<'src, 'val, T>
+pub trait JsonObjectExt<'s, T>
 where
-    'src: 'val,
-    T: JsonDeserialize<'src, 'val> + 'val,
+    T: JsonDeserialize<'s>,
 {
     /// Gets a value from the object, returning an error if the key is missing.
     ///
@@ -758,16 +741,16 @@ where
     ///
     /// It does not by itself throw an error if `self.get()` returns `None`, to allow
     /// for optional fields (via the [JsonDeserialize] implementation on the [Option] type).
-    fn must_get(&'val self, key: &'static str) -> Result<T, MerdeJsonError>;
+    fn must_get(&self, key: impl Into<Cow<'static, str>>) -> Result<T, MerdeJsonError>;
 }
 
-impl<'src, 'val, T> JsonObjectExt<'src, 'val, T> for JsonObject<'src>
+impl<'s, T> JsonObjectExt<'s, T> for JsonObject<'s>
 where
-    'src: 'val,
-    T: JsonDeserialize<'src, 'val> + 'val,
+    T: JsonDeserialize<'s>,
 {
-    fn must_get(&'val self, key: &'static str) -> Result<T, MerdeJsonError> {
-        T::json_deserialize(self.get(key)).map_err(|e| match e {
+    fn must_get(&self, key: impl Into<Cow<'static, str>>) -> Result<T, MerdeJsonError> {
+        let key = key.into();
+        T::json_deserialize(self.get(&key)).map_err(|e| match e {
             MerdeJsonError::MissingValue => MerdeJsonError::MissingProperty(key),
             _ => e,
         })
@@ -775,10 +758,9 @@ where
 }
 
 /// Extension trait to provide `must_get` on `JsonArray<'_>`
-pub trait JsonArrayExt<'val, 'src, T>
+pub trait JsonArrayExt<'s, T>
 where
-    'src: 'val,
-    T: JsonDeserialize<'src, 'val> + 'val,
+    T: JsonDeserialize<'s>,
 {
     /// Gets a value from the array, returning an error if the index is out of bounds.
     ///
@@ -786,15 +768,14 @@ where
     ///
     /// It does not by itself throw an error if `self.get()` returns `None`, to allow
     /// for optional fields (via the [JsonDeserialize] implementation on the [Option] type).
-    fn must_get(&'val self, index: usize) -> Result<T, MerdeJsonError>;
+    fn must_get(&self, index: usize) -> Result<T, MerdeJsonError>;
 }
 
-impl<'val, 'src, T> JsonArrayExt<'val, 'src, T> for JsonArray<'src>
+impl<'s, T> JsonArrayExt<'s, T> for JsonArray<'s>
 where
-    'src: 'val,
-    T: JsonDeserialize<'src, 'val> + 'val,
+    T: JsonDeserialize<'s>,
 {
-    fn must_get(&'val self, index: usize) -> Result<T, MerdeJsonError> {
+    fn must_get(&self, index: usize) -> Result<T, MerdeJsonError> {
         T::json_deserialize(self.get(index)).map_err(|e| match e {
             MerdeJsonError::MissingValue => MerdeJsonError::IndexOutOfBounds {
                 index,
@@ -805,22 +786,37 @@ where
     }
 }
 
-/// Deserialize an instance of type `T` from bytes of JSON text.
-pub fn from_slice(data: &[u8]) -> Result<JsonValue<'_>, MerdeJsonError> {
-    Ok(jiter::JsonValue::parse(data, false)?)
-}
-
-/// Deserialize an instance of type `T` from a string of JSON text.
-pub fn from_str(s: &str) -> Result<JsonValue<'_>, MerdeJsonError> {
-    from_slice(s.as_bytes())
+/// Interpret a `&JsonValue` as an instance of type `T`. This may involve
+/// more cloning than [from_value].
+pub fn from_value_ref<'s, T>(value: &JsonValue<'s>) -> Result<T, MerdeJsonError>
+where
+    T: JsonDeserialize<'s>,
+{
+    T::json_deserialize(Some(value))
 }
 
 /// Interpret a `JsonValue` as an instance of type `T`.
-pub fn from_value<'src: 'val, 'val, T>(value: &'val JsonValue<'src>) -> Result<T, MerdeJsonError>
+pub fn from_value<'s, T>(value: JsonValue<'s>) -> Result<T, MerdeJsonError>
 where
-    T: JsonDeserialize<'src, 'val>,
+    T: JsonDeserialize<'s>,
 {
-    T::json_deserialize(Some(value))
+    T::json_deserialize_taking_ownership(Some(value))
+}
+
+/// Deserialize an instance of type `T` from bytes of JSON text.
+pub fn from_slice<'s, T>(data: &'s [u8]) -> Result<T, MerdeJsonError>
+where
+    T: JsonDeserialize<'s>,
+{
+    from_value(jiter::JsonValue::parse(data, false)?)
+}
+
+/// Deserialize an instance of type `T` from a string of JSON text.
+pub fn from_str<'s, T>(s: &'s str) -> Result<T, MerdeJsonError>
+where
+    T: JsonDeserialize<'s>,
+{
+    from_slice(s.as_bytes())
 }
 
 /// Serialize the given data structure as a String of JSON.
@@ -1018,54 +1014,6 @@ impl<T: ToStatic> ToStatic for VecDeque<T> {
     }
 }
 
-/// Extension trait to provide `to_rust_value` on `JsonValue<'_>`
-///
-/// Which allows you to do something like:
-///
-/// ```rust
-/// use merde_json::{Fantome, JsonDeserialize, JsonSerialize, ToRustValue};
-/// use std::borrow::Cow;
-///
-/// #[derive(Debug, PartialEq, Eq)]
-/// struct MyStruct<'src, 'val> {
-///     _boo: Fantome<'src, 'val>,
-///     name: Cow<'val, str>,
-///     age: u8,
-/// }
-///
-/// merde_json::derive! {
-///     impl (JsonSerialize, JsonDeserialize) for MyStruct { name, age }
-/// }
-///
-/// # fn main() -> Result<(), merde_json::MerdeJsonError> {
-/// let input = r#"{"name": "John Doe", "age": 30}"#;
-/// let value: merde_json::JsonValue = merde_json::from_str(input)?;
-/// let my_struct: MyStruct = value.to_rust_value()?;
-/// println!("{:?}", my_struct);
-/// # Ok(())
-/// # }
-/// ```
-pub trait ToRustValue<'src, 'val, T>
-where
-    'src: 'val,
-    T: JsonDeserialize<'src, 'val> + 'val,
-{
-    /// Flips the calling convention of [JsonDeserialize::json_deserialize] to turn a [JsonValue] into a Rust value.
-    ///
-    /// Fallible, since the `JsonValue` might not match the structure we expect.
-    fn to_rust_value(&'val self) -> Result<T, MerdeJsonError>;
-}
-
-impl<'src, 'val, T> ToRustValue<'src, 'val, T> for JsonValue<'src>
-where
-    'src: 'val,
-    T: JsonDeserialize<'src, 'val> + 'val,
-{
-    fn to_rust_value(&'val self) -> Result<T, MerdeJsonError> {
-        JsonDeserialize::json_deserialize(Some(self))
-    }
-}
-
 // -------------------------------------------------------------------------
 // Macros
 // -------------------------------------------------------------------------
@@ -1074,15 +1022,13 @@ where
 #[macro_export]
 macro_rules! impl_json_deserialize {
     ($struct_name:ident { $($field:ident),+ }) => {
-        impl<'src, 'val> $crate::JsonDeserialize<'src, 'val> for $struct_name<'src, 'val>
-        where
-            'src: 'val,
+        impl<'s> $crate::JsonDeserialize<'s> for $struct_name<'s>
         {
-            fn json_deserialize(
-                value: Option<&'val $crate::JsonValue<'src>>,
+            fn json_deserialize<'val>(
+                value: Option<&'val $crate::JsonValue<'s>>,
             ) -> Result<Self, $crate::MerdeJsonError> {
                 #[allow(unused_imports)]
-                use $crate::{JsonObjectExt, JsonValueExt, MerdeJsonError, ToRustValue};
+                use $crate::{JsonObjectExt, JsonValueExt, MerdeJsonError};
 
                 let obj = value.ok_or(MerdeJsonError::MissingValue)?.as_object()?;
                 Ok($struct_name {
@@ -1098,10 +1044,10 @@ macro_rules! impl_json_deserialize {
 #[macro_export]
 macro_rules! impl_json_serialize {
     ($struct_name:ident { $($field:ident),+ }) => {
-        impl<'src, 'val> $crate::JsonSerialize for $struct_name<'src, 'val> {
+        impl<'s> $crate::JsonSerialize for $struct_name<'s> {
             fn json_serialize(&self, serializer: &mut $crate::JsonSerializer) {
                 #[allow(unused_imports)]
-                use $crate::{JsonObjectExt, JsonValueExt, MerdeJsonError, ToRustValue};
+                use $crate::{JsonObjectExt, JsonValueExt, MerdeJsonError};
 
                 let mut guard = serializer.write_obj();
                 $(
@@ -1116,8 +1062,8 @@ macro_rules! impl_json_serialize {
 #[macro_export]
 macro_rules! impl_to_static {
     ($struct_name:ident { $($field:ident),+ }) => {
-        impl<'src, 'val> $crate::ToStatic for $struct_name<'src, 'val> {
-            type Output = $struct_name<'static, 'static>;
+        impl<'s> $crate::ToStatic for $struct_name<'s> {
+            type Output = $struct_name<'static>;
 
             fn to_static(&self) -> Self::Output {
                 #[allow(unused_imports)]
@@ -1145,10 +1091,10 @@ macro_rules! impl_to_static {
 /// use std::borrow::Cow;
 ///
 /// #[derive(Debug, PartialEq)]
-/// struct MyStruct<'src, 'val> {
-///     _boo: Fantome<'src, 'val>,
+/// struct MyStruct<'s> {
+///     _boo: Fantome<'s>,
 ///
-///     field1: Cow<'val, str>,
+///     field1: Cow<'s, str>,
 ///     field2: i32,
 ///     field3: bool,
 /// }
@@ -1208,11 +1154,11 @@ macro_rules! impl_trait {
 ///
 /// This type is really just a convenience so you have less to type.
 #[derive(Default, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct Fantome<'src, 'val> {
-    _boo: std::marker::PhantomData<(&'src (), &'val ())>,
+pub struct Fantome<'s> {
+    _boo: std::marker::PhantomData<&'s ()>,
 }
 
-impl std::fmt::Debug for Fantome<'_, '_> {
+impl std::fmt::Debug for Fantome<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str("Boo!")
     }
@@ -1224,9 +1170,10 @@ mod tests {
 
     #[test]
     fn test_roundtrip_large_number() {
+        // TODO: only run that when bigint is enabled
         let large_number = 4611686018427387904u64; // 2^62
         let serialized = large_number.to_json_string();
-        let deserialized: u64 = from_str(&serialized).unwrap().to_rust_value().unwrap();
+        let deserialized: u64 = from_str(&serialized).unwrap();
         assert_eq!(large_number, deserialized);
     }
 
@@ -1236,10 +1183,10 @@ mod tests {
         use std::collections::HashMap;
 
         #[derive(Debug, PartialEq)]
-        struct SecondStruct<'src, 'val> {
-            _boo: Fantome<'src, 'val>,
+        struct SecondStruct<'s> {
+            _boo: Fantome<'s>,
 
-            string_field: Cow<'val, str>,
+            string_field: Cow<'s, str>,
             int_field: i32,
         }
 
@@ -1251,10 +1198,10 @@ mod tests {
         }
 
         #[derive(Debug, PartialEq)]
-        struct ComplexStruct<'src, 'val> {
-            _boo: Fantome<'src, 'val>,
+        struct ComplexStruct<'s> {
+            _boo: Fantome<'s>,
 
-            string_field: Cow<'val, str>,
+            string_field: Cow<'s, str>,
             u8_field: u8,
             u16_field: u16,
             u32_field: u32,
@@ -1268,7 +1215,7 @@ mod tests {
             option_field: Option<i32>,
             vec_field: Vec<i32>,
             hashmap_field: HashMap<String, i32>,
-            second_struct_field: SecondStruct<'src, 'val>,
+            second_struct_field: SecondStruct<'s>,
         }
 
         derive! {
@@ -1319,8 +1266,7 @@ mod tests {
         };
 
         let serialized = original.to_json_string();
-        let deserialized = from_str(&serialized).unwrap();
-        let deserialized: ComplexStruct = deserialized.to_rust_value().unwrap();
+        let deserialized: ComplexStruct = from_str(&serialized).unwrap();
 
         assert_eq!(original, deserialized);
     }
