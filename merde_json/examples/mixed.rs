@@ -3,43 +3,29 @@ use std::borrow::Cow;
 use jiter::JsonArray;
 use merde_json::{
     Fantome, JsonArrayExt, JsonDeserialize, JsonSerialize, JsonSerializer, JsonValue, JsonValueExt,
-    ToRustValue,
 };
 
 #[derive(Debug, PartialEq)]
-struct MixedArray<'src, 'val> {
-    _boo: Fantome<'src, 'val>,
+struct MixedArray<'src> {
+    _boo: Fantome<'src>,
 
-    items: Vec<&'val JsonValue<'src>>,
+    items: Vec<JsonValue<'src>>,
 }
 merde_json::derive! {
     impl(JsonSerialize, JsonDeserialize) for MixedArray { items }
 }
 
 #[derive(Debug, PartialEq)]
-struct MixedArray2<'src, 'val> {
-    _boo: Fantome<'src, 'val>,
-
-    items: &'val JsonArray<'src>,
-}
-merde_json::derive! {
-    impl(JsonSerialize, JsonDeserialize) for MixedArray2 { items }
-}
-
-#[derive(Debug, PartialEq)]
-struct Items<'src, 'val> {
-    _boo: Fantome<'src, 'val>,
+struct Items<'src> {
+    _boo: Fantome<'src>,
 
     number: u32,
-    string: Cow<'val, str>,
+    string: Cow<'src, str>,
     boolean: bool,
 }
 
-impl<'src, 'val> JsonDeserialize<'src, 'val> for Items<'src, 'val>
-where
-    'src: 'val,
-{
-    fn json_deserialize(
+impl<'src> JsonDeserialize<'src> for Items<'src> {
+    fn json_deserialize<'val>(
         value: Option<&'val JsonValue<'src>>,
     ) -> Result<Self, merde_json::MerdeJsonError> {
         let arr = value
@@ -56,7 +42,7 @@ where
     }
 }
 
-impl JsonSerialize for Items<'_, '_> {
+impl JsonSerialize for Items<'_> {
     fn json_serialize(&self, serializer: &mut JsonSerializer) {
         serializer
             .write_arr()
@@ -67,13 +53,13 @@ impl JsonSerialize for Items<'_, '_> {
 }
 
 #[derive(Debug, PartialEq)]
-struct MixedArray3<'src, 'val> {
-    _boo: Fantome<'src, 'val>,
+struct MixedArray2<'src> {
+    _boo: Fantome<'src>,
 
-    items: Items<'src, 'val>,
+    items: Items<'src>,
 }
 merde_json::derive! {
-    impl(JsonSerialize, JsonDeserialize) for MixedArray3 { items }
+    impl(JsonSerialize, JsonDeserialize) for MixedArray2 { items }
 }
 
 fn main() {
@@ -85,15 +71,9 @@ fn main() {
         }
     "#;
 
-    let ma = merde_json::from_str(input).unwrap();
-    let ma: MixedArray = ma.to_rust_value().unwrap();
+    let ma: MixedArray = merde_json::from_str(input).unwrap();
     println!("{:?}", ma);
 
-    let ma = merde_json::from_str(input).unwrap();
-    let ma: MixedArray2 = ma.to_rust_value().unwrap();
-    println!("{:?}", ma);
-
-    let ma = merde_json::from_str(input).unwrap();
-    let ma: MixedArray3 = ma.to_rust_value().unwrap();
+    let ma: MixedArray2 = merde_json::from_str(input).unwrap();
     println!("{:?}", ma);
 }

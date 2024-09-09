@@ -139,7 +139,9 @@ impl std::fmt::Display for MerdeJsonError {
 }
 
 impl std::error::Error for MerdeJsonError {}
+
 impl JsonFieldType {
+    /// Returns the [JsonFieldType] for a given [JsonValue].
     pub fn for_json_value(value: &JsonValue<'_>) -> Self {
         match value {
             JsonValue::Null => JsonFieldType::Null,

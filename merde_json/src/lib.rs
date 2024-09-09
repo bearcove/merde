@@ -217,18 +217,26 @@ impl<'src> JsonDeserialize<'src> for bool {
         }
     }
 }
+
 impl<'src, T> JsonDeserialize<'src> for Option<T>
 where
     T: JsonDeserialize<'src>,
 {
-    fn json_deserialize<'val>(
-        value: Option<&'val JsonValue<'src>>,
+    fn json_deserialize_taking_ownership(
+        value: Option<JsonValue<'src>>,
     ) -> Result<Self, MerdeJsonError> {
         match value {
             Some(JsonValue::Null) => Ok(None),
-            Some(v) => T::json_deserialize(Some(v)).map(Some),
+            Some(v) => T::json_deserialize_taking_ownership(Some(v)).map(Some),
             None => Ok(None),
         }
+    }
+
+    #[inline(always)]
+    fn json_deserialize<'val>(
+        value: Option<&'val JsonValue<'src>>,
+    ) -> Result<Self, MerdeJsonError> {
+        Self::json_deserialize_taking_ownership(value.cloned())
     }
 }
 
@@ -315,7 +323,7 @@ impl<'src> JsonDeserialize<'src> for JsonObject<'src> {
             Some(JsonValue::Object(obj)) => Ok(variance::shorten_jsonobject_lifetime(obj.clone())),
             Some(v) => Err(MerdeJsonError::MismatchedType {
                 expected: JsonFieldType::Object,
-                found: v.into(),
+                found: JsonFieldType::for_json_value(v),
             }),
             None => Err(MerdeJsonError::MissingValue),
         }
@@ -346,42 +354,46 @@ where
     'src: 'val,
     Self: 'src,
 {
+    #[inline(always)]
     fn as_object(&'val self) -> Result<&'val JsonObject<'src>, MerdeJsonError> {
         match self {
             JsonValue::Object(obj) => Ok(obj),
             _ => Err(MerdeJsonError::MismatchedType {
                 expected: JsonFieldType::Object,
-                found: self.into(),
+                found: JsonFieldType::for_json_value(self),
             }),
         }
     }
 
+    #[inline(always)]
     fn as_array(&'val self) -> Result<&'val JsonArray<'src>, MerdeJsonError> {
         match self {
             JsonValue::Array(arr) => Ok(arr),
             _ => Err(MerdeJsonError::MismatchedType {
                 expected: JsonFieldType::Array,
-                found: self.into(),
+                found: JsonFieldType::for_json_value(self),
             }),
         }
     }
 
+    #[inline(always)]
     fn as_cow_str(&'val self) -> Result<&'val Cow<'src, str>, MerdeJsonError> {
         match self {
             JsonValue::Str(s) => Ok(s),
             _ => Err(MerdeJsonError::MismatchedType {
                 expected: JsonFieldType::String,
-                found: self.into(),
+                found: JsonFieldType::for_json_value(self),
             }),
         }
     }
 
+    #[inline(always)]
     fn as_i64(&'val self) -> Result<i64, MerdeJsonError> {
         match self {
             JsonValue::Int(n) => Ok(*n),
             _ => Err(MerdeJsonError::MismatchedType {
                 expected: JsonFieldType::Int,
-                found: self.into(),
+                found: JsonFieldType::for_json_value(self),
             }),
         }
     }
@@ -800,22 +812,6 @@ where
     }
 }
 
-/// Deserialize an instance of type `T` from bytes of JSON text.
-pub fn from_slice<'src, T>(data: &'src [u8]) -> Result<T, MerdeJsonError>
-where
-    T: JsonDeserialize<'src>,
-{
-    jiter::JsonValue::parse(data, false)?.to_rust_value()
-}
-
-/// Deserialize an instance of type `T` from a string of JSON text.
-pub fn from_str<'src, T>(s: &'src str) -> Result<T, MerdeJsonError>
-where
-    T: JsonDeserialize<'src>,
-{
-    from_slice(s.as_bytes())
-}
-
 /// Interpret a `&JsonValue` as an instance of type `T`. This may involve
 /// more cloning than [from_value].
 pub fn from_value_ref<'src, T>(value: &JsonValue<'src>) -> Result<T, MerdeJsonError>
@@ -831,6 +827,22 @@ where
     T: JsonDeserialize<'src>,
 {
     T::json_deserialize_taking_ownership(Some(value))
+}
+
+/// Deserialize an instance of type `T` from bytes of JSON text.
+pub fn from_slice<'src, T>(data: &'src [u8]) -> Result<T, MerdeJsonError>
+where
+    T: JsonDeserialize<'src>,
+{
+    from_value(jiter::JsonValue::parse(data, false)?)
+}
+
+/// Deserialize an instance of type `T` from a string of JSON text.
+pub fn from_str<'src, T>(s: &'src str) -> Result<T, MerdeJsonError>
+where
+    T: JsonDeserialize<'src>,
+{
+    from_slice(s.as_bytes())
 }
 
 /// Serialize the given data structure as a String of JSON.
@@ -1028,52 +1040,6 @@ impl<T: ToStatic> ToStatic for VecDeque<T> {
     }
 }
 
-/// Extension trait to provide `to_rust_value` on `JsonValue<'_>`
-///
-/// Which allows you to do something like:
-///
-/// ```rust
-/// use merde_json::{Fantome, JsonDeserialize, JsonSerialize, ToRustValue};
-/// use std::borrow::Cow;
-///
-/// #[derive(Debug, PartialEq, Eq)]
-/// struct MyStruct<'src, 'val> {
-///     _boo: Fantome<'src, 'val>,
-///     name: Cow<'val, str>,
-///     age: u8,
-/// }
-///
-/// merde_json::derive! {
-///     impl (JsonSerialize, JsonDeserialize) for MyStruct { name, age }
-/// }
-///
-/// # fn main() -> Result<(), merde_json::MerdeJsonError> {
-/// let input = r#"{"name": "John Doe", "age": 30}"#;
-/// let value: merde_json::JsonValue = merde_json::from_str(input)?;
-/// let my_struct: MyStruct = value.to_rust_value()?;
-/// println!("{:?}", my_struct);
-/// # Ok(())
-/// # }
-/// ```
-pub trait ToRustValue<'src, T>
-where
-    T: JsonDeserialize<'src>,
-{
-    /// Flips the calling convention of [JsonDeserialize::json_deserialize] to turn a [JsonValue] into a Rust value.
-    ///
-    /// Fallible, since the `JsonValue` might not match the structure we expect.
-    fn to_rust_value(&self) -> Result<T, MerdeJsonError>;
-}
-
-impl<'src, T> ToRustValue<'src, T> for JsonValue<'src>
-where
-    T: JsonDeserialize<'src>,
-{
-    fn to_rust_value(&self) -> Result<T, MerdeJsonError> {
-        JsonDeserialize::json_deserialize(Some(self))
-    }
-}
-
 // -------------------------------------------------------------------------
 // Macros
 // -------------------------------------------------------------------------
@@ -1082,15 +1048,13 @@ where
 #[macro_export]
 macro_rules! impl_json_deserialize {
     ($struct_name:ident { $($field:ident),+ }) => {
-        impl<'src, 'val> $crate::JsonDeserialize<'src, 'val> for $struct_name<'src, 'val>
-        where
-            'src: 'val,
+        impl<'src> $crate::JsonDeserialize<'src> for $struct_name<'src>
         {
-            fn json_deserialize(
+            fn json_deserialize<'val>(
                 value: Option<&'val $crate::JsonValue<'src>>,
             ) -> Result<Self, $crate::MerdeJsonError> {
                 #[allow(unused_imports)]
-                use $crate::{JsonObjectExt, JsonValueExt, MerdeJsonError, ToRustValue};
+                use $crate::{JsonObjectExt, JsonValueExt, MerdeJsonError};
 
                 let obj = value.ok_or(MerdeJsonError::MissingValue)?.as_object()?;
                 Ok($struct_name {
@@ -1106,10 +1070,10 @@ macro_rules! impl_json_deserialize {
 #[macro_export]
 macro_rules! impl_json_serialize {
     ($struct_name:ident { $($field:ident),+ }) => {
-        impl<'src, 'val> $crate::JsonSerialize for $struct_name<'src, 'val> {
+        impl<'src> $crate::JsonSerialize for $struct_name<'src> {
             fn json_serialize(&self, serializer: &mut $crate::JsonSerializer) {
                 #[allow(unused_imports)]
-                use $crate::{JsonObjectExt, JsonValueExt, MerdeJsonError, ToRustValue};
+                use $crate::{JsonObjectExt, JsonValueExt, MerdeJsonError};
 
                 let mut guard = serializer.write_obj();
                 $(
@@ -1124,8 +1088,8 @@ macro_rules! impl_json_serialize {
 #[macro_export]
 macro_rules! impl_to_static {
     ($struct_name:ident { $($field:ident),+ }) => {
-        impl<'src, 'val> $crate::ToStatic for $struct_name<'src, 'val> {
-            type Output = $struct_name<'static, 'static>;
+        impl<'src> $crate::ToStatic for $struct_name<'src> {
+            type Output = $struct_name<'static>;
 
             fn to_static(&self) -> Self::Output {
                 #[allow(unused_imports)]
@@ -1216,11 +1180,11 @@ macro_rules! impl_trait {
 ///
 /// This type is really just a convenience so you have less to type.
 #[derive(Default, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct Fantome<'src, 'val> {
-    _boo: std::marker::PhantomData<(&'src (), &'val ())>,
+pub struct Fantome<'src> {
+    _boo: std::marker::PhantomData<&'src ()>,
 }
 
-impl std::fmt::Debug for Fantome<'_, '_> {
+impl std::fmt::Debug for Fantome<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str("Boo!")
     }
@@ -1232,9 +1196,10 @@ mod tests {
 
     #[test]
     fn test_roundtrip_large_number() {
+        // TODO: only run that when bigint is enabled
         let large_number = 4611686018427387904u64; // 2^62
         let serialized = large_number.to_json_string();
-        let deserialized: u64 = from_str(&serialized).unwrap().to_rust_value().unwrap();
+        let deserialized: u64 = from_str(&serialized).unwrap();
         assert_eq!(large_number, deserialized);
     }
 
@@ -1244,10 +1209,10 @@ mod tests {
         use std::collections::HashMap;
 
         #[derive(Debug, PartialEq)]
-        struct SecondStruct<'src, 'val> {
-            _boo: Fantome<'src, 'val>,
+        struct SecondStruct<'src> {
+            _boo: Fantome<'src>,
 
-            string_field: Cow<'val, str>,
+            string_field: Cow<'src, str>,
             int_field: i32,
         }
 
@@ -1259,10 +1224,10 @@ mod tests {
         }
 
         #[derive(Debug, PartialEq)]
-        struct ComplexStruct<'src, 'val> {
-            _boo: Fantome<'src, 'val>,
+        struct ComplexStruct<'src> {
+            _boo: Fantome<'src>,
 
-            string_field: Cow<'val, str>,
+            string_field: Cow<'src, str>,
             u8_field: u8,
             u16_field: u16,
             u32_field: u32,
@@ -1276,7 +1241,7 @@ mod tests {
             option_field: Option<i32>,
             vec_field: Vec<i32>,
             hashmap_field: HashMap<String, i32>,
-            second_struct_field: SecondStruct<'src, 'val>,
+            second_struct_field: SecondStruct<'src>,
         }
 
         derive! {
@@ -1327,8 +1292,7 @@ mod tests {
         };
 
         let serialized = original.to_json_string();
-        let deserialized = from_str(&serialized).unwrap();
-        let deserialized: ComplexStruct = deserialized.to_rust_value().unwrap();
+        let deserialized: ComplexStruct = from_str(&serialized).unwrap();
 
         assert_eq!(original, deserialized);
     }

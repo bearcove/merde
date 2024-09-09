@@ -79,11 +79,8 @@ mod merde_json_impls {
     }
 
     #[cfg(feature = "time-deserialize")]
-    impl<'src, 'val> merde_json::JsonDeserialize<'src, 'val> for Rfc3339<time::OffsetDateTime>
-    where
-        'src: 'val,
-    {
-        fn json_deserialize(
+    impl<'src> merde_json::JsonDeserialize<'src> for Rfc3339<time::OffsetDateTime> {
+        fn json_deserialize<'val>(
             value: Option<&'val merde_json::JsonValue<'src>>,
         ) -> Result<Self, merde_json::MerdeJsonError> {
             use merde_json::JsonValueExt;
@@ -106,15 +103,14 @@ mod merde_json_impls {
 ))]
 mod tests {
     use super::*;
-    use merde_json::{from_str, JsonSerialize, ToRustValue};
+    use merde_json::{from_str, JsonSerialize};
     use time::macros::datetime;
 
     #[test]
     fn test_rfc3339_offset_date_time_roundtrip() {
         let original = Rfc3339(datetime!(2023-05-15 14:30:00 UTC));
         let serialized = original.to_json_string();
-        let deserialized: Rfc3339<time::OffsetDateTime> =
-            from_str(&serialized).unwrap().to_rust_value().unwrap();
+        let deserialized: Rfc3339<time::OffsetDateTime> = from_str(&serialized).unwrap();
         assert_eq!(original, deserialized);
     }
 
@@ -128,8 +124,7 @@ mod tests {
     #[test]
     fn test_rfc3339_offset_date_time_deserialization() {
         let json = r#""2023-05-15T14:30:00Z""#;
-        let deserialized: Rfc3339<time::OffsetDateTime> =
-            from_str(json).unwrap().to_rust_value().unwrap();
+        let deserialized: Rfc3339<time::OffsetDateTime> = from_str(json).unwrap();
         assert_eq!(deserialized, Rfc3339(datetime!(2023-05-15 14:30:00 UTC)));
     }
 }
