@@ -4,6 +4,7 @@ mod lazyindexmap;
 pub use cowstr::CowStr;
 pub use lazyindexmap::LazyIndexMap;
 
+#[derive(Debug, PartialEq, Clone)]
 pub enum Value<'s> {
     Int(i64),
     Float(f64),

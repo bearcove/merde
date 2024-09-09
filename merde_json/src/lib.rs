@@ -1,6 +1,8 @@
 #![deny(missing_docs)]
 #![doc = include_str!("../README.md")]
 
+mod iterator_samples;
+
 mod error;
 pub use error::*;
 
