@@ -50,6 +50,12 @@ impl From<String> for CowStr<'_> {
     }
 }
 
+impl From<Box<str>> for CowStr<'_> {
+    fn from(s: Box<str>) -> Self {
+        CowStr::Owned(CompactString::from(s))
+    }
+}
+
 impl<'s> From<&'s String> for CowStr<'s> {
     fn from(s: &'s String) -> Self {
         CowStr::Borrowed(s.as_str())
