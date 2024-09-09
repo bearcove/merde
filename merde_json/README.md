@@ -34,33 +34,49 @@ struct MyStruct {
 By contrast, merde_json provides declarative macros:
 
 ```rust
-use merde_json::Fantome;
 use std::borrow::Cow;
 
 #[derive(Debug, PartialEq)]
 struct MyStruct<'s> {
-    _boo: Fantome<'s>,
-
     name: Cow<'s, str>,
     age: u8,
 }
 
 merde_json::derive! {
-    impl(JsonSerialize, JsonDeserialize) for MyStruct {
+    impl(JsonSerialize, JsonDeserialize) for MyStruct<'s> {
         name,
         age
     }
 }
 ```
 
-Declarative macros = less work to do at compile-time, as long as we follow a couple rules:
+Declarative macros = less work to do at compile-time, as long as we agree to list our field
+names twice: in the struct, and in the macro — which is a limitation of declarative macros.
 
- * All structs have an `'s` lifetime parameter
- * All structs have a `_boo` field, for structs that don't use their lifetime parameter
- * Field names are listed twice: in the struct and in the macro (limitation of declarative macros)
- * Use `Cow<'val, str>` for all your strings, instead of choosing between `&str` and `String` on a case-by-case basis
+`merde_json` supports copy-on-write types like [Cow<'s, str>](https://doc.rust-lang.org/stable/std/borrow/enum.Cow.html),
+see [The Secret Life Of Cows](https://deterministic.space/secret-life-of-cows.html) for a good introduction to them.
 
-Read [The Secret Life Of Cows](https://deterministic.space/secret-life-of-cows.html) for a good introduction to Rust's "Copy-on-Write" types.
+But you can also decide you don't want to deal with lifetimes at all!
+
+```rust
+use std::borrow::Cow;
+
+#[derive(Debug, PartialEq)]
+struct MyStruct {
+    name: String,
+    age: u8,
+}
+
+merde_json::derive! {
+    // note: there's no lifetime parameter here      👇
+    impl (JsonSerialize, JsonDeserialize) for MyStruct {
+        name,
+        age
+    }
+}
+```
+
+And that'll work, too.
 
 ## Deserializing
 
@@ -68,32 +84,26 @@ Read [The Secret Life Of Cows](https://deterministic.space/secret-life-of-cows.h
 via the [JsonDeserialize] trait:
 
 ```rust
-# use merde_json::{Fantome, JsonDeserialize, JsonSerialize};
+# use merde_json::{JsonDeserialize, JsonSerialize};
 # use std::borrow::Cow;
 #
 # #[derive(Debug, PartialEq)]
 # struct MyStruct<'s> {
-#     _boo: Fantome<'s>,
-#
 #     name: Cow<'s, str>,
 #     age: u8,
 # }
 #
 # merde_json::derive! {
-#     impl(JsonSerialize, JsonDeserialize) for MyStruct { name, age }
+#     impl(JsonSerialize, JsonDeserialize) for MyStruct<'s> { name, age }
 # }
 #
 # fn main() -> Result<(), merde_json::MerdeJsonError> {
 let input = String::from(r#"{"name": "John Doe", "age": 30}"#);
-let value = merde_json::from_str(&input)?;
-let my_struct = MyStruct::json_deserialize(Some(&value));
+let my_struct: MyStruct = merde_json::from_str(&input)?;
 println!("{:?}", my_struct);
 # Ok(())
 # }
 ```
-
-There are other convenience methods, to deserialize from byte slices, or from
-already-parsed `JsonValue`.
 
 ## Moving deserialized values around
 
@@ -105,18 +115,17 @@ not `T<'static>` — it still borrows from the source.
 This code fails to compile:
 
 ```compile_fail
-# use merde_json::{Fantome, JsonDeserialize, JsonSerialize};
+# use merde_json::{JsonDeserialize, JsonSerialize};
 # use std::borrow::Cow;
 #
 # #[derive(Debug, PartialEq)]
 # struct MyStruct<'s> {
-#     _boo: Fantome<'s>,
 #     name: Cow<'s, str>,
 #     age: u8,
 # }
 #
 # merde_json::derive! {
-#     impl(JsonSerialize, JsonDeserialize) for MyStruct { name, age }
+#     impl(JsonSerialize, JsonDeserialize) for MyStruct<'s> { name, age }
 # }
 #
 fn return_my_struct() -> MyStruct<'static> {
@@ -146,19 +155,18 @@ error[E0515]: cannot return value referencing local variable `input`
 Deriving the [ToStatic] trait lets you go from `MyStruct<'s>` to `MyStruct<'static>`:
 
 ```rust
-# use merde_json::{Fantome, JsonDeserialize, JsonSerialize, ToStatic};
+# use merde_json::{JsonDeserialize, JsonSerialize, ToStatic};
 # use std::borrow::Cow;
 #
 # #[derive(Debug, PartialEq)]
 # struct MyStruct<'s> {
-#     _boo: Fantome<'s>,
 #     name: Cow<'s, str>,
 #     age: u8,
 # }
 #
 merde_json::derive! {
     //                                     👇
-    impl(JsonSerialize, JsonDeserialize, ToStatic) for MyStruct { name, age }
+    impl(JsonSerialize, JsonDeserialize, ToStatic) for MyStruct<'s> { name, age }
 }
 
 fn return_my_struct() -> MyStruct<'static> {
@@ -183,15 +191,14 @@ Real-world JSON payloads can have arrays with mixed types. You can keep them as 
 until you know what to do with them:
 
 ```rust
-use merde_json::{Fantome, JsonDeserialize, JsonSerialize, JsonValue, MerdeJsonError};
+use merde_json::{JsonDeserialize, JsonSerialize, JsonValue, MerdeJsonError};
 
 #[derive(Debug, PartialEq)]
 struct MixedArray<'s> {
-    _boo: Fantome<'s>,
     items: Vec<JsonValue<'s>>,
 }
 
-merde_json::derive! { impl(JsonDeserialize) for MixedArray { items } }
+merde_json::derive! { impl(JsonDeserialize) for MixedArray<'s> { items } }
 
 fn main() -> Result<(), merde_json::MerdeJsonError> {
     let input = r#"{
@@ -238,23 +245,21 @@ wants to use your crate without using `merde_json`.
 Serializing typically looks like:
 
 ```rust
-# use merde_json::{Fantome, JsonSerialize, JsonDeserialize};
+# use merde_json::{JsonSerialize, JsonDeserialize};
 # use std::borrow::Cow;
 #
 # #[derive(Debug, PartialEq)]
 # struct MyStruct<'s> {
-#     _boo: Fantome<'s>,
 #     name: Cow<'s, str>,
 #     age: u8,
 # }
 #
 # merde_json::derive! {
-#     impl(JsonSerialize, JsonDeserialize) for MyStruct { name, age }
+#     impl(JsonSerialize, JsonDeserialize) for MyStruct<'s> { name, age }
 # }
 #
 # fn main() -> Result<(), merde_json::MerdeJsonError> {
 let original = MyStruct {
-    _boo: Default::default(),
     name: "John Doe".into(),
     age: 30,
 };
@@ -274,23 +279,21 @@ If you want more control over the buffer, for example you'd like to re-use the s
 `Vec<u8>` for multiple serializations, you can use [JsonSerializer::from_vec]:
 
 ```rust
-# use merde_json::{Fantome, JsonSerialize, JsonDeserialize};
+# use merde_json::{JsonSerialize, JsonDeserialize};
 # use std::borrow::Cow;
 #
 # #[derive(Debug, PartialEq)]
 # struct MyStruct<'s> {
-#     _boo: Fantome<'s>,
 #     name: Cow<'s, str>,
 #     age: u8,
 # }
 #
 # merde_json::derive! {
-#     impl(JsonSerialize, JsonDeserialize) for MyStruct { name, age }
+#     impl(JsonSerialize, JsonDeserialize) for MyStruct<'s> { name, age }
 # }
 #
 # fn main() -> Result<(), merde_json::MerdeJsonError> {
 let original = MyStruct {
-    _boo: Default::default(),
     name: "John Doe".into(),
     age: 30,
 };
@@ -357,8 +360,3 @@ into `MerdeJsonError::MissingProperty` with the field name./
 
 Make your actual struct fields `camelCase`, and slap `#[allow(non_snake_case)]` on
 top of your struct. Sorry!
-
-### What do I do about `#[serde(borrow)]`?
-
-That's the default and only mode — use `Cow<'a, str>` for all strings, do `.to_static()`
-if you need to move the struct.

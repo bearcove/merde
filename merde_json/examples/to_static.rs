@@ -1,12 +1,9 @@
 use std::borrow::Cow;
-
-use merde_json::{Fantome, ToStatic};
+use merde_json::ToStatic;
 
 #[allow(dead_code)]
 #[derive(Debug, PartialEq, Eq)]
 struct Address<'s> {
-    _boo: Fantome<'s>,
-
     street: Cow<'s, str>,
     city: Cow<'s, str>,
     state: Cow<'s, str>,
@@ -14,7 +11,7 @@ struct Address<'s> {
 }
 
 merde_json::derive! {
-    impl (JsonDeserialize, ToStatic) for Address {
+    impl (JsonDeserialize, ToStatic) for Address<'s> {
         street,
         city,
         state,
@@ -25,15 +22,13 @@ merde_json::derive! {
 #[allow(dead_code)]
 #[derive(Debug, PartialEq, Eq)]
 struct Person<'s> {
-    _boo: Fantome<'s>,
-
     name: Cow<'s, str>,
     age: u8,
     address: Address<'s>,
 }
 
 merde_json::derive! {
-    impl (JsonDeserialize, ToStatic) for Person { name, age, address }
+    impl (JsonDeserialize, ToStatic) for Person<'s> { name, age, address }
 }
 
 fn get_person() -> Person<'static> {

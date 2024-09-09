@@ -43,15 +43,13 @@ That means, you can have your crate unconditionally depend on `merde_json_types`
 and use `Rfc3339` in your public structs:
 
 ```rust
-use merde_json::{Fantome, JsonSerialize};
+use merde_json::JsonSerialize;
 use merde_json_types::time::Rfc3339;
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct Person<'s> {
+pub struct Person {
     pub name: String,
     pub birth_date: Rfc3339<time::OffsetDateTime>,
-
-    pub _boo: Fantome<'s>,
 }
 
 merde_json::derive! {
@@ -75,15 +73,12 @@ Of course, for that to work, we need to get rid of any unconditional mention of
 
 ```rust
 use std::marker::PhantomData;
-// merde_json_types also exports Fantome
-use merde_json_types::{Fantome, time::Rfc3339};
+use merde_json_types::{time::Rfc3339};
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct Person<'s> {
+pub struct Person {
     pub name: String,
     pub birth_date: Rfc3339<time::OffsetDateTime>,
-
-    pub _boo: Fantome<'s>,
 }
 
 #[cfg(feature = "merde_json")]
