@@ -1,8 +1,6 @@
 #![deny(missing_docs)]
 #![doc = include_str!("../README.md")]
 
-mod variance;
-
 mod error;
 pub use error::*;
 
@@ -290,43 +288,64 @@ where
 }
 
 impl<'src> JsonDeserialize<'src> for JsonValue<'src> {
+    fn json_deserialize_taking_ownership(
+        value: Option<JsonValue<'src>>,
+    ) -> Result<Self, MerdeJsonError> {
+        match value {
+            Some(json_value) => Ok(json_value),
+            None => Err(MerdeJsonError::MissingValue),
+        }
+    }
+
+    #[inline(always)]
     fn json_deserialize<'val>(
         value: Option<&'val JsonValue<'src>>,
     ) -> Result<Self, MerdeJsonError> {
-        match value {
-            Some(json_value) => Ok(variance::shorten_jsonvalue_lifetime(json_value.clone())),
-            None => Err(MerdeJsonError::MissingValue),
-        }
+        Self::json_deserialize_taking_ownership(value.cloned())
     }
 }
 
 impl<'src> JsonDeserialize<'src> for JsonArray<'src> {
-    fn json_deserialize<'val>(
-        value: Option<&'val JsonValue<'src>>,
+    fn json_deserialize_taking_ownership(
+        value: Option<JsonValue<'src>>,
     ) -> Result<Self, MerdeJsonError> {
         match value {
-            Some(JsonValue::Array(arr)) => Ok(variance::shorten_jsonarray_lifetime(arr.clone())),
+            Some(JsonValue::Array(arr)) => Ok(arr),
             Some(v) => Err(MerdeJsonError::MismatchedType {
                 expected: JsonFieldType::Array,
-                found: JsonFieldType::for_json_value(v),
+                found: JsonFieldType::for_json_value(&v),
             }),
             None => Err(MerdeJsonError::MissingValue),
         }
     }
-}
 
-impl<'src> JsonDeserialize<'src> for JsonObject<'src> {
+    #[inline(always)]
     fn json_deserialize<'val>(
         value: Option<&'val JsonValue<'src>>,
     ) -> Result<Self, MerdeJsonError> {
+        Self::json_deserialize_taking_ownership(value.cloned())
+    }
+}
+
+impl<'src> JsonDeserialize<'src> for JsonObject<'src> {
+    fn json_deserialize_taking_ownership(
+        value: Option<JsonValue<'src>>,
+    ) -> Result<Self, MerdeJsonError> {
         match value {
-            Some(JsonValue::Object(obj)) => Ok(variance::shorten_jsonobject_lifetime(obj.clone())),
+            Some(JsonValue::Object(obj)) => Ok(obj),
             Some(v) => Err(MerdeJsonError::MismatchedType {
                 expected: JsonFieldType::Object,
-                found: JsonFieldType::for_json_value(v),
+                found: JsonFieldType::for_json_value(&v),
             }),
             None => Err(MerdeJsonError::MissingValue),
         }
+    }
+
+    #[inline(always)]
+    fn json_deserialize<'val>(
+        value: Option<&'val JsonValue<'src>>,
+    ) -> Result<Self, MerdeJsonError> {
+        Self::json_deserialize_taking_ownership(value.cloned())
     }
 }
 

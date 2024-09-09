@@ -23,13 +23,12 @@ If you enable the `time-serialize`, `time-deserialize`, and `merde_json`
 features, you can do this:
 
 ```rust
-use merde_json::{from_str, JsonSerialize, ToRustValue};
+use merde_json::{from_str, JsonSerialize};
 use merde_json_types::time::Rfc3339;
 
 let dt = Rfc3339(time::OffsetDateTime::now_utc());
 let serialized = dt.to_json_string();
-let deserialized: Rfc3339<time::OffsetDateTime> =
-    merde_json::from_str(&serialized).unwrap().to_rust_value().unwrap();
+let deserialized: Rfc3339<time::OffsetDateTime> = merde_json::from_str(&serialized).unwrap();
 assert_eq!(dt, deserialized);
 ```
 
@@ -44,15 +43,15 @@ That means, you can have your crate unconditionally depend on `merde_json_types`
 and use `Rfc3339` in your public structs:
 
 ```rust
-use merde_json::{Fantome, JsonSerialize, ToRustValue};
+use merde_json::{Fantome, JsonSerialize};
 use merde_json_types::time::Rfc3339;
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct Person<'src, 'val> {
+pub struct Person<'s> {
     pub name: String,
     pub birth_date: Rfc3339<time::OffsetDateTime>,
 
-    pub _boo: Fantome<'src, 'val>,
+    pub _boo: Fantome<'s>,
 }
 
 merde_json::derive! {
@@ -76,17 +75,15 @@ Of course, for that to work, we need to get rid of any unconditional mention of
 
 ```rust
 use std::marker::PhantomData;
-use merde_json_types::time::Rfc3339;
+// merde_json_types also exports Fantome
+use merde_json_types::{Fantome, time::Rfc3339};
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct Person<'src, 'val> {
+pub struct Person<'s> {
     pub name: String,
     pub birth_date: Rfc3339<time::OffsetDateTime>,
 
-    /// This field still _has_ to be named `_boo`, but we can't use
-    /// the `Fantome` type here without pulling in `merde_json`: so,
-    /// we use `PhantomData` instead.
-    pub _boo: PhantomData<(&'src (), &'val ())>,
+    pub _boo: Fantome<'s>,
 }
 
 #[cfg(feature = "merde_json")]
