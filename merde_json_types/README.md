@@ -50,8 +50,6 @@ use merde_json_types::time::Rfc3339;
 pub struct Person<'s> {
     pub name: String,
     pub birth_date: Rfc3339<time::OffsetDateTime>,
-
-    pub _boo: Fantome<'s>,
 }
 
 merde_json::derive! {
@@ -82,8 +80,6 @@ use merde_json_types::{Fantome, time::Rfc3339};
 pub struct Person<'s> {
     pub name: String,
     pub birth_date: Rfc3339<time::OffsetDateTime>,
-
-    pub _boo: Fantome<'s>,
 }
 
 #[cfg(feature = "merde_json")]

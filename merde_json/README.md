@@ -39,8 +39,6 @@ use std::borrow::Cow;
 
 #[derive(Debug, PartialEq)]
 struct MyStruct<'s> {
-    _boo: Fantome<'s>,
-
     name: Cow<'s, str>,
     age: u8,
 }
@@ -53,12 +51,8 @@ merde_json::derive! {
 }
 ```
 
-Declarative macros = less work to do at compile-time, as long as we follow a couple rules:
-
- * All structs have an `'s` lifetime parameter
- * All structs have a `_boo` field, for structs that don't use their lifetime parameter
- * Field names are listed twice: in the struct and in the macro (limitation of declarative macros)
- * Use `Cow<'val, str>` for all your strings, instead of choosing between `&str` and `String` on a case-by-case basis
+Declarative macros = less work to do at compile-time, as long as we agree to list our field
+names twice: in the struct, and in the macro — which is a limitation of declarative macros.
 
 Read [The Secret Life Of Cows](https://deterministic.space/secret-life-of-cows.html) for a good introduction to Rust's "Copy-on-Write" types.
 
@@ -73,8 +67,6 @@ via the [JsonDeserialize] trait:
 #
 # #[derive(Debug, PartialEq)]
 # struct MyStruct<'s> {
-#     _boo: Fantome<'s>,
-#
 #     name: Cow<'s, str>,
 #     age: u8,
 # }
@@ -110,7 +102,6 @@ This code fails to compile:
 #
 # #[derive(Debug, PartialEq)]
 # struct MyStruct<'s> {
-#     _boo: Fantome<'s>,
 #     name: Cow<'s, str>,
 #     age: u8,
 # }
@@ -151,7 +142,6 @@ Deriving the [ToStatic] trait lets you go from `MyStruct<'s>` to `MyStruct<'stat
 #
 # #[derive(Debug, PartialEq)]
 # struct MyStruct<'s> {
-#     _boo: Fantome<'s>,
 #     name: Cow<'s, str>,
 #     age: u8,
 # }
@@ -187,7 +177,6 @@ use merde_json::{Fantome, JsonDeserialize, JsonSerialize, JsonValue, MerdeJsonEr
 
 #[derive(Debug, PartialEq)]
 struct MixedArray<'s> {
-    _boo: Fantome<'s>,
     items: Vec<JsonValue<'s>>,
 }
 
@@ -243,7 +232,6 @@ Serializing typically looks like:
 #
 # #[derive(Debug, PartialEq)]
 # struct MyStruct<'s> {
-#     _boo: Fantome<'s>,
 #     name: Cow<'s, str>,
 #     age: u8,
 # }
@@ -254,7 +242,6 @@ Serializing typically looks like:
 #
 # fn main() -> Result<(), merde_json::MerdeJsonError> {
 let original = MyStruct {
-    _boo: Default::default(),
     name: "John Doe".into(),
     age: 30,
 };
@@ -279,7 +266,6 @@ If you want more control over the buffer, for example you'd like to re-use the s
 #
 # #[derive(Debug, PartialEq)]
 # struct MyStruct<'s> {
-#     _boo: Fantome<'s>,
 #     name: Cow<'s, str>,
 #     age: u8,
 # }
@@ -290,7 +276,6 @@ If you want more control over the buffer, for example you'd like to re-use the s
 #
 # fn main() -> Result<(), merde_json::MerdeJsonError> {
 let original = MyStruct {
-    _boo: Default::default(),
     name: "John Doe".into(),
     age: 30,
 };

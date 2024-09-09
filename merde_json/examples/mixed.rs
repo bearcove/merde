@@ -1,23 +1,19 @@
 use std::borrow::Cow;
 
 use merde_json::{
-    Fantome, JsonArrayExt, JsonDeserialize, JsonSerialize, JsonSerializer, JsonValue, JsonValueExt,
+    JsonArrayExt, JsonDeserialize, JsonSerialize, JsonSerializer, JsonValue, JsonValueExt,
 };
 
 #[derive(Debug, PartialEq)]
 struct MixedArray<'s> {
-    _boo: Fantome<'s>,
-
     items: Vec<JsonValue<'s>>,
 }
 merde_json::derive! {
-    impl(JsonSerialize, JsonDeserialize) for MixedArray { items }
+    impl(JsonSerialize, JsonDeserialize) for MixedArray<'s> { items }
 }
 
 #[derive(Debug, PartialEq)]
 struct Items<'s> {
-    _boo: Fantome<'s>,
-
     number: u32,
     string: Cow<'s, str>,
     boolean: bool,
@@ -32,8 +28,6 @@ impl<'s> JsonDeserialize<'s> for Items<'s> {
             .as_array()?;
 
         Ok(Items {
-            _boo: Default::default(),
-
             number: arr.must_get(0)?,
             string: arr.must_get(1)?,
             boolean: arr.must_get(2)?,
@@ -53,12 +47,10 @@ impl JsonSerialize for Items<'_> {
 
 #[derive(Debug, PartialEq)]
 struct MixedArray2<'s> {
-    _boo: Fantome<'s>,
-
     items: Items<'s>,
 }
 merde_json::derive! {
-    impl(JsonSerialize, JsonDeserialize) for MixedArray2 { items }
+    impl(JsonSerialize, JsonDeserialize) for MixedArray2<'s> { items }
 }
 
 fn main() {

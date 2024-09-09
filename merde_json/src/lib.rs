@@ -1021,18 +1021,34 @@ impl<T: ToStatic> ToStatic for VecDeque<T> {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! impl_json_deserialize {
-    ($struct_name:ident { $($field:ident),+ }) => {
-        impl<'s> $crate::JsonDeserialize<'s> for $struct_name<'s>
+    ($struct_name:ident <$lifetime:lifetime> { $($field:ident),+ }) => {
+        impl<$lifetime> $crate::JsonDeserialize<$lifetime> for $struct_name<$lifetime>
         {
             fn json_deserialize<'val>(
-                value: Option<&'val $crate::JsonValue<'s>>,
+                value: Option<&'val $crate::JsonValue<$lifetime>>,
             ) -> Result<Self, $crate::MerdeJsonError> {
                 #[allow(unused_imports)]
                 use $crate::{JsonObjectExt, JsonValueExt, MerdeJsonError};
 
                 let obj = value.ok_or(MerdeJsonError::MissingValue)?.as_object()?;
                 Ok($struct_name {
-                    _boo: Default::default(),
+                    $($field: obj.must_get(stringify!($field))?,)+
+                })
+            }
+        }
+    };
+
+    ($struct_name:ident { $($field:ident),+ }) => {
+        impl $crate::JsonDeserialize<'static> for $struct_name
+        {
+            fn json_deserialize<'val>(
+                value: Option<&'val $crate::JsonValue<'_>>,
+            ) -> Result<Self, $crate::MerdeJsonError> {
+                #[allow(unused_imports)]
+                use $crate::{JsonObjectExt, JsonValueExt, MerdeJsonError};
+
+                let obj = value.ok_or(MerdeJsonError::MissingValue)?.as_object()?;
+                Ok($struct_name {
                     $($field: obj.must_get(stringify!($field))?,)+
                 })
             }
@@ -1043,8 +1059,22 @@ macro_rules! impl_json_deserialize {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! impl_json_serialize {
+    ($struct_name:ident < $lifetime:lifetime > { $($field:ident),+ }) => {
+        impl<$lifetime> $crate::JsonSerialize for $struct_name<$lifetime> {
+            fn json_serialize(&self, serializer: &mut $crate::JsonSerializer) {
+                #[allow(unused_imports)]
+                use $crate::{JsonObjectExt, JsonValueExt, MerdeJsonError};
+
+                let mut guard = serializer.write_obj();
+                $(
+                    guard.pair(stringify!($field), &self.$field);
+                )+
+            }
+        }
+    };
+
     ($struct_name:ident { $($field:ident),+ }) => {
-        impl<'s> $crate::JsonSerialize for $struct_name<'s> {
+        impl $crate::JsonSerialize for $struct_name {
             fn json_serialize(&self, serializer: &mut $crate::JsonSerializer) {
                 #[allow(unused_imports)]
                 use $crate::{JsonObjectExt, JsonValueExt, MerdeJsonError};
@@ -1061,8 +1091,8 @@ macro_rules! impl_json_serialize {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! impl_to_static {
-    ($struct_name:ident { $($field:ident),+ }) => {
-        impl<'s> $crate::ToStatic for $struct_name<'s> {
+    ($struct_name:ident <$lifetime:lifetime> { $($field:ident),+ }) => {
+        impl<$lifetime> $crate::ToStatic for $struct_name<$lifetime> {
             type Output = $struct_name<'static>;
 
             fn to_static(&self) -> Self::Output {
@@ -1070,7 +1100,21 @@ macro_rules! impl_to_static {
                 use $crate::ToStatic;
 
                 $struct_name {
-                    _boo: Default::default(),
+                    $($field: self.$field.to_static(),)+
+                }
+            }
+        }
+    };
+
+    ($struct_name:ident { $($field:ident),+ }) => {
+        impl $crate::ToStatic for $struct_name {
+            type Output = $struct_name;
+
+            fn to_static(&self) -> Self::Output {
+                #[allow(unused_imports)]
+                use $crate::ToStatic;
+
+                $struct_name {
                     $($field: self.$field.to_static(),)+
                 }
             }
@@ -1087,20 +1131,18 @@ macro_rules! impl_to_static {
 /// # Usage
 ///
 /// ```rust
-/// use merde_json::{Fantome, JsonSerialize, JsonDeserialize};
+/// use merde_json::{JsonSerialize, JsonDeserialize};
 /// use std::borrow::Cow;
 ///
 /// #[derive(Debug, PartialEq)]
 /// struct MyStruct<'s> {
-///     _boo: Fantome<'s>,
-///
 ///     field1: Cow<'s, str>,
 ///     field2: i32,
 ///     field3: bool,
 /// }
 ///
 /// merde_json::derive! {
-///     impl(JsonSerialize, JsonDeserialize, ToStatic) for MyStruct {
+///     impl(JsonSerialize, JsonDeserialize, ToStatic) for MyStruct<'s> {
 ///         field1,
 ///         field2,
 ///         field3
@@ -1119,6 +1161,20 @@ macro_rules! impl_to_static {
 /// for this — or a proc macro, see [serde](https://serde.rs/)'s serde_derive.
 #[macro_export]
 macro_rules! derive {
+    // cow variants
+    (impl($($trait:ident),+) for $struct_name:ident <$lifetime:lifetime> { $($field:ident),+ }) => {
+        $crate::derive!(@step1 { $($trait),+ } $struct_name <$lifetime> { $($field),+ });
+    };
+    (@step1 { $trait:ident, $($rest_traits:ident),* } $struct_name:ident <$lifetime:lifetime> $fields:tt) => {
+        $crate::impl_trait!(@impl $trait, $struct_name <$lifetime> $fields);
+        $crate::derive!(@step1 { $($rest_traits),* } $struct_name <$lifetime> $fields);
+    };
+    (@step1 { $trait:ident } $struct_name:ident <$lifetime:lifetime> $fields:tt) => {
+        $crate::impl_trait!(@impl $trait, $struct_name <$lifetime> $fields);
+    };
+    (@step1 { } $struct_name:ident <$lifetime:lifetime> $fields:tt) => {};
+
+    // owned variants
     (impl($($trait:ident),+) for $struct_name:ident { $($field:ident),+ }) => {
         $crate::derive!(@step1 { $($trait),+ } $struct_name { $($field),+ });
     };
@@ -1135,6 +1191,18 @@ macro_rules! derive {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! impl_trait {
+    // cow variants
+    (@impl JsonSerialize, $struct_name:ident <$lifetime:lifetime> { $($field:ident),+ }) => {
+        $crate::impl_json_serialize!($struct_name <$lifetime> { $($field),+ });
+    };
+    (@impl JsonDeserialize, $struct_name:ident <$lifetime:lifetime> { $($field:ident),+ }) => {
+        $crate::impl_json_deserialize!($struct_name <$lifetime> { $($field),+ });
+    };
+    (@impl ToStatic, $struct_name:ident <$lifetime:lifetime> { $($field:ident),+ }) => {
+        $crate::impl_to_static!($struct_name <$lifetime> { $($field),+ });
+    };
+
+    // owned variants
     (@impl JsonSerialize, $struct_name:ident { $($field:ident),+ }) => {
         $crate::impl_json_serialize!($struct_name { $($field),+ });
     };
@@ -1144,24 +1212,6 @@ macro_rules! impl_trait {
     (@impl ToStatic, $struct_name:ident { $($field:ident),+ }) => {
         $crate::impl_to_static!($struct_name { $($field),+ });
     };
-}
-
-/// A type you can use instead of `PhantomData` for convenience.
-///
-/// Note: if you're conditionally deriving `JsonSerialize` and `JsonDeserialize` for a type,
-/// and you don't want the `merde_json` dependency  when it's not used, you can use
-/// `merde_json_types::Fantome` instead — the derive macros will be happy with that.
-///
-/// This type is really just a convenience so you have less to type.
-#[derive(Default, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct Fantome<'s> {
-    _boo: std::marker::PhantomData<&'s ()>,
-}
-
-impl std::fmt::Debug for Fantome<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("Boo!")
-    }
 }
 
 #[cfg(test)]
@@ -1184,14 +1234,12 @@ mod tests {
 
         #[derive(Debug, PartialEq)]
         struct SecondStruct<'s> {
-            _boo: Fantome<'s>,
-
             string_field: Cow<'s, str>,
             int_field: i32,
         }
 
         derive! {
-            impl(JsonSerialize, JsonDeserialize) for SecondStruct {
+            impl(JsonSerialize, JsonDeserialize) for SecondStruct<'s> {
                 string_field,
                 int_field
             }
@@ -1199,8 +1247,6 @@ mod tests {
 
         #[derive(Debug, PartialEq)]
         struct ComplexStruct<'s> {
-            _boo: Fantome<'s>,
-
             string_field: Cow<'s, str>,
             u8_field: u8,
             u16_field: u16,
@@ -1219,7 +1265,7 @@ mod tests {
         }
 
         derive! {
-            impl(JsonSerialize, JsonDeserialize) for ComplexStruct {
+            impl(JsonSerialize, JsonDeserialize) for ComplexStruct<'s> {
                 string_field,
                 u8_field,
                 u16_field,
@@ -1257,12 +1303,9 @@ mod tests {
             vec_field: vec![1, 2, 3],
             hashmap_field: hashmap,
             second_struct_field: SecondStruct {
-                _boo: Default::default(),
-
                 string_field: Cow::Borrowed("nested string"),
                 int_field: 100,
             },
-            _boo: Default::default(),
         };
 
         let serialized = original.to_json_string();

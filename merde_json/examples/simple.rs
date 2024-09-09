@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use merde_json::{Fantome, JsonSerialize};
+use merde_json::JsonSerialize;
 
 fn main() {
     let input = r#"
@@ -34,8 +34,6 @@ fn main() {
 #[allow(dead_code)]
 #[derive(Debug, PartialEq, Eq)]
 struct Address<'s> {
-    _boo: Fantome<'s>,
-
     street: Cow<'s, str>,
     city: Cow<'s, str>,
     state: Cow<'s, str>,
@@ -43,7 +41,7 @@ struct Address<'s> {
 }
 
 merde_json::derive! {
-    impl (JsonSerialize, JsonDeserialize) for Address {
+    impl (JsonSerialize, JsonDeserialize) for Address<'s> {
         street,
         city,
         state,
@@ -54,13 +52,11 @@ merde_json::derive! {
 #[allow(dead_code)]
 #[derive(Debug, PartialEq, Eq)]
 struct Person<'s> {
-    _boo: Fantome<'s>,
-
     name: Cow<'s, str>,
     age: u8,
     address: Address<'s>,
 }
 
 merde_json::derive! {
-    impl (JsonSerialize, JsonDeserialize) for Person { name, age, address }
+    impl (JsonSerialize, JsonDeserialize) for Person<'s> { name, age, address }
 }
