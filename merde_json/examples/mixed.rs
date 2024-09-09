@@ -5,27 +5,27 @@ use merde_json::{
 };
 
 #[derive(Debug, PartialEq)]
-struct MixedArray<'src> {
-    _boo: Fantome<'src>,
+struct MixedArray<'s> {
+    _boo: Fantome<'s>,
 
-    items: Vec<JsonValue<'src>>,
+    items: Vec<JsonValue<'s>>,
 }
 merde_json::derive! {
     impl(JsonSerialize, JsonDeserialize) for MixedArray { items }
 }
 
 #[derive(Debug, PartialEq)]
-struct Items<'src> {
-    _boo: Fantome<'src>,
+struct Items<'s> {
+    _boo: Fantome<'s>,
 
     number: u32,
-    string: Cow<'src, str>,
+    string: Cow<'s, str>,
     boolean: bool,
 }
 
-impl<'src> JsonDeserialize<'src> for Items<'src> {
+impl<'s> JsonDeserialize<'s> for Items<'s> {
     fn json_deserialize<'val>(
-        value: Option<&'val JsonValue<'src>>,
+        value: Option<&'val JsonValue<'s>>,
     ) -> Result<Self, merde_json::MerdeJsonError> {
         let arr = value
             .ok_or(merde_json::MerdeJsonError::MissingValue)?
@@ -52,10 +52,10 @@ impl JsonSerialize for Items<'_> {
 }
 
 #[derive(Debug, PartialEq)]
-struct MixedArray2<'src> {
-    _boo: Fantome<'src>,
+struct MixedArray2<'s> {
+    _boo: Fantome<'s>,
 
-    items: Items<'src>,
+    items: Items<'s>,
 }
 merde_json::derive! {
     impl(JsonSerialize, JsonDeserialize) for MixedArray2 { items }

@@ -8,8 +8,8 @@ pub mod time;
 ///
 /// This type is really just a convenience so you have less to type.
 #[derive(Default, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct Fantome<'src> {
-    _boo: std::marker::PhantomData<&'src ()>,
+pub struct Fantome<'s> {
+    _boo: std::marker::PhantomData<&'s ()>,
 }
 
 impl std::fmt::Debug for Fantome<'_> {

@@ -4,12 +4,12 @@ use merde_json::{Fantome, ToStatic};
 
 #[allow(dead_code)]
 #[derive(Debug, PartialEq, Eq)]
-struct Address<'src> {
-    _boo: Fantome<'src>,
+struct Address<'s> {
+    _boo: Fantome<'s>,
 
-    street: Cow<'src, str>,
-    city: Cow<'src, str>,
-    state: Cow<'src, str>,
+    street: Cow<'s, str>,
+    city: Cow<'s, str>,
+    state: Cow<'s, str>,
     zip: u16,
 }
 
@@ -24,12 +24,12 @@ merde_json::derive! {
 
 #[allow(dead_code)]
 #[derive(Debug, PartialEq, Eq)]
-struct Person<'src> {
-    _boo: Fantome<'src>,
+struct Person<'s> {
+    _boo: Fantome<'s>,
 
-    name: Cow<'src, str>,
+    name: Cow<'s, str>,
     age: u8,
-    address: Address<'src>,
+    address: Address<'s>,
 }
 
 merde_json::derive! {

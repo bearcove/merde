@@ -79,9 +79,9 @@ mod merde_json_impls {
     }
 
     #[cfg(feature = "time-deserialize")]
-    impl<'src> merde_json::JsonDeserialize<'src> for Rfc3339<time::OffsetDateTime> {
+    impl<'s> merde_json::JsonDeserialize<'s> for Rfc3339<time::OffsetDateTime> {
         fn json_deserialize<'val>(
-            value: Option<&'val merde_json::JsonValue<'src>>,
+            value: Option<&'val merde_json::JsonValue<'s>>,
         ) -> Result<Self, merde_json::MerdeJsonError> {
             use merde_json::JsonValueExt;
             let s = value
