@@ -23,18 +23,7 @@ pub(crate) fn jiter_to_value_with_peek<'j>(
         Peek::NaN => Value::Float(f64::NAN),
         Peek::String => {
             let s = iter.known_str()?;
-            // fun trick! we try to figure out if `s` is taken from `src`.
-            // if yes, we can borrow. if no, we need to allocate.
-            let range = src.as_bytes().as_ptr_range();
-            if range.contains(&s.as_ptr()) {
-                // okay, cool! let's transmute the lifetime away I guess.
-                // the public API of `jiter` is just not flexible enough for this,
-                // I wish they'd expose `Parser` or something.
-                Value::String(CowStr::Borrowed(unsafe { std::mem::transmute(s) }))
-            } else {
-                // nope, this was written to the tape, let's copy
-                Value::String(CowStr::Owned(s.into()))
-            }
+            Value::String(cowify(src, s))
         }
         Peek::Array => {
             let mut arr = Vec::new();
@@ -106,7 +95,12 @@ fn test_jiter_to_value() {
             "city": "Anytown",
             "state": "CA",
             "zip": 12345
-        }
+        },
+        "friends": [
+            "Alice",
+            "Bob",
+            "Charlie"
+        ]
     }
     "#;
 
@@ -118,7 +112,7 @@ fn test_jiter_to_value() {
             let mut map = LazyIndexMap::new();
             map.insert(
                 CowStr::from("name"),
-                Value::String(CowStr::Borrowed("John Doe")),
+                Value::String(CowStr::from("John Doe")),
             );
             map.insert(CowStr::from("age"), Value::Int(42));
             map.insert(
@@ -127,16 +121,21 @@ fn test_jiter_to_value() {
                     let mut map = LazyIndexMap::new();
                     map.insert(
                         CowStr::from("street"),
-                        Value::String(CowStr::Borrowed("123 Main St")),
+                        Value::String(CowStr::from("123 Main St")),
                     );
-                    map.insert(
-                        CowStr::from("city"),
-                        Value::String(CowStr::Borrowed("Anytown")),
-                    );
-                    map.insert(CowStr::from("state"), Value::String(CowStr::Borrowed("CA")));
+                    map.insert(CowStr::from("city"), Value::String(CowStr::from("Anytown")));
+                    map.insert(CowStr::from("state"), Value::String(CowStr::from("CA")));
                     map.insert(CowStr::from("zip"), Value::Int(12345));
                     map
                 }),
+            );
+            map.insert(
+                CowStr::from("friends"),
+                Value::Array(vec![
+                    Value::String(CowStr::from("Alice")),
+                    Value::String(CowStr::from("Bob")),
+                    Value::String(CowStr::from("Charlie")),
+                ]),
             );
             map
         })
