@@ -1117,10 +1117,10 @@ macro_rules! impl_to_static {
 /// use std::borrow::Cow;
 ///
 /// #[derive(Debug, PartialEq)]
-/// struct MyStruct<'src, 'val> {
-///     _boo: Fantome<'src, 'val>,
+/// struct MyStruct<'src> {
+///     _boo: Fantome<'src>,
 ///
-///     field1: Cow<'val, str>,
+///     field1: Cow<'src, str>,
 ///     field2: i32,
 ///     field3: bool,
 /// }
