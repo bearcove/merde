@@ -11,3 +11,6 @@ keywords = ["serialization", "deserialization"]
 categories = ["encoding", "parser-implementations"]
 
 [dependencies]
+ahash = "0.8.11"
+compact_str = "0.8.0"
+smallvec = "1.13.2"
