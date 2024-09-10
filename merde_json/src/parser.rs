@@ -1,7 +1,7 @@
 use jiter::{Jiter, JiterError, JsonError, JsonErrorType, Peek};
 use merde_types::{CowStr, Map, Value};
 
-pub(crate) fn bytes_to_value(src: &[u8]) -> Result<Value<'_>, JiterError> {
+pub(crate) fn json_bytes_to_value(src: &[u8]) -> Result<Value<'_>, JiterError> {
     let mut iter = Jiter::new(src);
     jiter_to_value(src, &mut iter)
 }
@@ -20,9 +20,11 @@ pub(crate) fn jiter_to_value_with_peek<'j>(
     iter: &mut Jiter<'j>,
 ) -> Result<Value<'j>, JiterError> {
     Ok(match peek {
-        Peek::Null => Value::Null,
-        Peek::True => Value::Bool(true),
-        Peek::False => Value::Bool(false),
+        Peek::Null => {
+            iter.known_null()?;
+            Value::Null
+        }
+        Peek::True | Peek::False => iter.known_bool(peek)?.into(),
         Peek::Infinity => Value::Float(f64::INFINITY),
         Peek::NaN => Value::Float(f64::NAN),
         Peek::String => {
@@ -86,7 +88,7 @@ fn cowify<'j>(src: &'j [u8], s: &str) -> CowStr<'j> {
 mod tests {
     use merde_types::{Array, CowStr, Map, Value};
 
-    use crate::parser::{bytes_to_value, cowify};
+    use crate::parser::{cowify, json_bytes_to_value};
 
     #[test]
     fn test_cowify() {
@@ -119,7 +121,7 @@ mod tests {
         }
         "#;
 
-        let value = bytes_to_value(src.as_bytes()).unwrap();
+        let value = json_bytes_to_value(src.as_bytes()).unwrap();
         assert_eq!(
             value,
             Value::Map(

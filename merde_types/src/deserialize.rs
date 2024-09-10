@@ -55,8 +55,8 @@ impl<'s> ValueDeserialize<'s> for Cow<'s, str> {
     fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
         match value {
             Some(Value::Str(s)) => match s {
-                CowStr::Borrowed(_) => todo!(),
-                CowStr::Owned(_) => todo!(),
+                CowStr::Borrowed(b) => Ok(Cow::Borrowed(b)),
+                CowStr::Owned(o) => Ok(Cow::Owned(o.into())),
             },
             Some(v) => Err(MerdeError::MismatchedType {
                 expected: ValueType::String,
