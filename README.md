@@ -2,22 +2,24 @@
 [![crates.io](https://img.shields.io/crates/v/merde_json.svg)](https://crates.io/crates/merde_json)
 [![docs.rs](https://docs.rs/merde_json/badge.svg)](https://docs.rs/merde_json)
 
-# merde_json
+# merde
 
-![The merde_json logo: a glorious poop floating above a pair of hands](https://github.com/user-attachments/assets/763d60e0-5101-48af-bc72-f96f516a5d0f)
+![The merde logo: a glorious poop floating above a pair of hands](https://github.com/user-attachments/assets/763d60e0-5101-48af-bc72-f96f516a5d0f)
 
 _Logo by [MisiasArt](https://misiasart.carrd.co)_
 
+A simpler (and slightly shittier) take on [serde](https://crates.io/crates/serde)
+
 Do you want to deal with JSON data? Are you not _that_ worried about the
 performance overhead? (ie. you're writing a backend in Rust, but if it was
-written in Node.js nobody would bat an eye).
+written in Node.js nobody would bat an eye?).
 
 Do you value short build times at the expense of some comfort?
 
 Then head over to the crate documentations:
 
+  * [merde](./merde/README.md)
   * [merde_json](./merde_json/README.md)
-  * [merde_json_types](./merde_json_types/README.md)
 
 ## FAQ
 

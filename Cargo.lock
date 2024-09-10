@@ -146,29 +146,35 @@ checksum = "97b3888a4aecf77e811145cadf6eef5901f4782c53886191b2f693f24761847c"
 
 [[package]]
 name = "merde"
-version = "0.1.0"
+version = "3.0.0"
 dependencies = [
- "ahash",
- "compact_str",
- "smallvec",
+ "merde_json",
 ]
 
 [[package]]
 name = "merde_json"
-version = "2.4.1"
+version = "3.0.0"
 dependencies = [
  "jiter",
- "merde",
- "serde",
- "smallvec",
+ "merde_types",
 ]
 
 [[package]]
-name = "merde_json_types"
-version = "2.2.3"
+name = "merde_time"
+version = "3.0.0"
 dependencies = [
  "merde_json",
+ "merde_types",
  "time",
+]
+
+[[package]]
+name = "merde_types"
+version = "3.0.0"
+dependencies = [
+ "ahash",
+ "compact_str",
+ "smallvec",
 ]
 
 [[package]]
