@@ -2,6 +2,7 @@ mod cowstr;
 mod deserialize;
 mod error;
 mod lazyindexmap;
+mod macros;
 
 use std::ops::Deref;
 use std::ops::DerefMut;
@@ -228,6 +229,23 @@ impl<'s> Map<'s> {
     {
         let key = key.into();
         T::from_value_ref(self.get(&key)).map_err(|e| match e {
+            MerdeError::MissingValue => MerdeError::MissingProperty(key),
+            _ => e,
+        })
+    }
+
+    /// Removes a value from the object, returning an error if the key is missing.
+    ///
+    /// Because this method knows the key name, it transforms [MerdeError::MissingValue] into [MerdeError::MissingProperty].
+    ///
+    /// It does not by itself throw an error if `self.remove()` returns `None`, to allow
+    /// for optional fields (via the [ValueDeserialize] implementation on the [Option] type).
+    pub fn must_remove<T>(&mut self, key: impl Into<CowStr<'static>>) -> Result<T, MerdeError>
+    where
+        T: ValueDeserialize<'s>,
+    {
+        let key = key.into();
+        T::from_value(self.remove(&key)).map_err(|e| match e {
             MerdeError::MissingValue => MerdeError::MissingProperty(key),
             _ => e,
         })

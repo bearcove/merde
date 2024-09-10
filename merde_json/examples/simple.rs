@@ -18,14 +18,14 @@ fn main() {
 
     // Note: those two bindings are necessary — `Person` borrows from `JsonValue`
     // If we wanted a `Person` we can move, we could do `.to_static()`
-    let person: Person = merde_json::from_str(input).unwrap();
+    let person: Person = merde_json::from_str_via_value(input).unwrap();
     println!("{:#?}", person);
 
     // Round-trip! Again, every binding borrows from the previous one, and
     // everything can be converted from `F<'a>` to `F<'static>` via the
     // `ToStatic` trait.
     let serialized = person.to_json_string();
-    let person2: Person = merde_json::from_str(&serialized).unwrap();
+    let person2: Person = merde_json::from_str_via_value(&serialized).unwrap();
     println!("{:#?}", person2);
 
     assert_eq!(person, person2);

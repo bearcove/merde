@@ -62,9 +62,9 @@ fn main() {
         }
     "#;
 
-    let ma: MixedArray = merde_json::from_str(input).unwrap();
+    let ma: MixedArray = merde_json::from_str_via_value(input).unwrap();
     println!("{:?}", ma);
 
-    let ma: MixedArray2 = merde_json::from_str(input).unwrap();
+    let ma: MixedArray2 = merde_json::from_str_via_value(input).unwrap();
     println!("{:?}", ma);
 }

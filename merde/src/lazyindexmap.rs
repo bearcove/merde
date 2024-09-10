@@ -130,6 +130,50 @@ where
                 .collect()
         })
     }
+
+    fn get_map_mut(&mut self) -> &mut AHashMap<K, usize> {
+        self.map.get_or_init(|| {
+            self.vec
+                .iter()
+                .enumerate()
+                .map(|(index, (key, _))| (key.clone(), index))
+                .collect()
+        })
+    }
+
+    pub fn remove(&mut self, key: &K) -> Option<V> {
+        let vec_len = self.vec.len();
+
+        let mut k_index = None;
+        // if the vec is longer than the threshold, we use the hashmap for lookups
+        if vec_len > HASHMAP_THRESHOLD {
+            k_index = Some(self.get_map().remove(key)?)
+        } else {
+            // otherwise we find the value in the vec
+            // we assume the most likely position for the match is at `last_find + 1`
+            let first_try = self.last_find.load(Ordering::Relaxed) + 1;
+            for i in first_try..first_try + vec_len {
+                let index = i % vec_len;
+                let (k, v) = &self.vec[index];
+                if k == key {
+                    self.last_find.store(index, Ordering::Relaxed);
+                    k_index = Some(index);
+                }
+            }
+        };
+
+        // swap the last element with the one we want to remove, then pop
+        // the last element off the back
+        let k_index = k_index?;
+
+        if vec_len == 1 {
+            Some(self.vec.pop().unwrap().1)
+        } else {
+            let last_index = vec_len - 1;
+            self.vec.swap(k_index, last_index);
+            Some(self.vec.pop().unwrap().1)
+        }
+    }
 }
 
 impl<K: PartialEq, V: PartialEq> PartialEq for LazyIndexMap<K, V> {
