@@ -11,8 +11,8 @@ mod error;
 pub use error::MerdeError;
 pub use error::ValueType;
 
-mod to_static;
-pub use to_static::ToStatic;
+mod into_static;
+pub use into_static::IntoStatic;
 
 mod value;
 pub use value::Value;

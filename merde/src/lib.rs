@@ -70,17 +70,17 @@ macro_rules! impl_value_deserialize {
 
 #[doc(hidden)]
 #[macro_export]
-macro_rules! impl_to_static {
+macro_rules! impl_into_static {
     ($struct_name:ident <$lifetime:lifetime> { $($field:ident),+ }) => {
-        impl<$lifetime> $crate::ToStatic for $struct_name<$lifetime> {
+        impl<$lifetime> $crate::IntoStatic for $struct_name<$lifetime> {
             type Output = $struct_name<'static>;
 
-            fn to_static(&self) -> Self::Output {
+            fn into_static(self) -> Self::Output {
                 #[allow(unused_imports)]
-                use $crate::ToStatic;
+                use $crate::IntoStatic;
 
                 $struct_name {
-                    $($field: self.$field.to_static(),)+
+                    $($field: self.$field.into_static(),)+
                 }
             }
         }
@@ -90,13 +90,9 @@ macro_rules! impl_to_static {
         impl $crate::ToStatic for $struct_name {
             type Output = $struct_name;
 
-            fn to_static(&self) -> Self::Output {
-                #[allow(unused_imports)]
-                use $crate::ToStatic;
-
-                $struct_name {
-                    $($field: self.$field.to_static(),)+
-                }
+            #[inline(always)]
+            fn into_static(self) -> Self::Output {
+                self
             }
         }
     };
@@ -192,11 +188,11 @@ macro_rules! impl_trait {
 
     // with lifetime param
     (@impl ToStatic, $struct_name:ident <$lifetime:lifetime> { $($field:ident),+ }) => {
-        $crate::impl_to_static!($struct_name <$lifetime> { $($field),+ });
+        $crate::impl_into_static!($struct_name <$lifetime> { $($field),+ });
     };
     // without lifetime param
     (@impl ToStatic, $struct_name:ident { $($field:ident),+ }) => {
-        $crate::impl_to_static!($struct_name { $($field),+ });
+        $crate::impl_into_static!($struct_name { $($field),+ });
     };
 }
 
