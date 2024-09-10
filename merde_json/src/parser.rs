@@ -1,7 +1,7 @@
 use jiter::{Jiter, JiterError, Peek};
 use merde_types::{CowStr, Map, Value};
 
-pub(crate) fn bytes_to_value<'j>(src: &'j [u8]) -> Result<Value<'j>, JiterError> {
+pub(crate) fn bytes_to_value(src: &[u8]) -> Result<Value<'_>, JiterError> {
     let mut iter = Jiter::new(src);
     jiter_to_value(src, &mut iter)
 }
@@ -48,7 +48,7 @@ pub(crate) fn jiter_to_value_with_peek<'j>(
                 obj.insert(key, value);
                 next = iter.next_key()?;
             }
-            Value::Map(obj.into())
+            Value::Map(obj)
         }
         p if p.is_num() => {
             if let Ok(i) = iter.next_int() {
