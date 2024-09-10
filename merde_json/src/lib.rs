@@ -9,7 +9,6 @@ use parser::bytes_to_value;
 
 use std::borrow::Cow;
 use std::collections::HashMap;
-use std::hash::Hash;
 use std::io::Write;
 
 /// Writes JSON to a `Vec<u8>`. None of its methods can fail, since it doesn't target
