@@ -1,5 +1,5 @@
 use jiter::{Jiter, JiterError, Peek};
-use merde_types::{Array, CowStr, Map, Value};
+use merde_types::{CowStr, Map, Value};
 
 pub(crate) fn bytes_to_value<'j>(src: &'j [u8]) -> Result<Value<'j>, JiterError> {
     let mut iter = Jiter::new(src);
@@ -78,60 +78,66 @@ fn cowify<'j>(src: &'j [u8], s: &str) -> CowStr<'j> {
     }
 }
 
-#[test]
-fn test_cowify() {
-    let src = "That's a subset!";
-    let s = &src[4..8];
-    assert_eq!(cowify(src.as_bytes(), s), CowStr::Borrowed(s));
+#[cfg(test)]
+mod tests {
+    use merde_types::{Array, CowStr, Map, Value};
 
-    let src = "Not a subset";
-    let s = "indeed not";
-    assert_eq!(cowify(src.as_bytes(), s), CowStr::Owned(s.into()));
-}
+    use crate::parser::{bytes_to_value, cowify};
 
-#[test]
-fn test_jiter_to_value() {
-    let src = r#"
-    {
-        "name": "John Doe",
-        "age": 42,
-        "address": {
-            "street": "123 Main St",
-            "city": "Anytown",
-            "state": "CA",
-            "zip": 12345
-        },
-        "friends": [
-            "Alice",
-            "Bob",
-            "Charlie"
-        ]
+    #[test]
+    fn test_cowify() {
+        let src = "That's a subset!";
+        let s = &src[4..8];
+        assert_eq!(cowify(src.as_bytes(), s), CowStr::Borrowed(s));
+
+        let src = "Not a subset";
+        let s = "indeed not";
+        assert_eq!(cowify(src.as_bytes(), s), CowStr::Owned(s.into()));
     }
-    "#;
 
-    let mut iter = Jiter::new(src.as_bytes());
-    let value = jiter_to_value(src.as_bytes(), &mut iter).unwrap();
-    assert_eq!(
-        value,
-        Value::Map(
-            Map::new()
-                .with("name", Value::Str(CowStr::from("John Doe")))
-                .with("age", Value::Int(42))
-                .with(
-                    "address",
-                    Map::new()
-                        .with("street", Value::Str(CowStr::from("123 Main St")))
-                        .with("city", Value::Str(CowStr::from("Anytown")))
-                        .with("state", Value::Str(CowStr::from("CA")))
-                        .with("zip", Value::Int(12345))
-                )
-                .with(
-                    "friends",
-                    Array::new()
-                        .with(Value::from("Alice"))
-                        .with(Value::from("Bob"))
-                        .with(Value::from("Charlie"))
-                )
-        )
-    );
+    #[test]
+    fn test_jiter_to_value() {
+        let src = r#"
+        {
+            "name": "John Doe",
+            "age": 42,
+            "address": {
+                "street": "123 Main St",
+                "city": "Anytown",
+                "state": "CA",
+                "zip": 12345
+            },
+            "friends": [
+                "Alice",
+                "Bob",
+                "Charlie"
+            ]
+        }
+        "#;
+
+        let value = bytes_to_value(src.as_bytes()).unwrap();
+        assert_eq!(
+            value,
+            Value::Map(
+                Map::new()
+                    .with("name", Value::Str(CowStr::from("John Doe")))
+                    .with("age", Value::Int(42))
+                    .with(
+                        "address",
+                        Map::new()
+                            .with("street", Value::Str(CowStr::from("123 Main St")))
+                            .with("city", Value::Str(CowStr::from("Anytown")))
+                            .with("state", Value::Str(CowStr::from("CA")))
+                            .with("zip", Value::Int(12345))
+                    )
+                    .with(
+                        "friends",
+                        Array::new()
+                            .with(Value::from("Alice"))
+                            .with(Value::from("Bob"))
+                            .with(Value::from("Charlie"))
+                    )
+            )
+        );
+    }
 }
