@@ -114,7 +114,7 @@ impl IntoStatic for CowStr<'_> {
     fn into_static(self) -> Self::Output {
         match self {
             CowStr::Borrowed(s) => CowStr::Owned((*s).into()),
-            CowStr::Owned(s) => CowStr::Owned(s.clone()),
+            CowStr::Owned(s) => CowStr::Owned(s),
         }
     }
 }
