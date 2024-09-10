@@ -1,4 +1,4 @@
-use jiter::{Jiter, JiterError, Peek};
+use jiter::{Jiter, JiterError, JsonError, JsonErrorType, Peek};
 use merde_types::{CowStr, Map, Value};
 
 pub(crate) fn bytes_to_value(src: &[u8]) -> Result<Value<'_>, JiterError> {
@@ -23,7 +23,6 @@ pub(crate) fn jiter_to_value_with_peek<'j>(
         Peek::Null => Value::Null,
         Peek::True => Value::Bool(true),
         Peek::False => Value::Bool(false),
-        Peek::Minus => unimplemented!(),
         Peek::Infinity => Value::Float(f64::INFINITY),
         Peek::NaN => Value::Float(f64::NAN),
         Peek::String => {
@@ -50,12 +49,17 @@ pub(crate) fn jiter_to_value_with_peek<'j>(
             }
             Value::Map(obj)
         }
-        p if p.is_num() => {
+        p if p.is_num() || p == Peek::Minus => {
+            let index = iter.current_index();
             if let Ok(i) = iter.next_int() {
                 match i {
                     jiter::NumberInt::Int(i) => Value::Int(i),
                     jiter::NumberInt::BigInt(_) => {
-                        unimplemented!("BigInt")
+                        return Err(JsonError {
+                            error_type: JsonErrorType::NumberOutOfRange,
+                            index,
+                        }
+                        .into())
                     }
                 }
             } else if let Ok(f) = iter.next_float() {

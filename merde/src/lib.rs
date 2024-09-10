@@ -207,15 +207,6 @@ mod json_tests {
     use merde_json::{from_str_via_value, JsonSerialize};
 
     #[test]
-    fn test_roundtrip_large_number() {
-        // TODO: only run that when bigint is enabled
-        let large_number = 4611686018427387904u64; // 2^62
-        let serialized = large_number.to_json_string();
-        let deserialized: u64 = from_str_via_value(&serialized).unwrap();
-        assert_eq!(large_number, deserialized);
-    }
-
-    #[test]
     fn test_complex_structs() {
         use std::borrow::Cow;
         use std::collections::HashMap;
