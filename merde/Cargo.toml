@@ -10,8 +10,24 @@ repository = "https://github.com/bearcove/merde"
 keywords = ["serialization", "deserialization"]
 categories = ["encoding", "parser-implementations"]
 
+[[example]]
+name = "simple"
+path = "examples/simple.rs"
+required-features = ["merde_json"]
+
+[[example]]
+name = "mixed"
+path = "examples/mixed.rs"
+required-features = ["merde_json"]
+
+[[example]]
+name = "to_static"
+path = "examples/to_static.rs"
+required-features = ["merde_json"]
+
 [dependencies]
 merde_json = { version = "3.0.0", path = "../merde_json", optional = true }
+merde_types = { version = "3.0.0", path = "../merde_types" }
 
 [features]
 default = []

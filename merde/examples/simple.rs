@@ -1,5 +1,4 @@
 use std::borrow::Cow;
-
 use merde_json::JsonSerialize;
 
 fn main() {
@@ -40,8 +39,8 @@ struct Address<'s> {
     zip: u16,
 }
 
-merde_json::derive! {
-    impl (JsonSerialize, JsonDeserialize) for Address<'s> {
+merde::derive! {
+    impl (JsonSerialize, ValueDeserialize) for Address<'s> {
         street,
         city,
         state,
@@ -57,6 +56,6 @@ struct Person<'s> {
     address: Address<'s>,
 }
 
-merde_json::derive! {
-    impl (JsonSerialize, JsonDeserialize) for Person<'s> { name, age, address }
+merde::derive! {
+    impl (JsonSerialize, ValueDeserialize) for Person<'s> { name, age, address }
 }

@@ -10,7 +10,7 @@ struct Address<'s> {
     zip: u16,
 }
 
-merde_json::derive! {
+merde::derive! {
     impl (JsonDeserialize, ToStatic) for Address<'s> {
         street,
         city,
@@ -27,7 +27,7 @@ struct Person<'s> {
     address: Address<'s>,
 }
 
-merde_json::derive! {
+merde::derive! {
     impl (JsonDeserialize, ToStatic) for Person<'s> { name, age, address }
 }
 

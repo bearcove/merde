@@ -1,5 +1,5 @@
 use jiter::{Jiter, JiterError, Peek};
-use merde::{CowStr, Map, Value};
+use merde_types::{Array, CowStr, Map, Value};
 
 pub(crate) fn bytes_to_value<'j>(src: &'j [u8]) -> Result<Value<'j>, JiterError> {
     let mut iter = Jiter::new(src);
@@ -7,7 +7,7 @@ pub(crate) fn bytes_to_value<'j>(src: &'j [u8]) -> Result<Value<'j>, JiterError>
 }
 
 pub(crate) fn jiter_to_value<'j>(
-    src: &'j str,
+    src: &'j [u8],
     iter: &mut Jiter<'j>,
 ) -> Result<Value<'j>, JiterError> {
     let peek = iter.peek()?;
@@ -15,7 +15,7 @@ pub(crate) fn jiter_to_value<'j>(
 }
 
 pub(crate) fn jiter_to_value_with_peek<'j>(
-    src: &'j str,
+    src: &'j [u8],
     peek: Peek,
     iter: &mut Jiter<'j>,
 ) -> Result<Value<'j>, JiterError> {
@@ -68,11 +68,11 @@ pub(crate) fn jiter_to_value_with_peek<'j>(
     })
 }
 
-fn cowify<'j>(src: &'j str, s: &str) -> CowStr<'j> {
-    if src.as_bytes().as_ptr_range().contains(&s.as_ptr()) {
-        let start = unsafe { s.as_ptr().offset_from(src.as_ptr()) };
-        let start: usize = start.try_into().unwrap();
-        CowStr::Borrowed(&src[start..][..s.len()])
+fn cowify<'j>(src: &'j [u8], s: &str) -> CowStr<'j> {
+    if src.as_ptr_range().contains(&s.as_ptr()) {
+        CowStr::Borrowed(unsafe {
+            std::str::from_utf8_unchecked(std::slice::from_raw_parts(s.as_ptr(), s.len()))
+        })
     } else {
         CowStr::Owned(s.into())
     }
@@ -82,11 +82,11 @@ fn cowify<'j>(src: &'j str, s: &str) -> CowStr<'j> {
 fn test_cowify() {
     let src = "That's a subset!";
     let s = &src[4..8];
-    assert_eq!(cowify(src, s), CowStr::Borrowed(s));
+    assert_eq!(cowify(src.as_bytes(), s), CowStr::Borrowed(s));
 
     let src = "Not a subset";
     let s = "indeed not";
-    assert_eq!(cowify(src, s), CowStr::Owned(s.into()));
+    assert_eq!(cowify(src.as_bytes(), s), CowStr::Owned(s.into()));
 }
 
 #[test]
@@ -110,36 +110,28 @@ fn test_jiter_to_value() {
     "#;
 
     let mut iter = Jiter::new(src.as_bytes());
-    let value = jiter_to_value(src, &mut iter).unwrap();
+    let value = jiter_to_value(src.as_bytes(), &mut iter).unwrap();
     assert_eq!(
         value,
-        Value::Map({
-            let mut map = Map::new();
-            map.insert("name", Value::Str(CowStr::from("John Doe")));
-            map.insert("age", Value::Int(42));
-            map.insert(
-                "address",
-                Value::Map({
-                    let mut map = Map::new();
-                    map.insert("street", Value::Str(CowStr::from("123 Main St")));
-                    map.insert("city", Value::Str(CowStr::from("Anytown")));
-                    map.insert("state", Value::Str(CowStr::from("CA")));
-                    map.insert("zip", Value::Int(12345));
-                    map
-                }),
-            );
-            map.insert(
-                "friends",
-                Value::Array(
-                    vec![
-                        Value::from("Alice"),
-                        Value::from("Bob"),
-                        Value::from("Charlie"),
-                    ]
-                    .into(),
-                ),
-            );
-            map
-        })
+        Value::Map(
+            Map::new()
+                .with("name", Value::Str(CowStr::from("John Doe")))
+                .with("age", Value::Int(42))
+                .with(
+                    "address",
+                    Map::new()
+                        .with("street", Value::Str(CowStr::from("123 Main St")))
+                        .with("city", Value::Str(CowStr::from("Anytown")))
+                        .with("state", Value::Str(CowStr::from("CA")))
+                        .with("zip", Value::Int(12345))
+                )
+                .with(
+                    "friends",
+                    Array::new()
+                        .with(Value::from("Alice"))
+                        .with(Value::from("Bob"))
+                        .with(Value::from("Charlie"))
+                )
+        )
     );
 }
