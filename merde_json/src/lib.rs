@@ -1,15 +1,16 @@
 #![deny(missing_docs)]
 #![doc = include_str!("../README.md")]
 
-mod iterator_samples;
+mod parser;
 
-use merde::{Array, CowStr, Map, MerdeError, Value, ValueType};
+use jiter::JiterError;
+use merde::{Array, Map, MerdeError, Value, ValueDeserialize};
+use parser::bytes_to_value;
 
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::io::Write;
-use std::str::FromStr;
 
 /// Writes JSON to a `Vec<u8>`. None of its methods can fail, since it doesn't target
 /// an `io::Write`. You can provide your own buffer via `JsonSerializer::from_vec`.
@@ -202,11 +203,10 @@ impl JsonSerialize for Value<'_> {
             Value::Null => serializer.write_null(),
             Value::Bool(b) => serializer.write_bool(*b),
             Value::Int(i) => serializer.write_i64(*i),
-            Value::BigInt(bi) => serializer.write_str(&bi.to_string()),
             Value::Float(f) => serializer.write_f64(*f),
             Value::Str(s) => serializer.write_str(s),
             Value::Array(arr) => arr.json_serialize(serializer),
-            Value::Object(obj) => obj.json_serialize(serializer),
+            Value::Map(map) => map.json_serialize(serializer),
         }
     }
 }
@@ -368,33 +368,33 @@ impl<V: JsonSerialize> JsonSerialize for &[(&str, V)] {
     }
 }
 
-/// Interpret a `&Value` as an instance of type `T`. This may involve
-/// more cloning than [from_value].
-pub fn from_value_ref<'s, T>(value: &Value<'s>) -> Result<T, MerdeError>
-where
-    T: ValueDeserialize<'s>,
-{
-    T::json_deserialize(Some(value))
+pub enum MerdeJsonError {
+    MerdeError(MerdeError),
+    JiterError(JiterError),
 }
 
-/// Interpret a `Value` as an instance of type `T`.
-pub fn from_value<'s, T>(value: Value<'s>) -> Result<T, MerdeError>
-where
-    T: ValueDeserialize<'s>,
-{
-    T::json_deserialize_taking_ownership(Some(value))
+impl From<MerdeError> for MerdeJsonError {
+    fn from(e: MerdeError) -> Self {
+        MerdeJsonError::MerdeError(e)
+    }
+}
+
+impl From<JiterError> for MerdeJsonError {
+    fn from(e: JiterError) -> Self {
+        MerdeJsonError::JiterError(e)
+    }
 }
 
 /// Deserialize an instance of type `T` from bytes of JSON text.
-pub fn from_slice<'s, T>(data: &'s [u8]) -> Result<T, MerdeError>
+pub fn from_slice<'s, T>(data: &'s [u8]) -> Result<T, MerdeJsonError>
 where
     T: ValueDeserialize<'s>,
 {
-    from_value(jiter::Value::parse(data, false)?)
+    Ok(merde::from_value(bytes_to_value(data)?)?)
 }
 
 /// Deserialize an instance of type `T` from a string of JSON text.
-pub fn from_str<'s, T>(s: &'s str) -> Result<T, MerdeError>
+pub fn from_str<'s, T>(s: &'s str) -> Result<T, MerdeJsonError>
 where
     T: ValueDeserialize<'s>,
 {

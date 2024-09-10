@@ -27,7 +27,7 @@ where
     /// A default implementation is provided, but some types may want to implement it themselves
     /// to avoid unnecessary allocations/cloning.
     #[inline(always)]
-    fn from_owned_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
         match value {
             Some(v) => Self::from_value_ref(Some(&v)),
             None => Self::from_value_ref(None),
@@ -36,7 +36,7 @@ where
 }
 
 impl<'s> ValueDeserialize<'s> for CowStr<'s> {
-    fn from_owned_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
         match value {
             Some(Value::Str(s)) => Ok(s),
             Some(v) => Err(MerdeError::MismatchedType {
@@ -49,12 +49,12 @@ impl<'s> ValueDeserialize<'s> for CowStr<'s> {
 
     #[inline(always)]
     fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
-        Self::from_owned_value(value.cloned())
+        Self::from_value(value.cloned())
     }
 }
 
 impl<'s> ValueDeserialize<'s> for String {
-    fn from_owned_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
         match value {
             Some(Value::Str(s)) => Ok(s.into()),
             Some(v) => Err(MerdeError::MismatchedType {
@@ -67,7 +67,7 @@ impl<'s> ValueDeserialize<'s> for String {
 
     #[inline(always)]
     fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
-        Self::from_owned_value(value.cloned())
+        Self::from_value(value.cloned())
     }
 }
 
@@ -180,17 +180,17 @@ impl<'s, T> ValueDeserialize<'s> for Option<T>
 where
     T: ValueDeserialize<'s>,
 {
-    fn from_owned_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
         match value {
             Some(Value::Null) => Ok(None),
-            Some(v) => T::from_owned_value(Some(v)).map(Some),
+            Some(v) => T::from_value(Some(v)).map(Some),
             None => Ok(None),
         }
     }
 
     #[inline(always)]
     fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
-        Self::from_owned_value(value.cloned())
+        Self::from_value(value.cloned())
     }
 }
 
@@ -240,7 +240,7 @@ where
 }
 
 impl<'s> ValueDeserialize<'s> for Value<'s> {
-    fn from_owned_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
         match value {
             Some(json_value) => Ok(json_value),
             None => Err(MerdeError::MissingValue),
@@ -249,12 +249,12 @@ impl<'s> ValueDeserialize<'s> for Value<'s> {
 
     #[inline(always)]
     fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
-        Self::from_owned_value(value.cloned())
+        Self::from_value(value.cloned())
     }
 }
 
 impl<'s> ValueDeserialize<'s> for Array<'s> {
-    fn from_owned_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
         match value {
             Some(Value::Array(arr)) => Ok(arr),
             Some(v) => Err(MerdeError::MismatchedType {
@@ -267,12 +267,12 @@ impl<'s> ValueDeserialize<'s> for Array<'s> {
 
     #[inline(always)]
     fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
-        Self::from_owned_value(value.cloned())
+        Self::from_value(value.cloned())
     }
 }
 
 impl<'s> ValueDeserialize<'s> for Map<'s> {
-    fn from_owned_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
         match value {
             Some(Value::Map(obj)) => Ok(obj),
             Some(v) => Err(MerdeError::MismatchedType {
@@ -285,6 +285,6 @@ impl<'s> ValueDeserialize<'s> for Map<'s> {
 
     #[inline(always)]
     fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
-        Self::from_owned_value(value.cloned())
+        Self::from_value(value.cloned())
     }
 }
