@@ -1,19 +1,23 @@
 [package]
-name = "merde"
-version = "3.0.0"
 edition = "2021"
+name = "merde_time"
+version = "3.0.0"
 authors = ["Amos Wenger <amos@bearcove.net>"]
-description = "Serialize and deserialize with declarative macros"
+description = "Wrapper date-time types for merde"
 license = "Apache-2.0 OR MIT"
 readme = "README.md"
 repository = "https://github.com/bearcove/merde"
-keywords = ["serialization", "deserialization"]
+keywords = ["merde", "serialization", "deserialization"]
 categories = ["encoding", "parser-implementations"]
 
 [dependencies]
+merde_types = { version = "3.0.0", path = "../merde_types" }
 merde_json = { version = "3.0.0", path = "../merde_json", optional = true }
+time = "*"
 
 [features]
 default = []
-full = ["merde_json"]
+full = ["merde_json", "serialize", "deserialize"]
 merde_json = ["dep:merde_json"]
+serialize = ["time/formatting"]
+deserialize = ["time/parsing"]

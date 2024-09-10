@@ -1,0 +1,16 @@
+[package]
+edition = "2021"
+name = "merde_types"
+version = "3.0.0"
+authors = ["Amos Wenger <amos@bearcove.net>"]
+description = "Base types for merde"
+license = "Apache-2.0 OR MIT"
+readme = "README.md"
+repository = "https://github.com/bearcove/merde"
+keywords = ["merde", "serialization", "deserialization"]
+categories = ["encoding", "parser-implementations"]
+
+[dependencies]
+ahash = "0.8.11"
+compact_str = "0.8.0"
+smallvec = "1.13.2"

@@ -4,7 +4,7 @@
 mod parser;
 
 use jiter::JiterError;
-use merde::{Array, Map, MerdeError, Value, ValueDeserialize};
+use merde_types::{Array, Map, MerdeError, Value, ValueDeserialize};
 use parser::bytes_to_value;
 
 use std::borrow::Cow;
@@ -390,7 +390,7 @@ pub fn from_slice_via_value<'s, T>(data: &'s [u8]) -> Result<T, MerdeJsonError>
 where
     T: ValueDeserialize<'s>,
 {
-    Ok(merde::from_value(bytes_to_value(data)?)?)
+    Ok(merde_types::from_value(bytes_to_value(data)?)?)
 }
 
 /// Deserialize an instance of type `T` from a string of JSON text.

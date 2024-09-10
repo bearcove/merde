@@ -1,309 +1,297 @@
-mod cowstr;
-mod deserialize;
-mod error;
-mod macros;
+#[cfg(feature = "merde_json")]
+mod json_macros;
 
-use std::ops::Deref;
-use std::ops::DerefMut;
+#[cfg(feature = "merde_json")]
+pub use merde_json;
 
-use ahash::HashMap;
-use ahash::HashMapExt;
-pub use cowstr::CowStr;
-pub use deserialize::ValueDeserialize;
-pub use error::MerdeError;
-pub use error::ValueType;
+pub use merde_types::*;
 
-#[derive(Debug, PartialEq, Clone)]
-pub enum Value<'s> {
-    Int(i64),
-    Float(f64),
-    Str(CowStr<'s>),
-    Null,
-    Bool(bool),
-    Array(Array<'s>),
-    Map(Map<'s>),
-}
+#[doc(hidden)]
+#[macro_export]
+macro_rules! impl_value_deserialize {
+    ($struct_name:ident <$lifetime:lifetime> { $($field:ident),+ }) => {
+        impl<$lifetime> $crate::ValueDeserialize<$lifetime> for $struct_name<$lifetime>
+        {
+            fn from_value_ref<'val>(
+                value: Option<&'val $crate::Value<$lifetime>>,
+            ) -> Result<Self, $crate::MerdeError> {
+                #[allow(unused_imports)]
+                use $crate::MerdeError;
 
-impl<'s> From<i64> for Value<'s> {
-    fn from(v: i64) -> Self {
-        Value::Int(v)
-    }
-}
+                let obj = value.ok_or(MerdeError::MissingValue)?.as_object()?;
+                Ok($struct_name {
+                    $($field: obj.must_get(stringify!($field))?,)+
+                })
+            }
 
-impl<'s> From<f64> for Value<'s> {
-    fn from(v: f64) -> Self {
-        Value::Float(v)
-    }
-}
+            fn from_value(
+                value: Option<$crate::Value<$lifetime>>,
+            ) -> Result<Self, $crate::MerdeError> {
+                #[allow(unused_imports)]
+                use $crate::MerdeError;
 
-impl<'s> From<CowStr<'s>> for Value<'s> {
-    fn from(v: CowStr<'s>) -> Self {
-        Value::Str(v)
-    }
-}
-
-impl<'s> From<&'s str> for Value<'s> {
-    fn from(v: &'s str) -> Self {
-        Value::Str(v.into())
-    }
-}
-
-impl<'s> From<String> for Value<'s> {
-    fn from(v: String) -> Self {
-        Value::Str(v.into())
-    }
-}
-
-impl<'s> From<&'s String> for Value<'s> {
-    fn from(v: &'s String) -> Self {
-        Value::Str(v.as_str().into())
-    }
-}
-
-impl<'s> From<()> for Value<'s> {
-    fn from(_: ()) -> Self {
-        Value::Null
-    }
-}
-
-impl<'s> From<bool> for Value<'s> {
-    fn from(v: bool) -> Self {
-        Value::Bool(v)
-    }
-}
-
-impl<'s> From<Array<'s>> for Value<'s> {
-    fn from(v: Array<'s>) -> Self {
-        Value::Array(v)
-    }
-}
-
-impl<'s> From<Map<'s>> for Value<'s> {
-    fn from(v: Map<'s>) -> Self {
-        Value::Map(v)
-    }
-}
-
-impl<'s> From<Vec<Value<'s>>> for Value<'s> {
-    fn from(v: Vec<Value<'s>>) -> Self {
-        Value::Array(Array(v))
-    }
-}
-
-impl<'s> From<HashMap<CowStr<'s>, Value<'s>>> for Value<'s> {
-    fn from(v: HashMap<CowStr<'s>, Value<'s>>) -> Self {
-        Value::Map(Map(v))
-    }
-}
-
-impl<'s> Value<'s> {
-    #[inline(always)]
-    pub fn as_map(&self) -> Result<&Map<'s>, MerdeError> {
-        match self {
-            Value::Map(obj) => Ok(obj),
-            _ => Err(MerdeError::MismatchedType {
-                expected: ValueType::Map,
-                found: self.value_type(),
-            }),
+                let obj = value.ok_or(MerdeError::MissingValue)?.as_object()?;
+                Ok($struct_name {
+                    $($field: obj.must_remove(stringify!($field))?,)+
+                })
+            }
         }
-    }
+    };
 
-    #[inline(always)]
-    pub fn as_array(&self) -> Result<&Array<'s>, MerdeError> {
-        match self {
-            Value::Array(arr) => Ok(arr),
-            _ => Err(MerdeError::MismatchedType {
-                expected: ValueType::Array,
-                found: self.value_type(),
-            }),
+    ($struct_name:ident { $($field:ident),+ }) => {
+        impl $crate::JsonDeserialize<'static> for $struct_name
+        {
+            fn from_value_ref<'val>(
+                value: Option<&'val $crate::Value<'_>>,
+            ) -> Result<Self, $crate::MerdeError> {
+                #[allow(unused_imports)]
+                use $crate::MerdeError;
+
+                let obj = value.ok_or(MerdeError::MissingValue)?.as_object()?;
+                Ok($struct_name {
+                    $($field: obj.must_get(stringify!($field))?,)+
+                })
+            }
+
+            fn from_value(
+                value: Option<$crate::Value<'_>>,
+            ) -> Result<Self, $crate::MerdeError> {
+                #[allow(unused_imports)]
+                use $crate::MerdeError;
+
+                let obj = value.ok_or(MerdeError::MissingValue)?.as_object()?
+                Ok($struct_name {
+                    $($field: obj.must_remove(stringify!($field))?,)+
+                })
+            }
         }
-    }
+    };
+}
 
-    #[inline(always)]
-    pub fn as_str(&self) -> Result<&CowStr<'s>, MerdeError> {
-        match self {
-            Value::Str(s) => Ok(s),
-            _ => Err(MerdeError::MismatchedType {
-                expected: ValueType::String,
-                found: self.value_type(),
-            }),
+#[doc(hidden)]
+#[macro_export]
+macro_rules! impl_to_static {
+    ($struct_name:ident <$lifetime:lifetime> { $($field:ident),+ }) => {
+        impl<$lifetime> $crate::ToStatic for $struct_name<$lifetime> {
+            type Output = $struct_name<'static>;
+
+            fn to_static(&self) -> Self::Output {
+                #[allow(unused_imports)]
+                use $crate::ToStatic;
+
+                $struct_name {
+                    $($field: self.$field.to_static(),)+
+                }
+            }
         }
-    }
+    };
 
-    #[inline(always)]
-    pub fn as_i64(&self) -> Result<i64, MerdeError> {
-        match self {
-            Value::Int(n) => Ok(*n),
-            _ => Err(MerdeError::MismatchedType {
-                expected: ValueType::Int,
-                found: self.value_type(),
-            }),
+    ($struct_name:ident { $($field:ident),+ }) => {
+        impl $crate::ToStatic for $struct_name {
+            type Output = $struct_name;
+
+            fn to_static(&self) -> Self::Output {
+                #[allow(unused_imports)]
+                use $crate::ToStatic;
+
+                $struct_name {
+                    $($field: self.$field.to_static(),)+
+                }
+            }
         }
-    }
+    };
 }
 
-/// An array of [Value]s. Named "List" because it's a bit less
-/// overloaded than "Array"
-#[derive(Debug, PartialEq, Clone)]
-#[repr(transparent)]
-pub struct Array<'s>(Vec<Value<'s>>);
+/// Derives the specified traits for a struct.
+///
+/// This macro can be used to automatically implement `JsonSerialize` and `ValueDeserialize`
+/// traits for a given struct. It expands to call the appropriate implementation macros
+/// based on the traits specified.
+///
+/// # Usage
+///
+/// ```rust
+/// use merde::ValueDeserialize;
+/// use merde_json::JsonSerialize;
+/// use std::borrow::Cow;
+///
+/// #[derive(Debug, PartialEq)]
+/// struct MyStruct<'s> {
+///     field1: Cow<'s, str>,
+///     field2: i32,
+///     field3: bool,
+/// }
+///
+/// merde_json::derive! {
+///     impl(JsonSerialize, ValueDeserialize, ToStatic) for MyStruct<'s> {
+///         field1,
+///         field2,
+///         field3
+///     }
+/// }
+/// ```
+///
+/// This generates all three impls, but you can omit the ones you don't need.
+///
+/// The struct must have exactly one lifetime parameter. Additionally, even if there are no
+/// borrowed fields, the struct must include a `_phantom` field of type `PhantomData<&'a ()>`,
+/// where `'a` is the lifetime parameter.
+///
+/// Implementing other variants (no lifetimes, multiple lifetimes, etc.) with declarative macros
+/// would be too complicated. At this point we'd want a whole parser / compiler / code generator
+/// for this — or a proc macro, see [serde](https://serde.rs/)'s serde_derive.
+#[macro_export]
+macro_rules! derive {
+    // cow variants
+    (impl($($trait:ident),+) for $struct_name:ident <$lifetime:lifetime> { $($field:ident),+ }) => {
+        $crate::derive!(@step1 { $($trait),+ } $struct_name <$lifetime> { $($field),+ });
+    };
+    (@step1 { $trait:ident, $($rest_traits:ident),* } $struct_name:ident <$lifetime:lifetime> $fields:tt) => {
+        $crate::impl_trait!(@impl $trait, $struct_name <$lifetime> $fields);
+        $crate::derive!(@step1 { $($rest_traits),* } $struct_name <$lifetime> $fields);
+    };
+    (@step1 { $trait:ident } $struct_name:ident <$lifetime:lifetime> $fields:tt) => {
+        $crate::impl_trait!(@impl $trait, $struct_name <$lifetime> $fields);
+    };
+    (@step1 { } $struct_name:ident <$lifetime:lifetime> $fields:tt) => {};
 
-impl<'s> Array<'s> {
-    pub fn new() -> Self {
-        Array(Vec::new())
-    }
+    // owned variants
+    (impl($($trait:ident),+) for $struct_name:ident { $($field:ident),+ }) => {
+        $crate::derive!(@step1 { $($trait),+ } $struct_name { $($field),+ });
+    };
+    (@step1 { $trait:ident, $($rest_traits:ident),* } $struct_name:ident $fields:tt) => {
+        $crate::impl_trait!(@impl $trait, $struct_name $fields);
+        $crate::derive!(@step1 { $($rest_traits),* } $struct_name $fields);
+    };
+    (@step1 { $trait:ident } $struct_name:ident $fields:tt) => {
+        $crate::impl_trait!(@impl $trait, $struct_name $fields);
+    };
+    (@step1 { } $struct_name:ident $fields:tt) => {};
 }
 
-impl<'s> Default for Array<'s> {
-    fn default() -> Self {
-        Self::new()
-    }
+#[doc(hidden)]
+#[macro_export]
+macro_rules! impl_trait {
+    // cow variants
+    (@impl JsonSerialize, $struct_name:ident <$lifetime:lifetime> { $($field:ident),+ }) => {
+        $crate::impl_json_serialize!($struct_name <$lifetime> { $($field),+ });
+    };
+    (@impl JsonDeserialize, $struct_name:ident <$lifetime:lifetime> { $($field:ident),+ }) => {
+        $crate::impl_json_deserialize!($struct_name <$lifetime> { $($field),+ });
+    };
+    (@impl ToStatic, $struct_name:ident <$lifetime:lifetime> { $($field:ident),+ }) => {
+        $crate::impl_to_static!($struct_name <$lifetime> { $($field),+ });
+    };
+
+    // owned variants
+    (@impl JsonSerialize, $struct_name:ident { $($field:ident),+ }) => {
+        $crate::impl_json_serialize!($struct_name { $($field),+ });
+    };
+    (@impl JsonDeserialize, $struct_name:ident { $($field:ident),+ }) => {
+        $crate::impl_json_deserialize!($struct_name { $($field),+ });
+    };
+    (@impl ToStatic, $struct_name:ident { $($field:ident),+ }) => {
+        $crate::impl_to_static!($struct_name { $($field),+ });
+    };
 }
 
-impl<'s> From<Vec<Value<'s>>> for Array<'s> {
-    fn from(v: Vec<Value<'s>>) -> Self {
-        Array(v)
-    }
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-impl<'s> Deref for Array<'s> {
-    type Target = Vec<Value<'s>>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl<'s> DerefMut for Array<'s> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
-#[repr(transparent)]
-pub struct Map<'s>(HashMap<CowStr<'s>, Value<'s>>);
-
-impl<'s> Map<'s> {
-    pub fn new() -> Self {
-        Map(HashMap::new())
+    #[test]
+    fn test_roundtrip_large_number() {
+        // TODO: only run that when bigint is enabled
+        let large_number = 4611686018427387904u64; // 2^62
+        let serialized = large_number.to_json_string();
+        let deserialized: u64 = from_str_via_value(&serialized).unwrap();
+        assert_eq!(large_number, deserialized);
     }
 
-    pub fn with_capacity(capacity: usize) -> Self {
-        Map(HashMap::with_capacity(capacity))
-    }
-}
+    #[test]
+    fn test_complex_structs() {
+        use std::borrow::Cow;
+        use std::collections::HashMap;
 
-impl<'s> Default for Map<'s> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+        #[derive(Debug, PartialEq)]
+        struct SecondStruct<'s> {
+            string_field: Cow<'s, str>,
+            int_field: i32,
+        }
 
-impl<'s> From<HashMap<CowStr<'s>, Value<'s>>> for Map<'s> {
-    fn from(v: HashMap<CowStr<'s>, Value<'s>>) -> Self {
-        Map(v)
-    }
-}
+        derive! {
+            impl(JsonSerialize, JsonDeserialize) for SecondStruct<'s> {
+                string_field,
+                int_field
+            }
+        }
 
-impl<'s> Deref for Map<'s> {
-    type Target = HashMap<CowStr<'s>, Value<'s>>;
+        #[derive(Debug, PartialEq)]
+        struct ComplexStruct<'s> {
+            string_field: Cow<'s, str>,
+            u8_field: u8,
+            u16_field: u16,
+            u32_field: u32,
+            u64_field: u64,
+            i8_field: i8,
+            i16_field: i16,
+            i32_field: i32,
+            i64_field: i64,
+            usize_field: usize,
+            bool_field: bool,
+            option_field: Option<i32>,
+            vec_field: Vec<i32>,
+            hashmap_field: HashMap<String, i32>,
+            second_struct_field: SecondStruct<'s>,
+        }
 
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
+        derive! {
+            impl(JsonSerialize, JsonDeserialize) for ComplexStruct<'s> {
+                string_field,
+                u8_field,
+                u16_field,
+                u32_field,
+                u64_field,
+                i8_field,
+                i16_field,
+                i32_field,
+                i64_field,
+                usize_field,
+                bool_field,
+                option_field,
+                vec_field,
+                hashmap_field,
+                second_struct_field
+            }
+        }
 
-impl DerefMut for Map<'_> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
+        let mut hashmap = HashMap::new();
+        hashmap.insert("key".to_string(), 42);
 
-impl<'s> Map<'s> {
-    /// Gets a value from the object, returning an error if the key is missing.
-    ///
-    /// Because this method knows the key name, it transforms [MerdeError::MissingValue] into [MerdeError::MissingProperty].
-    ///
-    /// It does not by itself throw an error if `self.get()` returns `None`, to allow
-    /// for optional fields (via the [ValueDeserialize] implementation on the [Option] type).
-    pub fn must_get<T>(&self, key: impl Into<CowStr<'static>>) -> Result<T, MerdeError>
-    where
-        T: ValueDeserialize<'s>,
-    {
-        let key = key.into();
-        T::from_value_ref(self.get(&key)).map_err(|e| match e {
-            MerdeError::MissingValue => MerdeError::MissingProperty(key),
-            _ => e,
-        })
-    }
-
-    /// Removes a value from the object, returning an error if the key is missing.
-    ///
-    /// Because this method knows the key name, it transforms [MerdeError::MissingValue] into [MerdeError::MissingProperty].
-    ///
-    /// It does not by itself throw an error if `self.remove()` returns `None`, to allow
-    /// for optional fields (via the [ValueDeserialize] implementation on the [Option] type).
-    pub fn must_remove<T>(&mut self, key: impl Into<CowStr<'static>>) -> Result<T, MerdeError>
-    where
-        T: ValueDeserialize<'s>,
-    {
-        let key = key.into();
-        T::from_value(self.remove(&key)).map_err(|e| match e {
-            MerdeError::MissingValue => MerdeError::MissingProperty(key),
-            _ => e,
-        })
-    }
-}
-
-impl<'s> Array<'s> {
-    /// Gets a value from the array, returning an error if the index is out of bounds.
-    ///
-    /// Because this method knows the index, it transforms [MerdeError::MissingValue] into [MerdeError::IndexOutOfBounds].
-    ///
-    /// It does not by itself throw an error if `self.get()` returns `None`, to allow
-    /// for optional fields (via the [ValueDeserialize] implementation on the [Option] type).
-    pub fn must_get<T>(&self, index: usize) -> Result<T, MerdeError>
-    where
-        T: ValueDeserialize<'s>,
-    {
-        T::from_value_ref(self.get(index)).map_err(|e| match e {
-            MerdeError::MissingValue => MerdeError::IndexOutOfBounds {
-                index,
-                len: self.len(),
+        let original = ComplexStruct {
+            string_field: Cow::Borrowed("test string"),
+            u8_field: 8,
+            u16_field: 16,
+            u32_field: 32,
+            u64_field: 64,
+            i8_field: -8,
+            i16_field: -16,
+            i32_field: -32,
+            i64_field: -64,
+            usize_field: 100,
+            bool_field: true,
+            option_field: Some(42),
+            vec_field: vec![1, 2, 3],
+            hashmap_field: hashmap,
+            second_struct_field: SecondStruct {
+                string_field: Cow::Borrowed("nested string"),
+                int_field: 100,
             },
-            _ => e,
-        })
+        };
+
+        let serialized = original.to_json_string();
+        let deserialized: ComplexStruct = from_str_via_value(&serialized).unwrap();
+
+        assert_eq!(original, deserialized);
     }
-
-    /// Pops a value from the back of the array and deserializes it
-    pub fn must_pop<T>(&mut self) -> Result<T, MerdeError>
-    where
-        T: ValueDeserialize<'s>,
-    {
-        T::from_value(self.pop()).map_err(|e| match e {
-            MerdeError::MissingValue => MerdeError::IndexOutOfBounds {
-                index: self.len(),
-                len: self.len(),
-            },
-            _ => e,
-        })
-    }
-}
-
-/// Interpret a `&Value` as an instance of type `T`. This may involve
-/// more cloning than [from_value].
-pub fn from_value_ref<'s, T>(value: &Value<'s>) -> Result<T, MerdeError>
-where
-    T: ValueDeserialize<'s>,
-{
-    T::from_value_ref(Some(value))
-}
-
-/// Interpret a `Value` as an instance of type `T`.
-pub fn from_value<'s, T>(value: Value<'s>) -> Result<T, MerdeError>
-where
-    T: ValueDeserialize<'s>,
-{
-    T::from_value(Some(value))
 }
