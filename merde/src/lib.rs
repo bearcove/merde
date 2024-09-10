@@ -1,17 +1,17 @@
 mod cowstr;
 mod deserialize;
 mod error;
-mod lazyindexmap;
 mod macros;
 
 use std::ops::Deref;
 use std::ops::DerefMut;
 
+use ahash::HashMap;
+use ahash::HashMapExt;
 pub use cowstr::CowStr;
 pub use deserialize::ValueDeserialize;
 pub use error::MerdeError;
 pub use error::ValueType;
-pub use lazyindexmap::LazyIndexMap;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Value<'s> {
@@ -90,8 +90,8 @@ impl<'s> From<Vec<Value<'s>>> for Value<'s> {
     }
 }
 
-impl<'s> From<LazyIndexMap<CowStr<'s>, Value<'s>>> for Value<'s> {
-    fn from(v: LazyIndexMap<CowStr<'s>, Value<'s>>) -> Self {
+impl<'s> From<HashMap<CowStr<'s>, Value<'s>>> for Value<'s> {
+    fn from(v: HashMap<CowStr<'s>, Value<'s>>) -> Self {
         Value::Map(Map(v))
     }
 }
@@ -182,11 +182,15 @@ impl<'s> DerefMut for Array<'s> {
 
 #[derive(Debug, PartialEq, Clone)]
 #[repr(transparent)]
-pub struct Map<'s>(LazyIndexMap<CowStr<'s>, Value<'s>>);
+pub struct Map<'s>(HashMap<CowStr<'s>, Value<'s>>);
 
 impl<'s> Map<'s> {
     pub fn new() -> Self {
-        Map(LazyIndexMap::new())
+        Map(HashMap::new())
+    }
+
+    pub fn with_capacity(capacity: usize) -> Self {
+        Map(HashMap::with_capacity(capacity))
     }
 }
 
@@ -196,14 +200,14 @@ impl<'s> Default for Map<'s> {
     }
 }
 
-impl<'s> From<LazyIndexMap<CowStr<'s>, Value<'s>>> for Map<'s> {
-    fn from(v: LazyIndexMap<CowStr<'s>, Value<'s>>) -> Self {
+impl<'s> From<HashMap<CowStr<'s>, Value<'s>>> for Map<'s> {
+    fn from(v: HashMap<CowStr<'s>, Value<'s>>) -> Self {
         Map(v)
     }
 }
 
 impl<'s> Deref for Map<'s> {
-    type Target = LazyIndexMap<CowStr<'s>, Value<'s>>;
+    type Target = HashMap<CowStr<'s>, Value<'s>>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -266,6 +270,20 @@ impl<'s> Array<'s> {
         T::from_value_ref(self.get(index)).map_err(|e| match e {
             MerdeError::MissingValue => MerdeError::IndexOutOfBounds {
                 index,
+                len: self.len(),
+            },
+            _ => e,
+        })
+    }
+
+    /// Pops a value from the back of the array and deserializes it
+    pub fn must_pop<T>(&mut self) -> Result<T, MerdeError>
+    where
+        T: ValueDeserialize<'s>,
+    {
+        T::from_value(self.pop()).map_err(|e| match e {
+            MerdeError::MissingValue => MerdeError::IndexOutOfBounds {
+                index: self.len(),
                 len: self.len(),
             },
             _ => e,
