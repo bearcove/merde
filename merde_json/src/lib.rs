@@ -401,7 +401,30 @@ pub fn from_str_via_value<'s, T>(s: &'s str) -> Result<T, MerdeJsonError>
 where
     T: ValueDeserialize<'s>,
 {
-    from_slice_via_value(s.as_bytes())
+    match from_slice_via_value(s.as_bytes()) {
+        Ok(v) => Ok(v),
+        Err(e) => match e {
+            MerdeJsonError::MerdeError(me) => Err(me.into()),
+            MerdeJsonError::JiterError(je) => {
+                eprintln!("JSON parsing error: {:?}", je);
+                let context_start = je.index.saturating_sub(20);
+                let context_end = (je.index + 20).min(s.len());
+                let context = &s[context_start..context_end];
+
+                eprintln!("Error context:");
+                for (i, c) in context.char_indices() {
+                    if i + context_start == je.index {
+                        eprint!("\x1b[48;2;255;200;200m\x1b[97m{}\x1b[0m", c);
+                    } else {
+                        eprint!("\x1b[48;2;200;200;255m\x1b[97m{}\x1b[0m", c);
+                    }
+                }
+                eprintln!();
+
+                Err(je.into())
+            }
+        },
+    }
 }
 
 /// Serialize the given data structure as a String of JSON.
