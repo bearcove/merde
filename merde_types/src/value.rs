@@ -1,4 +1,6 @@
-use crate::{array::Array, map::Map, CowStr};
+use std::collections::HashMap;
+
+use crate::{array::Array, map::Map, CowStr, MerdeError, ValueType};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Value<'s> {

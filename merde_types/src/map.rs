@@ -3,11 +3,11 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-use crate::{value::Value, CowStr};
+use crate::{value::Value, CowStr, MerdeError, ValueDeserialize};
 
 #[derive(Debug, PartialEq, Clone)]
 #[repr(transparent)]
-pub struct Map<'s>(HashMap<CowStr<'s>, Value<'s>>);
+pub struct Map<'s>(pub HashMap<CowStr<'s>, Value<'s>>);
 
 impl<'s> Map<'s> {
     pub fn new() -> Self {
