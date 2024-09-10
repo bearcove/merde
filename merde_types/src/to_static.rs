@@ -1,3 +1,5 @@
+use std::hash::Hash;
+
 /// Allow turning a value into an "owned" variant, which can then be
 /// returned, moved, etc.
 ///
