@@ -7,7 +7,7 @@ use std::{
 
 use compact_str::CompactString;
 
-use crate::ToStatic;
+use crate::IntoStatic;
 
 /// A copy-on-write string type that uses [CompactString] for
 /// the "owned" variant.
@@ -108,10 +108,10 @@ impl fmt::Display for CowStr<'_> {
     }
 }
 
-impl ToStatic for CowStr<'_> {
+impl IntoStatic for CowStr<'_> {
     type Output = CowStr<'static>;
 
-    fn to_static(&self) -> Self::Output {
+    fn into_static(self) -> Self::Output {
         match self {
             CowStr::Borrowed(s) => CowStr::Owned((*s).into()),
             CowStr::Owned(s) => CowStr::Owned(s.clone()),

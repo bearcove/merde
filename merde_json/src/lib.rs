@@ -4,7 +4,7 @@
 mod parser;
 
 use jiter::JiterError;
-use merde_types::{Array, CowStr, Map, MerdeError, ToStatic, Value, ValueDeserialize};
+use merde_types::{Array, CowStr, IntoStatic, Map, MerdeError, Value, ValueDeserialize};
 use parser::json_bytes_to_value;
 
 use std::borrow::Cow;
@@ -403,7 +403,7 @@ impl<'s> MerdeJsonError<'s> {
             MerdeJsonError::Utf8Error(e) => MerdeJsonError::Utf8Error(e),
             MerdeJsonError::JiterError { err, source } => MerdeJsonError::JiterError {
                 err,
-                source: source.map(|s| s.to_static()),
+                source: source.map(|s| s.into_static()),
             },
         }
     }

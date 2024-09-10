@@ -1,4 +1,4 @@
-use merde_types::ToStatic;
+use merde_types::IntoStatic;
 use std::borrow::Cow;
 
 #[allow(dead_code)]
@@ -45,8 +45,9 @@ fn get_person() -> Person<'static> {
     }
     "#;
 
-    let person: Person = merde_json::from_str_via_value(input).unwrap();
-    person.to_static()
+    merde_json::from_str_via_value::<Person>(input)
+        .unwrap()
+        .into_static()
 }
 
 fn main() {
