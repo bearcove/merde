@@ -1,10 +1,9 @@
 #[cfg(feature = "merde_json")]
-mod json_macros;
-
-#[cfg(feature = "merde_json")]
 pub use merde_json;
 
 pub use merde_types::*;
+
+mod json_macros;
 
 #[doc(hidden)]
 #[macro_export]
