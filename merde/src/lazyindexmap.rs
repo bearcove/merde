@@ -63,7 +63,9 @@ where
         }
     }
 
-    pub fn insert(&mut self, key: K, value: V) {
+    pub fn insert(&mut self, key: impl Into<K>, value: impl Into<V>) {
+        let key = key.into();
+        let value = value.into();
         if let Some(map) = self.map.get_mut() {
             map.insert(key.clone(), self.vec.len());
         }
