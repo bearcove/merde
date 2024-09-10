@@ -7,6 +7,8 @@ use std::{
 
 use compact_str::CompactString;
 
+use crate::ToStatic;
+
 /// A copy-on-write string type that uses [CompactString] for
 /// the "owned" variant.
 ///
@@ -103,5 +105,16 @@ impl fmt::Debug for CowStr<'_> {
 impl fmt::Display for CowStr<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.deref().fmt(f)
+    }
+}
+
+impl ToStatic for CowStr<'_> {
+    type Output = CowStr<'static>;
+
+    fn to_static(&self) -> Self::Output {
+        match self {
+            CowStr::Borrowed(s) => CowStr::Owned((*s).into()),
+            CowStr::Owned(s) => CowStr::Owned(s.clone()),
+        }
     }
 }

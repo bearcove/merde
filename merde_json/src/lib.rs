@@ -4,7 +4,7 @@
 mod parser;
 
 use jiter::JiterError;
-use merde_types::{Array, Map, MerdeError, Value, ValueDeserialize};
+use merde_types::{Array, CowStr, Map, MerdeError, ToStatic, Value, ValueDeserialize};
 use parser::bytes_to_value;
 
 use std::borrow::Cow;
@@ -368,63 +368,115 @@ impl<V: JsonSerialize> JsonSerialize for &[(&str, V)] {
 }
 
 /// Unifies [MerdeError] and [JiterError] into a single type
-#[derive(Debug)]
-pub enum MerdeJsonError {
+pub enum MerdeJsonError<'s> {
     /// A [MerdeError]
     MerdeError(MerdeError),
+
+    /// An Utf8 error
+    Utf8Error(std::str::Utf8Error),
+
     /// A [JiterError]
-    JiterError(JiterError),
+    JiterError {
+        /// The underlying jiter error
+        err: JiterError,
+        /// The JSON source, if available
+        source: Option<CowStr<'s>>,
+    },
 }
 
-impl From<MerdeError> for MerdeJsonError {
+impl<'s> MerdeJsonError<'s> {
+    /// Strip the 'source' field from the error, making it `'static`
+    pub fn without_source(self) -> MerdeJsonError<'static> {
+        match self {
+            MerdeJsonError::MerdeError(e) => MerdeJsonError::MerdeError(e),
+            MerdeJsonError::Utf8Error(e) => MerdeJsonError::Utf8Error(e),
+            MerdeJsonError::JiterError { err, source: _ } => {
+                MerdeJsonError::JiterError { err, source: None }
+            }
+        }
+    }
+
+    /// Converts the attached 'source' field to an owned string, making the whole error `'static`
+    pub fn to_static(self) -> MerdeJsonError<'static> {
+        match self {
+            MerdeJsonError::MerdeError(e) => MerdeJsonError::MerdeError(e),
+            MerdeJsonError::Utf8Error(e) => MerdeJsonError::Utf8Error(e),
+            MerdeJsonError::JiterError { err, source } => MerdeJsonError::JiterError {
+                err,
+                source: source.map(|s| s.to_static()),
+            },
+        }
+    }
+}
+
+impl From<std::str::Utf8Error> for MerdeJsonError<'_> {
+    fn from(e: std::str::Utf8Error) -> Self {
+        MerdeJsonError::Utf8Error(e)
+    }
+}
+
+impl<'s> std::fmt::Display for MerdeJsonError<'s> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MerdeJsonError::MerdeError(me) => write!(f, "Merde Error: {}", me),
+            MerdeJsonError::Utf8Error(ue) => write!(f, "UTF-8 Error: {}", ue),
+            MerdeJsonError::JiterError { err, source } => {
+                writeln!(f, "JSON parsing error: \x1b[31m{}\x1b[0m", err.error_type)?;
+                if let Some(source) = source {
+                    let context_start = err.index.saturating_sub(20);
+                    let context_end = (err.index + 20).min(source.len());
+                    let context = &source[context_start..context_end];
+
+                    write!(f, "Source: ")?;
+                    for (i, c) in context.char_indices() {
+                        if i + context_start == err.index {
+                            write!(f, "\x1b[48;2;255;200;200m\x1b[97m{}\x1b[0m", c)?;
+                        } else {
+                            write!(f, "\x1b[48;2;200;200;255m\x1b[97m{}\x1b[0m", c)?;
+                        }
+                    }
+                    writeln!(f)?;
+                } else {
+                    writeln!(f, "Error context: (not attached)")?;
+                }
+                Ok(())
+            }
+        }
+    }
+}
+
+impl<'s> std::error::Error for MerdeJsonError<'s> {}
+
+impl<'s> std::fmt::Debug for MerdeJsonError<'s> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Display::fmt(self, f)
+    }
+}
+
+impl From<MerdeError> for MerdeJsonError<'_> {
     fn from(e: MerdeError) -> Self {
         MerdeJsonError::MerdeError(e)
     }
 }
 
-impl From<JiterError> for MerdeJsonError {
-    fn from(e: JiterError) -> Self {
-        MerdeJsonError::JiterError(e)
-    }
-}
-
 /// Deserialize an instance of type `T` from bytes of JSON text.
-pub fn from_slice_via_value<'s, T>(data: &'s [u8]) -> Result<T, MerdeJsonError>
+pub fn from_slice_via_value<'s, T>(data: &'s [u8]) -> Result<T, MerdeJsonError<'s>>
 where
     T: ValueDeserialize<'s>,
 {
-    Ok(merde_types::from_value(bytes_to_value(data)?)?)
+    from_str_via_value(std::str::from_utf8(data)?)
 }
 
 /// Deserialize an instance of type `T` from a string of JSON text.
-pub fn from_str_via_value<'s, T>(s: &'s str) -> Result<T, MerdeJsonError>
+pub fn from_str_via_value<'s, T>(s: &'s str) -> Result<T, MerdeJsonError<'s>>
 where
     T: ValueDeserialize<'s>,
 {
-    match from_slice_via_value(s.as_bytes()) {
-        Ok(v) => Ok(v),
-        Err(e) => match e {
-            MerdeJsonError::MerdeError(me) => Err(me.into()),
-            MerdeJsonError::JiterError(je) => {
-                eprintln!("JSON parsing error: {:?}", je);
-                let context_start = je.index.saturating_sub(20);
-                let context_end = (je.index + 20).min(s.len());
-                let context = &s[context_start..context_end];
-
-                eprintln!("Error context:");
-                for (i, c) in context.char_indices() {
-                    if i + context_start == je.index {
-                        eprint!("\x1b[48;2;255;200;200m\x1b[97m{}\x1b[0m", c);
-                    } else {
-                        eprint!("\x1b[48;2;200;200;255m\x1b[97m{}\x1b[0m", c);
-                    }
-                }
-                eprintln!();
-
-                Err(je.into())
-            }
-        },
-    }
+    let value = bytes_to_value(s.as_bytes()).map_err(|e| MerdeJsonError::JiterError {
+        err: e,
+        source: Some(s.into()),
+    })?;
+    Ok(merde_types::from_value(value)?)
 }
 
 /// Serialize the given data structure as a String of JSON.
