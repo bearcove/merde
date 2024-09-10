@@ -103,14 +103,14 @@ mod merde_json_impls {
 ))]
 mod tests {
     use super::*;
-    use merde_json::{from_str, JsonSerialize};
+    use merde_json::{from_str_via_value, JsonSerialize};
     use time::macros::datetime;
 
     #[test]
     fn test_rfc3339_offset_date_time_roundtrip() {
         let original = Rfc3339(datetime!(2023-05-15 14:30:00 UTC));
         let serialized = original.to_json_string();
-        let deserialized: Rfc3339<time::OffsetDateTime> = from_str(&serialized).unwrap();
+        let deserialized: Rfc3339<time::OffsetDateTime> = from_str_via_value(&serialized).unwrap();
         assert_eq!(original, deserialized);
     }
 
@@ -124,7 +124,7 @@ mod tests {
     #[test]
     fn test_rfc3339_offset_date_time_deserialization() {
         let json = r#""2023-05-15T14:30:00Z""#;
-        let deserialized: Rfc3339<time::OffsetDateTime> = from_str(json).unwrap();
+        let deserialized: Rfc3339<time::OffsetDateTime> = from_str_via_value(json).unwrap();
         assert_eq!(deserialized, Rfc3339(datetime!(2023-05-15 14:30:00 UTC)));
     }
 }

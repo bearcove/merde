@@ -242,7 +242,7 @@ where
 impl<'s> ValueDeserialize<'s> for Value<'s> {
     fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
         match value {
-            Some(json_value) => Ok(json_value),
+            Some(value) => Ok(value),
             None => Err(MerdeError::MissingValue),
         }
     }

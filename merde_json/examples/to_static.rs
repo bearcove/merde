@@ -1,5 +1,5 @@
-use std::borrow::Cow;
 use merde_json::ToStatic;
+use std::borrow::Cow;
 
 #[allow(dead_code)]
 #[derive(Debug, PartialEq, Eq)]
@@ -45,7 +45,7 @@ fn get_person() -> Person<'static> {
     }
     "#;
 
-    let person: Person = merde_json::from_str(input).unwrap();
+    let person: Person = merde_json::from_str_via_value(input).unwrap();
     person.to_static()
 }
 
