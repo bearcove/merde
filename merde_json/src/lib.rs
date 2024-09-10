@@ -5,7 +5,7 @@ mod parser;
 
 use jiter::JiterError;
 use merde_types::{Array, CowStr, Map, MerdeError, ToStatic, Value, ValueDeserialize};
-use parser::bytes_to_value;
+use parser::json_bytes_to_value;
 
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -472,7 +472,7 @@ pub fn from_str_via_value<'s, T>(s: &'s str) -> Result<T, MerdeJsonError<'s>>
 where
     T: ValueDeserialize<'s>,
 {
-    let value = bytes_to_value(s.as_bytes()).map_err(|e| MerdeJsonError::JiterError {
+    let value = json_bytes_to_value(s.as_bytes()).map_err(|e| MerdeJsonError::JiterError {
         err: e,
         source: Some(s.into()),
     })?;
