@@ -1,6 +1,11 @@
 use jiter::{Jiter, JiterError, Peek};
 use merde::{CowStr, Map, Value};
 
+pub(crate) fn bytes_to_value<'j>(src: &'j [u8]) -> Result<Value<'j>, JiterError> {
+    let mut iter = Jiter::new(src);
+    jiter_to_value(src, &mut iter)
+}
+
 pub(crate) fn jiter_to_value<'j>(
     src: &'j str,
     iter: &mut Jiter<'j>,
