@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
 use merde_json::{
-    JsonArrayExt, JsonDeserialize, JsonSerialize, JsonSerializer, JsonValue, JsonValueExt,
+    JsonArrayExt, JsonSerialize, JsonSerializer, JsonValue, JsonValueExt, ValueDeserialize,
 };
 
 #[derive(Debug, PartialEq)]
@@ -19,7 +19,7 @@ struct Items<'s> {
     boolean: bool,
 }
 
-impl<'s> JsonDeserialize<'s> for Items<'s> {
+impl<'s> ValueDeserialize<'s> for Items<'s> {
     fn json_deserialize<'val>(
         value: Option<&'val JsonValue<'s>>,
     ) -> Result<Self, merde_json::MerdeJsonError> {

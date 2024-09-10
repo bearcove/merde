@@ -1,5 +1,5 @@
 use jiter::{Jiter, JiterError, Peek};
-use merde::{CowStr, LazyIndexMap, Value};
+use merde::{CowStr, Map, Value};
 
 pub(crate) fn jiter_to_value<'j>(
     src: &'j str,
@@ -23,7 +23,7 @@ pub(crate) fn jiter_to_value_with_peek<'j>(
         Peek::NaN => Value::Float(f64::NAN),
         Peek::String => {
             let s = iter.known_str()?;
-            Value::String(cowify(src, s))
+            Value::Str(cowify(src, s))
         }
         Peek::Array => {
             let mut arr = Vec::new();
@@ -32,10 +32,10 @@ pub(crate) fn jiter_to_value_with_peek<'j>(
                 arr.push(jiter_to_value_with_peek(src, peek, iter)?);
                 next = iter.array_step()?;
             }
-            Value::Array(arr)
+            Value::Array(arr.into())
         }
         Peek::Object => {
-            let mut obj = LazyIndexMap::new();
+            let mut obj = Map::new();
             let mut next = iter.known_object()?;
             while let Some(key) = next {
                 let key = cowify(src, key);
@@ -43,7 +43,7 @@ pub(crate) fn jiter_to_value_with_peek<'j>(
                 obj.insert(key, value);
                 next = iter.next_key()?;
             }
-            Value::Object(obj)
+            Value::Map(obj.into())
         }
         p if p.is_num() => {
             if let Ok(i) = iter.next_int() {
@@ -108,34 +108,31 @@ fn test_jiter_to_value() {
     let value = jiter_to_value(src, &mut iter).unwrap();
     assert_eq!(
         value,
-        Value::Object({
-            let mut map = LazyIndexMap::new();
+        Value::Map({
+            let mut map = Map::new();
+            map.insert("name", Value::Str(CowStr::from("John Doe")));
+            map.insert("age", Value::Int(42));
             map.insert(
-                CowStr::from("name"),
-                Value::String(CowStr::from("John Doe")),
-            );
-            map.insert(CowStr::from("age"), Value::Int(42));
-            map.insert(
-                CowStr::from("address"),
-                Value::Object({
-                    let mut map = LazyIndexMap::new();
-                    map.insert(
-                        CowStr::from("street"),
-                        Value::String(CowStr::from("123 Main St")),
-                    );
-                    map.insert(CowStr::from("city"), Value::String(CowStr::from("Anytown")));
-                    map.insert(CowStr::from("state"), Value::String(CowStr::from("CA")));
-                    map.insert(CowStr::from("zip"), Value::Int(12345));
+                "address",
+                Value::Map({
+                    let mut map = Map::new();
+                    map.insert("street", Value::Str(CowStr::from("123 Main St")));
+                    map.insert("city", Value::Str(CowStr::from("Anytown")));
+                    map.insert("state", Value::Str(CowStr::from("CA")));
+                    map.insert("zip", Value::Int(12345));
                     map
                 }),
             );
             map.insert(
-                CowStr::from("friends"),
-                Value::Array(vec![
-                    Value::String(CowStr::from("Alice")),
-                    Value::String(CowStr::from("Bob")),
-                    Value::String(CowStr::from("Charlie")),
-                ]),
+                "friends",
+                Value::Array(
+                    vec![
+                        Value::from("Alice"),
+                        Value::from("Bob"),
+                        Value::from("Charlie"),
+                    ]
+                    .into(),
+                ),
             );
             map
         })

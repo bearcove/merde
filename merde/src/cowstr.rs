@@ -62,6 +62,24 @@ impl<'s> From<&'s String> for CowStr<'s> {
     }
 }
 
+impl From<CowStr<'_>> for String {
+    fn from(s: CowStr<'_>) -> Self {
+        match s {
+            CowStr::Borrowed(s) => s.into(),
+            CowStr::Owned(s) => s.into(),
+        }
+    }
+}
+
+impl From<CowStr<'_>> for Box<str> {
+    fn from(s: CowStr<'_>) -> Self {
+        match s {
+            CowStr::Borrowed(s) => s.into(),
+            CowStr::Owned(s) => s.into(),
+        }
+    }
+}
+
 impl PartialEq for CowStr<'_> {
     fn eq(&self, other: &Self) -> bool {
         self.deref() == other.deref()

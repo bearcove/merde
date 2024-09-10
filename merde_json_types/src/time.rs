@@ -79,7 +79,7 @@ mod merde_json_impls {
     }
 
     #[cfg(feature = "time-deserialize")]
-    impl<'s> merde_json::JsonDeserialize<'s> for Rfc3339<time::OffsetDateTime> {
+    impl<'s> merde_json::ValueDeserialize<'s> for Rfc3339<time::OffsetDateTime> {
         fn json_deserialize<'val>(
             value: Option<&'val merde_json::JsonValue<'s>>,
         ) -> Result<Self, merde_json::MerdeJsonError> {
