@@ -1,6 +1,6 @@
 #[doc(hidden)]
 #[macro_export]
-macro_rules! impl_json_deserialize {
+macro_rules! impl_value_deserialize {
     ($struct_name:ident <$lifetime:lifetime> { $($field:ident),+ }) => {
         impl<$lifetime> $crate::ValueDeserialize<$lifetime> for $struct_name<$lifetime>
         {
@@ -15,13 +15,25 @@ macro_rules! impl_json_deserialize {
                     $($field: obj.must_get(stringify!($field))?,)+
                 })
             }
+
+            fn from_value(
+                value: Option<$crate::Value<$lifetime>>,
+            ) -> Result<Self, $crate::MerdeError> {
+                #[allow(unused_imports)]
+                use $crate::MerdeError;
+
+                let obj = value.ok_or(MerdeError::MissingValue)?.as_object()?;
+                Ok($struct_name {
+                    $($field: obj.must_remove(stringify!($field))?,)+
+                })
+            }
         }
     };
 
     ($struct_name:ident { $($field:ident),+ }) => {
         impl $crate::JsonDeserialize<'static> for $struct_name
         {
-            fn json_deserialize<'val>(
+            fn from_value_ref<'val>(
                 value: Option<&'val $crate::Value<'_>>,
             ) -> Result<Self, $crate::MerdeError> {
                 #[allow(unused_imports)]
@@ -30,6 +42,18 @@ macro_rules! impl_json_deserialize {
                 let obj = value.ok_or(MerdeError::MissingValue)?.as_object()?;
                 Ok($struct_name {
                     $($field: obj.must_get(stringify!($field))?,)+
+                })
+            }
+
+            fn from_value(
+                value: Option<$crate::Value<'_>>,
+            ) -> Result<Self, $crate::MerdeError> {
+                #[allow(unused_imports)]
+                use $crate::MerdeError;
+
+                let obj = value.ok_or(MerdeError::MissingValue)?.as_object()?
+                Ok($struct_name {
+                    $($field: obj.must_remove(stringify!($field))?,)+
                 })
             }
         }
@@ -43,7 +67,7 @@ macro_rules! impl_json_serialize {
         impl<$lifetime> $crate::JsonSerialize for $struct_name<$lifetime> {
             fn json_serialize(&self, serializer: &mut $crate::JsonSerializer) {
                 #[allow(unused_imports)]
-                use $crate::{JsonObjectExt, ValueExt, MerdeError};
+                use $crate::{MerdeError};
 
                 let mut guard = serializer.write_obj();
                 $(
@@ -104,14 +128,15 @@ macro_rules! impl_to_static {
 
 /// Derives the specified traits for a struct.
 ///
-/// This macro can be used to automatically implement `JsonSerialize` and `JsonDeserialize`
+/// This macro can be used to automatically implement `JsonSerialize` and `ValueDeserialize`
 /// traits for a given struct. It expands to call the appropriate implementation macros
 /// based on the traits specified.
 ///
 /// # Usage
 ///
 /// ```rust
-/// use merde_json::{JsonSerialize, JsonDeserialize};
+/// use merde::ValueDeserialize;
+/// use merde_json::JsonSerialize;
 /// use std::borrow::Cow;
 ///
 /// #[derive(Debug, PartialEq)]
@@ -122,7 +147,7 @@ macro_rules! impl_to_static {
 /// }
 ///
 /// merde_json::derive! {
-///     impl(JsonSerialize, JsonDeserialize, ToStatic) for MyStruct<'s> {
+///     impl(JsonSerialize, ValueDeserialize, ToStatic) for MyStruct<'s> {
 ///         field1,
 ///         field2,
 ///         field3
