@@ -1,6 +1,4 @@
-use std::{hash::Hash, str::FromStr};
-
-use ahash::{HashMap, HashMapExt};
+use std::{borrow::Cow, hash::Hash, str::FromStr};
 
 use crate::{Array, CowStr, Map, MerdeError, Value, ValueType};
 
@@ -39,6 +37,27 @@ impl<'s> ValueDeserialize<'s> for CowStr<'s> {
     fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
         match value {
             Some(Value::Str(s)) => Ok(s),
+            Some(v) => Err(MerdeError::MismatchedType {
+                expected: ValueType::String,
+                found: v.value_type(),
+            }),
+            None => Err(MerdeError::MissingValue),
+        }
+    }
+
+    #[inline(always)]
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+        Self::from_value(value.cloned())
+    }
+}
+
+impl<'s> ValueDeserialize<'s> for Cow<'s, str> {
+    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
+        match value {
+            Some(Value::Str(s)) => match s {
+                CowStr::Borrowed(_) => todo!(),
+                CowStr::Owned(_) => todo!(),
+            },
             Some(v) => Err(MerdeError::MismatchedType {
                 expected: ValueType::String,
                 found: v.value_type(),
@@ -213,7 +232,7 @@ where
     }
 }
 
-impl<'s, K, V> ValueDeserialize<'s> for HashMap<K, V>
+impl<'s, K, V> ValueDeserialize<'s> for std::collections::HashMap<K, V>
 where
     K: FromStr + Eq + Hash + 's,
     V: ValueDeserialize<'s>,
@@ -222,7 +241,7 @@ where
     fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
         match value {
             Some(Value::Map(obj)) => {
-                let mut map = HashMap::new();
+                let mut map = std::collections::HashMap::new();
                 for (key, val) in obj.iter() {
                     let parsed_key = K::from_str(key).map_err(|_| MerdeError::InvalidKey)?;
                     let parsed_value = V::from_value_ref(Some(val))?;

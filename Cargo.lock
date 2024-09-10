@@ -149,6 +149,7 @@ name = "merde"
 version = "3.0.0"
 dependencies = [
  "merde_json",
+ "merde_types",
 ]
 
 [[package]]

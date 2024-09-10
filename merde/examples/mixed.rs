@@ -1,15 +1,15 @@
 use std::borrow::Cow;
 
-use merde_json::{
-    JsonArrayExt, JsonSerialize, JsonSerializer, JsonValue, JsonValueExt, ValueDeserialize,
-};
+use merde::MerdeError;
+use merde_json::{JsonSerialize, JsonSerializer};
+use merde_types::{Value, ValueDeserialize};
 
 #[derive(Debug, PartialEq)]
 struct MixedArray<'s> {
-    items: Vec<JsonValue<'s>>,
+    items: Vec<Value<'s>>,
 }
-merde_json::derive! {
-    impl(JsonSerialize, JsonDeserialize) for MixedArray<'s> { items }
+merde::derive! {
+    impl (JsonSerialize, ValueDeserialize) for MixedArray<'s> { items }
 }
 
 #[derive(Debug, PartialEq)]
@@ -20,12 +20,8 @@ struct Items<'s> {
 }
 
 impl<'s> ValueDeserialize<'s> for Items<'s> {
-    fn json_deserialize<'val>(
-        value: Option<&'val JsonValue<'s>>,
-    ) -> Result<Self, merde_json::MerdeJsonError> {
-        let arr = value
-            .ok_or(merde_json::MerdeJsonError::MissingValue)?
-            .as_array()?;
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+        let arr = value.ok_or(MerdeError::MissingValue)?.as_array()?;
 
         Ok(Items {
             number: arr.must_get(0)?,
@@ -49,8 +45,8 @@ impl JsonSerialize for Items<'_> {
 struct MixedArray2<'s> {
     items: Items<'s>,
 }
-merde_json::derive! {
-    impl(JsonSerialize, JsonDeserialize) for MixedArray2<'s> { items }
+merde::derive! {
+    impl (JsonSerialize, ValueDeserialize) for MixedArray2<'s> { items }
 }
 
 fn main() {

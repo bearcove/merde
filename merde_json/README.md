@@ -42,7 +42,7 @@ struct MyStruct<'s> {
     age: u8,
 }
 
-merde_json::derive! {
+merde::derive! {
     impl(JsonSerialize, JsonDeserialize) for MyStruct<'s> {
         name,
         age
@@ -67,7 +67,7 @@ struct MyStruct {
     age: u8,
 }
 
-merde_json::derive! {
+merde::derive! {
     // note: there's no lifetime parameter here      👇
     impl (JsonSerialize, JsonDeserialize) for MyStruct {
         name,
@@ -93,7 +93,7 @@ via the [JsonDeserialize] trait:
 #     age: u8,
 # }
 #
-# merde_json::derive! {
+# merde::derive! {
 #     impl(JsonSerialize, JsonDeserialize) for MyStruct<'s> { name, age }
 # }
 #
@@ -124,7 +124,7 @@ This code fails to compile:
 #     age: u8,
 # }
 #
-# merde_json::derive! {
+# merde::derive! {
 #     impl(JsonSerialize, JsonDeserialize) for MyStruct<'s> { name, age }
 # }
 #
@@ -164,7 +164,7 @@ Deriving the [ToStatic] trait lets you go from `MyStruct<'s>` to `MyStruct<'stat
 #     age: u8,
 # }
 #
-merde_json::derive! {
+merde::derive! {
     //                                     👇
     impl(JsonSerialize, JsonDeserialize, ToStatic) for MyStruct<'s> { name, age }
 }
@@ -198,7 +198,7 @@ struct MixedArray<'s> {
     items: Vec<JsonValue<'s>>,
 }
 
-merde_json::derive! { impl(JsonDeserialize) for MixedArray<'s> { items } }
+merde::derive! { impl(JsonDeserialize) for MixedArray<'s> { items } }
 
 fn main() -> Result<(), merde_json::MerdeJsonError> {
     let input = r#"{
@@ -254,7 +254,7 @@ Serializing typically looks like:
 #     age: u8,
 # }
 #
-# merde_json::derive! {
+# merde::derive! {
 #     impl(JsonSerialize, JsonDeserialize) for MyStruct<'s> { name, age }
 # }
 #
@@ -288,7 +288,7 @@ If you want more control over the buffer, for example you'd like to re-use the s
 #     age: u8,
 # }
 #
-# merde_json::derive! {
+# merde::derive! {
 #     impl(JsonSerialize, JsonDeserialize) for MyStruct<'s> { name, age }
 # }
 #

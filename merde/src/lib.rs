@@ -18,7 +18,7 @@ macro_rules! impl_value_deserialize {
                 #[allow(unused_imports)]
                 use $crate::MerdeError;
 
-                let obj = value.ok_or(MerdeError::MissingValue)?.as_object()?;
+                let obj = value.ok_or(MerdeError::MissingValue)?.as_map()?;
                 Ok($struct_name {
                     $($field: obj.must_get(stringify!($field))?,)+
                 })
@@ -30,7 +30,7 @@ macro_rules! impl_value_deserialize {
                 #[allow(unused_imports)]
                 use $crate::MerdeError;
 
-                let obj = value.ok_or(MerdeError::MissingValue)?.as_object()?;
+                let mut obj = value.ok_or(MerdeError::MissingValue)?.into_map()?;
                 Ok($struct_name {
                     $($field: obj.must_remove(stringify!($field))?,)+
                 })
@@ -47,7 +47,7 @@ macro_rules! impl_value_deserialize {
                 #[allow(unused_imports)]
                 use $crate::MerdeError;
 
-                let obj = value.ok_or(MerdeError::MissingValue)?.as_object()?;
+                let obj = value.ok_or(MerdeError::MissingValue)?.as_map()?;
                 Ok($struct_name {
                     $($field: obj.must_get(stringify!($field))?,)+
                 })
@@ -59,7 +59,7 @@ macro_rules! impl_value_deserialize {
                 #[allow(unused_imports)]
                 use $crate::MerdeError;
 
-                let obj = value.ok_or(MerdeError::MissingValue)?.as_object()?
+                let obj = value.ok_or(MerdeError::MissingValue)?.into_map()?
                 Ok($struct_name {
                     $($field: obj.must_remove(stringify!($field))?,)+
                 })
@@ -122,7 +122,7 @@ macro_rules! impl_to_static {
 ///     field3: bool,
 /// }
 ///
-/// merde_json::derive! {
+/// merde::derive! {
 ///     impl(JsonSerialize, ValueDeserialize, ToStatic) for MyStruct<'s> {
 ///         field1,
 ///         field2,
@@ -172,32 +172,39 @@ macro_rules! derive {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! impl_trait {
-    // cow variants
+    // borrowed
     (@impl JsonSerialize, $struct_name:ident <$lifetime:lifetime> { $($field:ident),+ }) => {
         $crate::impl_json_serialize!($struct_name <$lifetime> { $($field),+ });
     };
-    (@impl JsonDeserialize, $struct_name:ident <$lifetime:lifetime> { $($field:ident),+ }) => {
-        $crate::impl_json_deserialize!($struct_name <$lifetime> { $($field),+ });
-    };
-    (@impl ToStatic, $struct_name:ident <$lifetime:lifetime> { $($field:ident),+ }) => {
-        $crate::impl_to_static!($struct_name <$lifetime> { $($field),+ });
-    };
-
-    // owned variants
+    // owned
     (@impl JsonSerialize, $struct_name:ident { $($field:ident),+ }) => {
         $crate::impl_json_serialize!($struct_name { $($field),+ });
     };
-    (@impl JsonDeserialize, $struct_name:ident { $($field:ident),+ }) => {
-        $crate::impl_json_deserialize!($struct_name { $($field),+ });
+
+    // with lifetime param
+    (@impl ValueDeserialize, $struct_name:ident <$lifetime:lifetime> { $($field:ident),+ }) => {
+        $crate::impl_value_deserialize!($struct_name <$lifetime> { $($field),+ });
     };
+    // l
+    (@impl ValueDeserialize, $struct_name:ident { $($field:ident),+ }) => {
+        $crate::impl_value_deserialize!($struct_name { $($field),+ });
+    };
+
+    // with lifetime param
+    (@impl ToStatic, $struct_name:ident <$lifetime:lifetime> { $($field:ident),+ }) => {
+        $crate::impl_to_static!($struct_name <$lifetime> { $($field),+ });
+    };
+    // without lifetime param
     (@impl ToStatic, $struct_name:ident { $($field:ident),+ }) => {
         $crate::impl_to_static!($struct_name { $($field),+ });
     };
 }
 
 #[cfg(test)]
-mod tests {
+#[cfg(feature = "merde_json")]
+mod json_tests {
     use super::*;
+    use merde_json::{from_str_via_value, JsonSerialize};
 
     #[test]
     fn test_roundtrip_large_number() {
@@ -220,7 +227,7 @@ mod tests {
         }
 
         derive! {
-            impl(JsonSerialize, JsonDeserialize) for SecondStruct<'s> {
+            impl(JsonSerialize, ValueDeserialize) for SecondStruct<'s> {
                 string_field,
                 int_field
             }
@@ -246,7 +253,7 @@ mod tests {
         }
 
         derive! {
-            impl(JsonSerialize, JsonDeserialize) for ComplexStruct<'s> {
+            impl(JsonSerialize, ValueDeserialize) for ComplexStruct<'s> {
                 string_field,
                 u8_field,
                 u16_field,
