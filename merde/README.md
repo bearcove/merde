@@ -80,3 +80,104 @@ Upsides:
 interface that works for various formats. A good thinking topic for future versions.
 
 ### Copy-on-write types
+
+Picture this: a large JSON documents, with large strings, that don't use escape sequences.
+
+Instead of allocating a separate `String` on the heap for each of these, `serde` lets you
+borrow from the input string, either automatically when you use a type like `&str`:
+
+```rust,ignore
+use serde::{Serialize, Deserialize};
+
+#[derive(Serialize, Deserialize, Debug)]
+struct Name<'s> {
+    first: &'s str,
+    middle: &'s str,
+    last: &'s str,
+}
+
+// etc.
+```
+
+Or explicitly when you use a copy-on-write type like `Cow<'s, str>`:
+
+```rust,ignore
+use serde::{Serialize, Deserialize};
+use std::borrow::Cow;
+
+#[derive(Serialize, Deserialize, Debug)]
+struct Name<'s> {
+    #[serde(borrow)]
+    first: Cow<'s, str>,
+    #[serde(borrow)]
+    middle: Cow<'s, str>,
+    #[serde(borrow)]
+    last: Cow<'s, str>,
+}
+```
+
+`serde` is really flexible here, letting you have types with multiple lifetimes, not
+all of which are related to the input string.
+
+`merde` only handles the simplest of cases: structs without a lifetime parameter
+are the simple case, since they're always owned / `'static` (by definition):
+
+```rust
+use serde::{Serialize, Deserialize};
+
+#[derive(Debug)]
+struct Name {
+    first: String,
+    middle: String,
+    last: String,
+}
+
+merde::derive! {
+    impl (ValueDeserialize, JsonSerialize) for Name { first, middle, last }
+}
+```
+
+But, as a treat, structs passed to `merde_derive!` can have exactly one lifetime
+parameter, so that you may use string slices:
+
+```rust
+use serde::{Serialize, Deserialize};
+
+#[derive(Debug)]
+struct Name<'s> {
+    first: &'s str,
+    middle: &'s str,
+    last: &'s str,
+}
+
+merde::derive! {
+    //                                              👇
+    impl (ValueDeserialize, JsonSerialize) for Name<'s> { first, middle, last }
+    //                                              👆
+}
+```
+
+Note that in the `merde_derive!` invocation, we _have_ to give it the lifetime parameter's
+name — this ends up generating different code, that can borrow from the input.
+
+Similarly, you can use the built-in `Cow<'s, str>` type, although merde provides and
+recommends its own `CowStr<'s>` type:
+
+```rust
+use serde::{Serialize, Deserialize};
+
+#[derive(Debug)]
+struct Name<'s> {
+    first: CowStr<'s>,
+    middle: CowStr<'s>,
+    last: CowStr<'s>,
+}
+
+merde::derive! {
+    impl (ValueDeserialize, JsonSerialize) for Name<'s> { first, middle, last }
+}
+```
+
+Which dereferences to `&str` like you'd expect, but instead of using `String` as its
+owned type, it uses `compact_str::CompactStr`, which stores strings of up to 24
+bytes inline!
