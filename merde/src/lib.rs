@@ -1,7 +1,7 @@
 #![deny(missing_docs)]
 #![doc = include_str!("../README.md")]
 
-#[cfg(feature = "merde_json")]
+#[cfg(feature = "json")]
 pub use merde_json;
 
 pub use merde_core::*;
@@ -12,6 +12,7 @@ mod json_macros;
 #[macro_export]
 macro_rules! impl_value_deserialize {
     ($struct_name:ident <$lifetime:lifetime> { $($field:ident),+ }) => {
+        #[automatically_derived]
         impl<$lifetime> $crate::ValueDeserialize<$lifetime> for $struct_name<$lifetime>
         {
             fn from_value_ref<'val>(
@@ -41,10 +42,11 @@ macro_rules! impl_value_deserialize {
     };
 
     ($struct_name:ident { $($field:ident),+ }) => {
-        impl $crate::JsonDeserialize<'static> for $struct_name
+        #[automatically_derived]
+        impl<'s> $crate::ValueDeserialize<'s> for $struct_name
         {
-            fn from_value_ref<'val>(
-                value: Option<&'val $crate::Value<'_>>,
+            fn from_value_ref(
+                value: Option<&$crate::Value<'_>>,
             ) -> Result<Self, $crate::MerdeError> {
                 #[allow(unused_imports)]
                 use $crate::MerdeError;
@@ -61,7 +63,7 @@ macro_rules! impl_value_deserialize {
                 #[allow(unused_imports)]
                 use $crate::MerdeError;
 
-                let obj = value.ok_or(MerdeError::MissingValue)?.into_map()?
+                let mut obj = value.ok_or(MerdeError::MissingValue)?.into_map()?;
                 Ok($struct_name {
                     $($field: obj.must_remove(stringify!($field))?,)+
                 })
@@ -74,6 +76,7 @@ macro_rules! impl_value_deserialize {
 #[macro_export]
 macro_rules! impl_into_static {
     ($struct_name:ident <$lifetime:lifetime> { $($field:ident),+ }) => {
+        #[automatically_derived]
         impl<$lifetime> $crate::IntoStatic for $struct_name<$lifetime> {
             type Output = $struct_name<'static>;
 
@@ -89,6 +92,7 @@ macro_rules! impl_into_static {
     };
 
     ($struct_name:ident { $($field:ident),+ }) => {
+        #[automatically_derived]
         impl $crate::ToStatic for $struct_name {
             type Output = $struct_name;
 
@@ -199,7 +203,7 @@ macro_rules! impl_trait {
 }
 
 #[cfg(test)]
-#[cfg(feature = "merde_json")]
+#[cfg(feature = "json")]
 mod json_tests {
     use super::*;
     use merde_json::{from_str_via_value, JsonSerialize};
@@ -290,4 +294,9 @@ mod json_tests {
 
         assert_eq!(original, deserialized);
     }
+}
+
+// used to test out doc-tests
+mod doctest_playground {
+    // use crate as merde;
 }
