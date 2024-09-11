@@ -9,10 +9,10 @@ use compact_str::CompactString;
 
 use crate::IntoStatic;
 
-/// A copy-on-write string type that uses [CompactString] for
+/// A copy-on-write string type that uses [`CompactString`] for
 /// the "owned" variant.
 ///
-/// The standard [std::borrow::Cow] type cannot be used, since
+/// The standard [`Cow`] type cannot be used, since
 /// `<str as ToOwned>::Owned` is `String`, and not `CompactString`.
 #[derive(Clone)]
 pub enum CowStr<'s> {

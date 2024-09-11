@@ -20,8 +20,8 @@ pub use value::Value;
 mod deserialize;
 pub use deserialize::ValueDeserialize;
 
-/// Interpret a `&Value` as an instance of type `T`. This may involve
-/// more cloning than [from_value].
+/// Interpret a &[`Value`] as an instance of type `T`. This may involve
+/// more cloning than [`from_value`].
 pub fn from_value_ref<'s, T>(value: &Value<'s>) -> Result<T, MerdeError>
 where
     T: ValueDeserialize<'s>,
@@ -29,7 +29,7 @@ where
     T::from_value_ref(Some(value))
 }
 
-/// Interpret a `Value` as an instance of type `T`.
+/// Interpret a [`Value`] as an instance of type `T`.
 pub fn from_value<'s, T>(value: Value<'s>) -> Result<T, MerdeError>
 where
     T: ValueDeserialize<'s>,

@@ -10,8 +10,8 @@
 that might run slower, but compiles faster.
 
 This is the "hub" crate, which re-exports all types from [merde_core](https://crates.io/crates/merde_core),
-including `Value`, `Array`, and `Object`, and provides a declarative `derive!` macro that helps implement
-traits like `ValueDeserialize`, `IntoStatic` and `JsonSerialize`.
+including [`Value`], [`Array`], and [`Map`], and provides a declarative [`derive`] macro that helps implement
+traits like [`ValueDeserialize`], [`IntoStatic`] and [`JsonSerialize`].
 
 ## From `serde` to `merde`
 
@@ -66,19 +66,11 @@ fn main() {
 }
 ```
 
-Downsides:
+This approach is less flexible, but because there's no proc-macro involved, or
+re-parsing of the struct definitions by the proc macro, it builds faster.
 
-  * Only works for structs
-  * You have to repeat the field list (but you'll get an error if you mess it up)
-  * Feels a bit eerie
-
-Upsides:
-
-  * Fast compiles
-
-`merde_json::from_str_via_value` goes through `merde::Value`, which isn't ideal for performance
-— there's no compelling technical reason for it to stay that way, just gotta think about an
-interface that works for various formats. A good thinking topic for future versions.
+[`json::from_str_via_value`] round-trips through [`Value`] but that's not inherent
+to the merde approach, we just need to figure out the right approach.
 
 ### Copy-on-write types
 

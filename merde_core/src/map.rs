@@ -5,6 +5,7 @@ use std::{
 
 use crate::{value::Value, CowStr, MerdeError, ValueDeserialize};
 
+/// A map, dictionary, object, whatever — with string keys.
 #[derive(Debug, PartialEq, Clone)]
 #[repr(transparent)]
 pub struct Map<'s>(pub HashMap<CowStr<'s>, Value<'s>>);
