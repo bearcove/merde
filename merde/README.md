@@ -11,7 +11,7 @@ that might run slower, but compiles faster.
 
 This is the "hub" crate, which re-exports all types from [merde_core](https://crates.io/crates/merde_core),
 including `Value`, `Array`, and `Object`, and provides a declarative `derive!` macro that helps implement
-traits like `ValueDeserialize`, `ToStatic` and `JsonSerialize`.
+traits like `ValueDeserialize`, `IntoStatic` and `JsonSerialize`.
 
 ## From `serde` to `merde`
 
@@ -257,19 +257,21 @@ Borrowing from the input (to avoid allocations and copies, in case you missed
 the memo) is all fun and games until you need to move something around, for
 example, returning it from a function.
 
-```rust
+```rust,compile_fail
 use merde::CowStr;
 
 struct Message<'s> {
     kind: u8,
-    payload: CowStr<'static>,
+    payload: CowStr<'s>,
 }
 
 merde::derive! {
-    impl (ValueDeserialize, JsonSerialize) for Message<'s> { kind, payload }
+    impl (ValueDeserialize, JsonSerialize)
+    for Message<'s> { kind, payload }
 }
 
-fn wait_for_message_of_kind(kind: u8) -> Message {
+// well this is already fishy, where does the `'s` come from?
+fn recv_and_deserialize<'s>() -> Message<'s> {
     let s: String = {
         // pretend this reads from the network instead, or something
         r#"{
@@ -277,14 +279,65 @@ fn wait_for_message_of_kind(kind: u8) -> Message {
             "payload": "hello"
         }"#.to_owned()
     };
-    let msg = merde::json::from_str_via_value(&s).unwrap();
-    msg
+    let message: Message = merde::json::from_str_via_value(&s).unwrap();
+    message
 }
 
 fn main() {
-    let msg = wait_for_message_of_kind(42);
+    let _msg = recv_and_deserialize();
 }
 ```
+
+This fails to build with:
+
+```text
+error[E0515]: cannot return value referencing local variable `s`
+    --> merde/src/lib.rs:366:9
+    |
+365 |         let message: Message = merde::json::from_str_via_value(&s).unwrap();
+    |                                                                -- `s` is borrowed here
+366 |         message
+    |         ^^^^^^^ returns a value referencing data owned by the current function
+```
+
+That's where the `IntoStatic` trait comes from — which you can also derive
+with `merde::derive!`:
+
+```rust
+use merde::IntoStatic;
+use merde::CowStr;
+
+struct Message<'s> {
+    kind: u8,
+    payload: CowStr<'s>,
+}
+
+merde::derive! {
+    impl (ValueDeserialize, JsonSerialize, IntoStatic)
+    for Message<'s> { kind, payload }
+}
+
+fn recv_and_deserialize() -> Message<'static> {
+    let s: String = {
+        // pretend this reads from the network instead, or something
+        r#"{
+            "kind": 42,
+            "payload": "hello"
+        }"#.to_owned()
+    };
+    let message: Message = merde::json::from_str_via_value(&s).unwrap();
+    message.into_static()
+}
+
+fn main() {
+    let _msg = recv_and_deserialize();
+}
+```
+
+Et voilà! ✨
+
+There might be something smarter to do based on the [yoke](https://docs.rs/yoke) crate for example,
+but for now, allocations it is.
 
 ### Third-party types
 
@@ -342,3 +395,5 @@ fn main() {
     println!("person = {:?}", person);
 }
 ```
+
+You can of course make your own newtype wrappers to control how a field gets deserialized.

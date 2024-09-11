@@ -21,8 +21,8 @@ path = "examples/mixed.rs"
 required-features = ["json"]
 
 [[example]]
-name = "to_static"
-path = "examples/to_static.rs"
+name = "into_static"
+path = "examples/into_static.rs"
 required-features = ["json"]
 
 [dependencies]

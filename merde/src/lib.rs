@@ -94,7 +94,7 @@ macro_rules! impl_into_static {
 
     ($struct_name:ident { $($field:ident),+ }) => {
         #[automatically_derived]
-        impl $crate::ToStatic for $struct_name {
+        impl $crate::IntoStatic for $struct_name {
             type Output = $struct_name;
 
             #[inline(always)]
@@ -162,7 +162,7 @@ macro_rules! impl_json_serialize {
 /// }
 ///
 /// merde::derive! {
-///     impl(JsonSerialize, ValueDeserialize, ToStatic) for MyStruct<'s> {
+///     impl(JsonSerialize, ValueDeserialize, IntoStatic) for MyStruct<'s> {
 ///         field1,
 ///         field2,
 ///         field3
@@ -230,11 +230,11 @@ macro_rules! impl_trait {
     };
 
     // with lifetime param
-    (@impl ToStatic, $struct_name:ident <$lifetime:lifetime> { $($field:ident),+ }) => {
+    (@impl IntoStatic, $struct_name:ident <$lifetime:lifetime> { $($field:ident),+ }) => {
         $crate::impl_into_static!($struct_name <$lifetime> { $($field),+ });
     };
     // without lifetime param
-    (@impl ToStatic, $struct_name:ident { $($field:ident),+ }) => {
+    (@impl IntoStatic, $struct_name:ident { $($field:ident),+ }) => {
         $crate::impl_into_static!($struct_name { $($field),+ });
     };
 }
@@ -335,5 +335,12 @@ mod json_tests {
 
 // used to test out doc-tests
 mod doctest_playground {
-    // use crate as merde;
+    #[allow(unused_imports)]
+    use crate as merde;
+
+    ////////////////////////////////////////////////////////////////////////////////
+
+    // (insert doctest here for testing)
+
+    ////////////////////////////////////////////////////////////////////////////////
 }
