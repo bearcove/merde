@@ -24,8 +24,8 @@ jobs:
           cargo hack --feature-powerset check
       - name: Run examples
         run: |
-          pushd merde_json
-          cargo run --example simple
-          cargo run --example mixed
-          cargo run --example into_static
+          pushd merde
+          cargo run --features full --example simple
+          cargo run --features full --example mixed
+          cargo run --features full --example into_static
           popd
