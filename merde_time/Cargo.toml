@@ -11,7 +11,7 @@ keywords = ["merde", "serialization", "deserialization"]
 categories = ["encoding", "parser-implementations"]
 
 [dependencies]
-merde_types = { version = "3.0.0", path = "../merde_types" }
+merde_core = { version = "3.0.0", path = "../merde_core" }
 merde_json = { version = "3.0.0", path = "../merde_json", optional = true }
 time = "*"
 

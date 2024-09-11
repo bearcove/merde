@@ -1,7 +1,10 @@
+#![deny(missing_docs)]
+#![doc = include_str!("../README.md")]
+
 #[cfg(feature = "merde_json")]
 pub use merde_json;
 
-pub use merde_types::*;
+pub use merde_core::*;
 
 mod json_macros;
 

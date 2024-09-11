@@ -13,23 +13,23 @@ categories = ["encoding", "parser-implementations"]
 [[example]]
 name = "simple"
 path = "examples/simple.rs"
-required-features = ["merde_json"]
+required-features = ["json"]
 
 [[example]]
 name = "mixed"
 path = "examples/mixed.rs"
-required-features = ["merde_json"]
+required-features = ["json"]
 
 [[example]]
 name = "to_static"
 path = "examples/to_static.rs"
-required-features = ["merde_json"]
+required-features = ["json"]
 
 [dependencies]
 merde_json = { version = "3.0.0", path = "../merde_json", optional = true }
-merde_types = { version = "3.0.0", path = "../merde_types" }
+merde_core = { version = "3.0.0", path = "../merde_core" }
 
 [features]
 default = []
-full = ["merde_json"]
-merde_json = ["dep:merde_json"]
+full = ["json"]
+json = ["dep:merde_json"]

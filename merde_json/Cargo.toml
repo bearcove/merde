@@ -12,7 +12,7 @@ categories = ["encoding", "parser-implementations"]
 
 [dependencies]
 jiter = "0.5.0"
-merde_types = { version = "3.0.0", path = "../merde_types" }
+merde_core = { version = "3.0.0", path = "../merde_core" }
 
 [features]
 default = []

@@ -4,7 +4,7 @@
 mod parser;
 
 use jiter::JiterError;
-use merde_types::{Array, CowStr, IntoStatic, Map, MerdeError, Value, ValueDeserialize};
+use merde_core::{Array, CowStr, IntoStatic, Map, MerdeError, Value, ValueDeserialize};
 use parser::json_bytes_to_value;
 
 use std::borrow::Cow;
@@ -476,7 +476,7 @@ where
         err: e,
         source: Some(s.into()),
     })?;
-    Ok(merde_types::from_value(value)?)
+    Ok(merde_core::from_value(value)?)
 }
 
 /// Serialize the given data structure as a String of JSON.
