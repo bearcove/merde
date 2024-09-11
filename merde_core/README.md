@@ -14,12 +14,12 @@ build-time-friendly alternative to `serde`.
 This "core" crate provides core types like `Value`, `Array`, `Map`,
 and `CowStr<'s>` (a copy-on-write string type that also leverages
 [compact_str](https://crates.io/crates/compact_str)'s small string
-optimization), and traits like `ValueDeserialize` and `ToStatic`.
+optimization), and traits like `ValueDeserialize` and `IntoStatic`.
 
 Crates that provide support for formats (like [merde_json](https://crates.io/crates/merde_json)),
 and crates that provide wrappers around other crates' types, to allow serializing/deserializing
 them (like [merde_time](https://crates.io/crates/merde_time)), depend only on the "core" crate.
 
 The umbrella crate [merde](https://crates.io/crates/merde) re-exports core's types, along
-with a `derive!` macro which lets you implement `ValueDeserialize`, `ToStatic`, and format-specific
+with a `derive!` macro which lets you implement `ValueDeserialize`, `IntoStatic`, and format-specific
 traits like `JsonSerialize` on structs, with or without lifetime parameters.
