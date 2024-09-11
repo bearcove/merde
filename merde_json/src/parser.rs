@@ -1,5 +1,5 @@
 use jiter::{Jiter, JiterError, JsonError, JsonErrorType, Peek};
-use merde_types::{CowStr, Map, Value};
+use merde_core::{CowStr, Map, Value};
 
 pub(crate) fn json_bytes_to_value(src: &[u8]) -> Result<Value<'_>, JiterError> {
     let mut iter = Jiter::new(src);
@@ -86,7 +86,7 @@ fn cowify<'j>(src: &'j [u8], s: &str) -> CowStr<'j> {
 
 #[cfg(test)]
 mod tests {
-    use merde_types::{Array, CowStr, Map, Value};
+    use merde_core::{Array, CowStr, Map, Value};
 
     use crate::parser::{cowify, json_bytes_to_value};
 

@@ -1,4 +1,4 @@
-use merde_types::IntoStatic;
+use merde_core::IntoStatic;
 use std::borrow::Cow;
 
 #[allow(dead_code)]

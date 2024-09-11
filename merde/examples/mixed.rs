@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use merde::MerdeError;
 use merde_json::{JsonSerialize, JsonSerializer};
-use merde_types::{Value, ValueDeserialize};
+use merde_core::{Value, ValueDeserialize};
 
 #[derive(Debug, PartialEq)]
 struct MixedArray<'s> {

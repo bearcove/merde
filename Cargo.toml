@@ -1,3 +1,3 @@
 [workspace]
 resolver = "2"
-members = ["merde", "merde_json", "merde_time", "merde_types"]
+members = ["merde", "merde_json", "merde_time", "merde_core"]
