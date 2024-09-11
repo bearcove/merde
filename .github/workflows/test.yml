@@ -15,20 +15,17 @@ jobs:
       - uses: actions/checkout@v4
       - name: Run tests (including doctests)
         run: cargo test -F full
+      - name: Install cargo-hack
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-hack
       - name: Check a few configurations
         run: |
-          pushd merde_json_types
-          cargo check -F time-types
-          cargo check -F time-serialize
-          cargo check -F time-deserialize
-          cargo check -F merde_json,time-types
-          cargo check -F merde_json,time-serialize
-          cargo check -F merde_json,time-deserialize
-          popd
+          cargo hack --feature-powerset check
       - name: Run examples
         run: |
           pushd merde_json
           cargo run --example simple
           cargo run --example mixed
-          cargo run --example to_static
+          cargo run --example into_static
           popd
