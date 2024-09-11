@@ -150,6 +150,8 @@ version = "3.0.0"
 dependencies = [
  "merde_core",
  "merde_json",
+ "merde_time",
+ "time",
 ]
 
 [[package]]

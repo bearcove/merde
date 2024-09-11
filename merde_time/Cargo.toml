@@ -11,13 +11,17 @@ keywords = ["merde", "serialization", "deserialization"]
 categories = ["encoding", "parser-implementations"]
 
 [dependencies]
-merde_core = { version = "3.0.0", path = "../merde_core" }
+merde_core = { version = "3.0.0", path = "../merde_core", optional = true }
 merde_json = { version = "3.0.0", path = "../merde_json", optional = true }
-time = "*"
+time = "0.3.36"
+
+[dev-dependencies]
+time = { version = "0.3.36", features = ["macros"] }
 
 [features]
 default = []
-full = ["merde_json", "serialize", "deserialize"]
-merde_json = ["dep:merde_json"]
+full = ["merde", "json", "serialize", "deserialize"]
+merde = ["dep:merde_core"]
+json = ["merde", "dep:merde_json"]
 serialize = ["time/formatting"]
 deserialize = ["time/parsing"]

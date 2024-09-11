@@ -244,13 +244,19 @@ impl JsonSerialize for String {
     }
 }
 
-impl<'a> JsonSerialize for &'a str {
+impl<'s> JsonSerialize for &'s str {
     fn json_serialize(&self, serializer: &mut JsonSerializer) {
         serializer.write_str(self)
     }
 }
 
-impl<'a> JsonSerialize for Cow<'a, str> {
+impl<'s> JsonSerialize for Cow<'s, str> {
+    fn json_serialize(&self, serializer: &mut JsonSerializer) {
+        serializer.write_str(self)
+    }
+}
+
+impl<'s> JsonSerialize for CowStr<'s> {
     fn json_serialize(&self, serializer: &mut JsonSerializer) {
         serializer.write_str(self)
     }
