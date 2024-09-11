@@ -10,7 +10,7 @@
           "command": "clippy"
         },
         "cargo": {
-          "features": ["full"]
+          "features": ["merde/full"]
         }
       }
     }
