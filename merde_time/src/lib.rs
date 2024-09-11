@@ -1,5 +1,5 @@
 //! Provides [Rfc3339], a wrapper around [time::OffsetDateTime] that implements
-//! [merde_json::JsonSerialize] and [merde_json::JsonDeserialize] when the right
+//! [merde_json::JsonSerialize] and [merde_core::ValueDeserialize] when the right
 //! cargo features are enabled.
 
 use std::{

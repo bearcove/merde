@@ -1,8 +1,13 @@
 #![deny(missing_docs)]
+#![deny(rustdoc::broken_intra_doc_links)]
 #![doc = include_str!("../README.md")]
 
 #[cfg(feature = "json")]
 pub use merde_json as json;
+
+#[cfg(feature = "json")]
+#[allow(unused_imports)]
+use json::JsonSerialize;
 
 #[cfg(feature = "time")]
 pub use merde_time as time;
@@ -143,20 +148,19 @@ macro_rules! impl_json_serialize {
 
 /// Derives the specified traits for a struct.
 ///
-/// This macro can be used to automatically implement `JsonSerialize` and `ValueDeserialize`
-/// traits for a given struct. It expands to call the appropriate implementation macros
-/// based on the traits specified.
+/// This macro can be used to generate implementations of [`JsonSerialize`], [`ValueDeserialize`],
+/// and [`IntoStatic`] traits for a given struct.
 ///
 /// # Usage
 ///
 /// ```rust
 /// use merde::ValueDeserialize;
+/// use merde::CowStr;
 /// use merde::json::JsonSerialize;
-/// use std::borrow::Cow;
 ///
 /// #[derive(Debug, PartialEq)]
 /// struct MyStruct<'s> {
-///     field1: Cow<'s, str>,
+///     field1: CowStr<'s>,
 ///     field2: i32,
 ///     field3: bool,
 /// }
@@ -170,7 +174,7 @@ macro_rules! impl_json_serialize {
 /// }
 /// ```
 ///
-/// This generates all three impls, but you can omit the ones you don't need.
+/// In this example, all three traits are derived, of course you can omit the ones you don't need.
 ///
 /// The struct must have exactly one lifetime parameter. Additionally, even if there are no
 /// borrowed fields, the struct must include a `_phantom` field of type `PhantomData<&'a ()>`,

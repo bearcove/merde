@@ -2,6 +2,8 @@ use std::collections::HashMap;
 
 use crate::{array::Array, map::Map, CowStr, MerdeError, ValueType};
 
+/// Think [`serde_json::Value`](https://docs.rs/serde_json/1.0.128/serde_json/enum.Value.html), but with a small string optimization,
+/// copy-on-write strings, etc. Might include other value types later.
 #[derive(Debug, PartialEq, Clone)]
 pub enum Value<'s> {
     Int(i64),

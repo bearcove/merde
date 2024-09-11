@@ -158,7 +158,6 @@ dependencies = [
 name = "merde_core"
 version = "3.0.0"
 dependencies = [
- "ahash",
  "compact_str",
  "smallvec",
 ]

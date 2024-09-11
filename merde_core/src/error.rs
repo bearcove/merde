@@ -4,7 +4,7 @@
 
 use crate::{CowStr, Value};
 
-/// A content-less variant of the [Value] enum, used for reporting errors, see [MerdeJsonError::MismatchedType].
+/// A content-less variant of the [`Value`] enum, used for reporting errors, see [`MerdeError::MismatchedType`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum ValueType {
@@ -70,7 +70,7 @@ pub enum MerdeError {
     /// A field was missing (but we don't know its name)
     MissingValue,
 
-    /// While calling out to [FromStr::from_str](std::str::FromStr::from_str) to build a [HashMap](std::collections::HashMap), we got an error.
+    /// While calling out to [`FromStr::from_str`](std::str::FromStr::from_str) to build a [`HashMap`](std::collections::HashMap), we got an error.
     InvalidKey,
 
     /// While parsing a datetime, we got an error

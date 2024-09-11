@@ -2,8 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use crate::{value::Value, MerdeError, ValueDeserialize};
 
-/// An array of [Value]s. Named "List" because it's a bit less
-/// overloaded than "Array"
+/// An array of [`Value`] items
 #[derive(Debug, PartialEq, Clone)]
 #[repr(transparent)]
 pub struct Array<'s>(pub Vec<Value<'s>>);

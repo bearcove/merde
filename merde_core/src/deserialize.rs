@@ -2,11 +2,10 @@ use std::{borrow::Cow, hash::Hash, str::FromStr};
 
 use crate::{Array, CowStr, Map, MerdeError, Value, ValueType};
 
-/// Implemented by anything that can be deserialized from a [Value]
+/// Types that can be deserialized from a [`Value`].
 ///
 /// Implementations are provided for primitive types, strings, arrays,
-/// HashMap, Option, and slices of tuples (for when you don't _need_ the
-/// "hash" part of the HashMap).
+/// [`HashMap`], [`Option`], etc.
 ///
 /// There is no facility for "parsing strings as numbers". However, this
 /// implementation does support numbers that are too big to fit (precisely) in
