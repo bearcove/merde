@@ -57,10 +57,11 @@ merde::derive! {
 fn main() {
     let point = Point { x: 1, y: 2 };
 
-    let serialized = merde_json::to_string(&point);
+    // note: `merde_json` is re-exported as `merde::json` if `merde`'s `json` feature is enabled
+    let serialized = merde::json::to_string(&point);
     println!("serialized = {}", serialized);
 
-    let deserialized: Point = merde_json::from_str_via_value(&serialized).unwrap();
+    let deserialized: Point = merde::json::from_str_via_value(&serialized).unwrap();
     println!("deserialized = {:?}", deserialized);
 }
 ```
@@ -123,8 +124,6 @@ all of which are related to the input string.
 are the simple case, since they're always owned / `'static` (by definition):
 
 ```rust
-use serde::{Serialize, Deserialize};
-
 #[derive(Debug)]
 struct Name {
     first: String,
@@ -137,34 +136,11 @@ merde::derive! {
 }
 ```
 
-But, as a treat, structs passed to `merde_derive!` can have exactly one lifetime
-parameter, so that you may use string slices:
+But, as a treat, structs passed to `merde::derive!` can have exactly one lifetime
+parameter, so that you may use copy-on-write types, like merde's own `CowStr`:
 
 ```rust
-use serde::{Serialize, Deserialize};
-
-#[derive(Debug)]
-struct Name<'s> {
-    first: &'s str,
-    middle: &'s str,
-    last: &'s str,
-}
-
-merde::derive! {
-    //                                              👇
-    impl (ValueDeserialize, JsonSerialize) for Name<'s> { first, middle, last }
-    //                                              👆
-}
-```
-
-Note that in the `merde_derive!` invocation, we _have_ to give it the lifetime parameter's
-name — this ends up generating different code, that can borrow from the input.
-
-Similarly, you can use the built-in `Cow<'s, str>` type, although merde provides and
-recommends its own `CowStr<'s>` type:
-
-```rust
-use serde::{Serialize, Deserialize};
+use merde::CowStr;
 
 #[derive(Debug)]
 struct Name<'s> {
@@ -174,10 +150,195 @@ struct Name<'s> {
 }
 
 merde::derive! {
+    //                                              👇
+    impl (ValueDeserialize, JsonSerialize) for Name<'s> { first, middle, last }
+    //                                              👆
+}
+```
+
+Note that in the `merde::derive!` invocation, we _have_ to give it the lifetime parameter's
+name — this ends up generating different code, that can borrow from the input.
+
+Although you may use [`Cow<'s, str>`](https://doc.rust-lang.org/std/borrow/enum.Cow.html) merde
+recommends [`CowStr<'s>`](https://docs.rs/merde/latest/merde/struct.CowStr.html) type,
+which dereferences to `&str` like you'd expect, but instead of using
+[`String`](https://doc.rust-lang.org/std/string/struct.String.html) as its owned type, it uses
+[`compact_str::CompactString`](https://docs.rs/compact_str/0.8.0/compact_str/struct.CompactString.html),
+which stores strings of up to 24 bytes inline!
+
+### Interlude: why not `&'s str`?
+
+You'll notice that `ValueDeserialize` is not implemented for `&'s str`, ie.
+this code does not compile:
+
+```rust,compile_fail
+#[derive(Debug)]
+struct Name<'s> {
+    first: &'s str,
+    middle: &'s str,
+    last: &'s str,
+}
+
+merde::derive! {
     impl (ValueDeserialize, JsonSerialize) for Name<'s> { first, middle, last }
 }
 ```
 
-Which dereferences to `&str` like you'd expect, but instead of using `String` as its
-owned type, it uses `compact_str::CompactStr`, which stores strings of up to 24
-bytes inline!
+```text
+error[E0277]: the trait bound `&str: ValueDeserialize<'_>` is not satisfied
+  --> merde/src/lib.rs:183:1
+   |
+12 | / merde::derive! {
+13 | |     impl (ValueDeserialize, JsonSerialize) for Name<'s> { first, middle, last }
+14 | | }
+   | |_^ the trait `ValueDeserialize<'_>` is not implemented for `&str`
+```
+
+That's because it's not always possible to borrow from the input.
+
+This JSON input would be fine:
+
+```json
+{
+  "first": "Jane",
+  "middle": "Panic",
+  "last": "Smith"
+}
+```
+
+But this JSON input would not:
+
+```json
+{
+  "first": "Jane",
+  "middle": "\"The Rock\"",
+  "last": "Smith",
+}
+```
+
+We could borrow `"The Rock`, but then we'd have a problem: the next _actual_ character is a double-quote,
+but the next character from the input is the backslash (`\`) used to escape the double-quote.
+
+Such a string will end up being owned in a `CowStr`:
+
+```rust
+use merde::{CowStr, ValueDeserialize};
+
+fn main() {
+    let input = r#"
+        ["\"The Rock\""]
+    "#;
+
+    let v: Vec<CowStr<'_>> = merde::json::from_str_via_value(input).unwrap();
+    assert!(matches!(v.first().unwrap(), CowStr::Owned(_)));
+}
+```
+
+Whereas something without escape sequences will end up being borrowed:
+
+```rust
+use merde::{CowStr, ValueDeserialize};
+
+fn main() {
+    let input = r#"
+        ["Joever"]
+    "#;
+
+    let v: Vec<CowStr<'_>> = merde::json::from_str_via_value(input).unwrap();
+    assert!(matches!(v.first().unwrap(), CowStr::Borrowed(_)));
+}
+```
+
+All this is pretty JSON-specific, but you get the idea.
+
+### Returning something you've serialized
+
+Borrowing from the input (to avoid allocations and copies, in case you missed
+the memo) is all fun and games until you need to move something around, for
+example, returning it from a function.
+
+```rust
+use merde::CowStr;
+
+struct Message<'s> {
+    kind: u8,
+    payload: CowStr<'static>,
+}
+
+merde::derive! {
+    impl (ValueDeserialize, JsonSerialize) for Message<'s> { kind, payload }
+}
+
+fn wait_for_message_of_kind(kind: u8) -> Message {
+    let s: String = {
+        // pretend this reads from the network instead, or something
+        r#"{
+            "kind": 42,
+            "payload": "hello"
+        }"#.to_owned()
+    };
+    let msg = merde::json::from_str_via_value(&s).unwrap();
+    msg
+}
+
+fn main() {
+    let msg = wait_for_message_of_kind(42);
+}
+```
+
+### Third-party types
+
+Some crates don't have a `merde` features. In fact, at the time of this writing,
+no crates at all do. `merde` is still moving fast (despite major features), so
+in fact, I would encourage crate authors _not_ to ship a `merde` feature yet, it
+would just create frustrating churn.
+
+`serde` lets you work around that by specifying a function that should be used to
+deserialize some field:
+
+```rust,ignore
+use serde::{Serialize, Deserialize};
+use time::OffsetDateTime;
+
+#[derive(Serialize, Deserialize)]
+struct Person {
+    name: String,
+    #[serde(with = "time::serde::rfc3339")]
+    birth: OffsetDateTime,
+}
+```
+
+Which solves two problems at once:
+
+  1. the crate may not know about serde at all (not true in this case, time does have a serde feature)
+  2. there might be several ways to serialize/deserialize something (RFC-3339, ISO-8601, and many others etc.)
+
+`merde` solves both of these with wrapper types:
+
+```rust
+use time::OffsetDateTime;
+use merde::CowStr;
+use merde::time::Rfc3339;
+
+#[derive(Debug)]
+struct Person<'s> {
+    name: CowStr<'s>,
+    birth: Rfc3339<OffsetDateTime>,
+}
+
+merde::derive! {
+    impl (ValueDeserialize, JsonSerialize) for Person<'s> { name, birth }
+}
+
+fn main() {
+    let input = r#"
+        {
+            "name": "Jane Smith",
+            "birth": "1990-01-01T00:00:00Z"
+        }
+    "#;
+
+    let person: Person = merde::json::from_str_via_value(input).unwrap();
+    println!("person = {:?}", person);
+}
+```

@@ -1,8 +1,9 @@
-use std::borrow::Cow;
-
+use merde::json::JsonSerialize;
+use merde::json::JsonSerializer;
+use merde::CowStr;
 use merde::MerdeError;
-use merde_json::{JsonSerialize, JsonSerializer};
-use merde_core::{Value, ValueDeserialize};
+use merde::Value;
+use merde::ValueDeserialize;
 
 #[derive(Debug, PartialEq)]
 struct MixedArray<'s> {
@@ -15,7 +16,7 @@ merde::derive! {
 #[derive(Debug, PartialEq)]
 struct Items<'s> {
     number: u32,
-    string: Cow<'s, str>,
+    string: CowStr<'s>,
     boolean: bool,
 }
 

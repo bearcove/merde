@@ -1,5 +1,5 @@
-use std::borrow::Cow;
-use merde_json::JsonSerialize;
+use merde::CowStr;
+use merde::json::JsonSerialize;
 
 fn main() {
     let input = r#"
@@ -33,9 +33,9 @@ fn main() {
 #[allow(dead_code)]
 #[derive(Debug, PartialEq, Eq)]
 struct Address<'s> {
-    street: Cow<'s, str>,
-    city: Cow<'s, str>,
-    state: Cow<'s, str>,
+    street: CowStr<'s>,
+    city: CowStr<'s>,
+    state: CowStr<'s>,
     zip: u16,
 }
 
@@ -51,7 +51,7 @@ merde::derive! {
 #[allow(dead_code)]
 #[derive(Debug, PartialEq, Eq)]
 struct Person<'s> {
-    name: Cow<'s, str>,
+    name: CowStr<'s>,
     age: u8,
     address: Address<'s>,
 }

@@ -2,11 +2,12 @@
 #![doc = include_str!("../README.md")]
 
 #[cfg(feature = "json")]
-pub use merde_json;
+pub use merde_json as json;
+
+#[cfg(feature = "time")]
+pub use merde_time as time;
 
 pub use merde_core::*;
-
-mod json_macros;
 
 #[doc(hidden)]
 #[macro_export]
@@ -104,6 +105,42 @@ macro_rules! impl_into_static {
     };
 }
 
+#[doc(hidden)]
+#[macro_export]
+macro_rules! impl_json_serialize {
+    ($struct_name:ident < $lifetime:lifetime > { $($field:ident),+ }) => {
+        #[cfg(feature = "json")]
+        #[automatically_derived]
+        impl<$lifetime> $crate::json::JsonSerialize for $struct_name<$lifetime> {
+            fn json_serialize(&self, serializer: &mut $crate::json::JsonSerializer) {
+                #[allow(unused_imports)]
+                use $crate::MerdeError;
+
+                let mut guard = serializer.write_obj();
+                $(
+                    guard.pair(stringify!($field), &self.$field);
+                )+
+            }
+        }
+    };
+
+    ($struct_name:ident { $($field:ident),+ }) => {
+        #[cfg(feature = "json")]
+        #[automatically_derived]
+        impl $crate::json::JsonSerialize for $struct_name {
+            fn json_serialize(&self, serializer: &mut $crate::json::JsonSerializer) {
+                #[allow(unused_imports)]
+                use $crate::MerdeError;
+
+                let mut guard = serializer.write_obj();
+                $(
+                    guard.pair(stringify!($field), &self.$field);
+                )+
+            }
+        }
+    };
+}
+
 /// Derives the specified traits for a struct.
 ///
 /// This macro can be used to automatically implement `JsonSerialize` and `ValueDeserialize`
@@ -114,7 +151,7 @@ macro_rules! impl_into_static {
 ///
 /// ```rust
 /// use merde::ValueDeserialize;
-/// use merde_json::JsonSerialize;
+/// use merde::json::JsonSerialize;
 /// use std::borrow::Cow;
 ///
 /// #[derive(Debug, PartialEq)]
@@ -206,7 +243,7 @@ macro_rules! impl_trait {
 #[cfg(feature = "json")]
 mod json_tests {
     use super::*;
-    use merde_json::{from_str_via_value, JsonSerialize};
+    use crate::json::{from_str_via_value, JsonSerialize};
 
     #[test]
     fn test_complex_structs() {
