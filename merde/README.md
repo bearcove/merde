@@ -389,3 +389,109 @@ fn main() {
 ```
 
 You can of course make your own newtype wrappers to control how a field gets deserialized.
+
+## Conditional compilation
+
+(As of merde 3.1), you never need to add `cfg` gates to conditionally invoke the `merde::derive!`
+macro, because, with default features disabled, `merde` has zero dependencies.
+
+There's two main ways to be conservative with the amount of generated code / the amount of
+dependencies pulled with merde.
+
+### Approach 1: "core" by default, "deserialize" on demand
+
+Your manifest could look like this:
+
+```toml
+# in `Cargo.toml`
+
+[dependencies]
+merde = { version = "3.1", default-features = false, features = ["core"] }
+```
+
+And then you'd be able to use merde-provided types, like `CowStr`:
+
+```rust
+use merde::CowStr;
+
+#[derive(Debug)]
+struct Person<'s> {
+    name: CowStr<'s>,
+    age: u8, // sorry 256-year-olds
+}
+
+merde::derive! {
+    impl (ValueDeserialize, JsonSerialize, IntoStatic) for Person<'s> { name, age }
+}
+```
+
+And the `impl` blocks for `ValueDeserialize`, and `JsonSerialize` wouldn't actually
+be generated unless crates downstream of yours enable `merde/deserialize` or `merde/json`.
+
+### Approach 2: zero-deps
+
+If your manifest looks more like this:
+
+```toml
+# in `Cargo.toml`
+
+[dependencies]
+merde = { version = "3.1", default-features = false }
+
+[features]
+default = []
+merde = ["merde/core"]
+```
+
+...with no `merde` features enabled by default at all, then you have to stay
+away from merde types, or use substitutes, for example, you could switch
+`CowStr<'s>` with `std::borrow::Cow<'s, str>` and get largely the same API:
+
+```rust
+#[cfg(feature = "merde")]
+use merde::CowStr;
+
+#[cfg(not(feature = "merde"))]
+pub type CowStr<'s> = std::borrow::Cow<'s, str>;
+
+#[derive(Debug)]
+pub struct Person<'s> {
+    name: CowStr<'s>,
+    age: u8, // sorry 256-year-olds
+}
+
+merde::derive! {
+    impl (ValueDeserialize, JsonSerialize, IntoStatic) for Person<'s> { name, age }
+}
+```
+
+(But not the same ABI! Careful if you use this in conjunction with something
+like [rubicon](https://github.com/bearcove/rubicon)).
+
+With that configuration, users of your crate will only have to pay for downloading
+`merde` and evaluating a few `derive!` macros which will produce empty token trees —
+no extra dependencies, barely any extra build time.
+
+See `zerodeps-example` in the [merde repository](https://github.com/bearcove/merde)
+for a demonstration:
+
+```shell
+❯ cargo tree --prefix none
+zerodeps-example v0.1.0 (/Users/amos/bearcove/merde/zerodeps-example)
+merde v3.0.0 (/Users/amos/bearcove/merde/merde)
+```
+
+```shell
+❯ cargo tree --prefix none --features 'merde'
+zerodeps-example v0.1.0 (/Users/amos/bearcove/merde/zerodeps-example)
+merde v3.0.0 (/Users/amos/bearcove/merde/merde)
+merde_core v3.0.0 (/Users/amos/bearcove/merde/merde_core)
+compact_str v0.8.0
+castaway v0.2.3
+rustversion v1.0.17 (proc-macro)
+cfg-if v1.0.0
+itoa v1.0.11
+rustversion v1.0.17 (proc-macro)
+ryu v1.0.18
+static_assertions v1.1.0
+```

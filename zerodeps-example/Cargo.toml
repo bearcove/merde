@@ -1,0 +1,11 @@
+[package]
+name = "zerodeps-example"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+merde = { version = "3.0.0", path = "../merde", default-features = false }
+
+[features]
+default = []
+merde = ["merde/core"]

@@ -31,8 +31,9 @@ merde_json = { version = "3.0.0", path = "../merde_json", optional = true }
 merde_time = { version = "3.0.0", path = "../merde_time", optional = true }
 
 [features]
-default = ["core"]
-full = ["json", "time", "core"]
+default = ["core", "deserialize"]
+full = ["core", "deserialize", "json", "time"]
+deserialize = ["core"]
 core = ["dep:merde_core"]
 json = ["dep:merde_json"]
 time = ["dep:merde_time"]

@@ -1,7 +1,13 @@
+#[cfg(feature = "core")]
 use merde::CowStr;
-use merde::json::JsonSerialize;
 
+#[cfg(not(feature = "core"))]
+type CowStr<'s> = std::borrow::Cow<'s, str>;
+
+#[cfg(all(feature = "core", feature = "json"))]
 fn main() {
+    use merde::json::JsonSerialize;
+
     let input = r#"
     {
         "name": "John Doe",
@@ -30,7 +36,15 @@ fn main() {
     assert_eq!(person, person2);
 }
 
-#[allow(dead_code)]
+#[cfg(not(all(feature = "core", feature = "json")))]
+fn main() {
+    eprintln!("Well if the `core` feature is not enabled,");
+    eprintln!("we can't call `from_str_via_value` and stuff,");
+    eprintln!("but this still serves as an example that");
+    eprintln!("you can keep your `merde::derive!` in place,");
+    eprintln!("they'll just not generate any code.");
+}
+
 #[derive(Debug, PartialEq, Eq)]
 struct Address<'s> {
     street: CowStr<'s>,
@@ -48,7 +62,6 @@ merde::derive! {
     }
 }
 
-#[allow(dead_code)]
 #[derive(Debug, PartialEq, Eq)]
 struct Person<'s> {
     name: CowStr<'s>,
