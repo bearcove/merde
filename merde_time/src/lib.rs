@@ -7,6 +7,8 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
+pub use time::OffsetDateTime;
+
 /// A wrapper around date-time types that implements `JsonSerialize` and `JsonDeserialize`
 /// when the right cargo features are enabled.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]

@@ -361,7 +361,7 @@ Which solves two problems at once:
 `merde` solves both of these with wrapper types:
 
 ```rust
-use time::OffsetDateTime;
+use merde::time::OffsetDateTime; // re-export from the time crate
 use merde::CowStr;
 use merde::time::Rfc3339;
 

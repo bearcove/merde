@@ -12,6 +12,7 @@ use json::JsonSerialize;
 #[cfg(feature = "time")]
 pub use merde_time as time;
 
+#[cfg(feature = "core")]
 pub use merde_core::*;
 
 #[doc(hidden)]
