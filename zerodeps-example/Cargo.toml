@@ -2,9 +2,10 @@
 name = "zerodeps-example"
 version = "0.1.0"
 edition = "2021"
+publish = false
 
 [dependencies]
-merde = { version = "3.0.0", path = "../merde", default-features = false }
+merde = { version = "3.1.0", path = "../merde", default-features = false }
 
 [features]
 default = []

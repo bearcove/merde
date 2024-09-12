@@ -146,7 +146,7 @@ checksum = "97b3888a4aecf77e811145cadf6eef5901f4782c53886191b2f693f24761847c"
 
 [[package]]
 name = "merde"
-version = "3.0.0"
+version = "3.1.0"
 dependencies = [
  "merde_core",
  "merde_json",
