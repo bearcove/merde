@@ -4,7 +4,7 @@
 
 # merde
 
-[The merde logo: a glorious poop floating above a pair of hands](https://github.com/user-attachments/assets/763d60e0-5101-48af-bc72-f96f516a5d0f)
+![The merde logo: a glorious poop floating above a pair of hands](https://github.com/user-attachments/assets/763d60e0-5101-48af-bc72-f96f516a5d0f)
 
 `merde` aims to provide a simpler, lighter alternative to [serde](https://crates.io/crates/serde),
 that might run slower, but compiles faster.
