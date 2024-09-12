@@ -151,7 +151,6 @@ dependencies = [
  "merde_core",
  "merde_json",
  "merde_time",
- "time",
 ]
 
 [[package]]
@@ -159,7 +158,6 @@ name = "merde_core"
 version = "3.0.0"
 dependencies = [
  "compact_str",
- "smallvec",
 ]
 
 [[package]]

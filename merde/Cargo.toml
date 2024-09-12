@@ -29,10 +29,9 @@ required-features = ["json"]
 merde_core = { version = "3.0.0", path = "../merde_core" }
 merde_json = { version = "3.0.0", path = "../merde_json", optional = true }
 merde_time = { version = "3.0.0", path = "../merde_time", optional = true }
-time = { version = "0.3.36", optional = true }
 
 [features]
 default = []
 full = ["json", "time"]
 json = ["dep:merde_json"]
-time = ["dep:merde_time", "dep:time"]
+time = ["dep:merde_time"]
