@@ -46,6 +46,7 @@ fn main() {
 }
 
 #[derive(Debug, PartialEq, Eq)]
+#[allow(dead_code)]
 struct Address<'s> {
     street: CowStr<'s>,
     city: CowStr<'s>,
@@ -63,6 +64,7 @@ merde::derive! {
 }
 
 #[derive(Debug, PartialEq, Eq)]
+#[allow(dead_code)]
 struct Person<'s> {
     name: CowStr<'s>,
     age: u8,

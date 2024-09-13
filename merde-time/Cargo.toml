@@ -1,6 +1,6 @@
 [package]
 edition = "2021"
-name = "merde_time"
+name = "merde-time"
 version = "3.0.1"
 authors = ["Amos Wenger <amos@bearcove.net>"]
 description = "Wrapper date-time types for merde"
@@ -11,8 +11,8 @@ keywords = ["merde", "serialization", "deserialization"]
 categories = ["encoding", "parser-implementations"]
 
 [dependencies]
-merde_core = { version = "3.0.1", path = "../merde_core", optional = true }
-merde_json = { version = "3.0.1", path = "../merde_json", optional = true }
+merde-core = { version = "3.0.1", path = "../merde-core", optional = true }
+merde-json = { version = "3.0.1", path = "../merde-json", optional = true }
 time = "0.3.36"
 
 [dev-dependencies]
@@ -21,7 +21,7 @@ time = { version = "0.3.36", features = ["macros"] }
 [features]
 default = []
 full = ["merde", "json", "serialize", "deserialize"]
-merde = ["dep:merde_core"]
-json = ["merde", "dep:merde_json"]
+merde = ["dep:merde-core"]
+json = ["merde", "dep:merde-json"]
 serialize = ["time/formatting"]
 deserialize = ["time/parsing"]
