@@ -86,34 +86,34 @@ dependencies = [
 name = "merde"
 version = "3.1.1"
 dependencies = [
- "merde_core",
- "merde_json",
- "merde_time",
+ "merde-core",
+ "merde-json",
+ "merde-time",
 ]
 
 [[package]]
-name = "merde_core"
+name = "merde-core"
 version = "3.0.1"
 dependencies = [
  "compact_str",
 ]
 
 [[package]]
-name = "merde_json"
+name = "merde-json"
 version = "3.0.1"
 dependencies = [
  "lexical-parse-float",
- "merde_core",
+ "merde-core",
  "num-bigint",
  "num-traits",
 ]
 
 [[package]]
-name = "merde_time"
+name = "merde-time"
 version = "3.0.1"
 dependencies = [
- "merde_core",
- "merde_json",
+ "merde-core",
+ "merde-json",
  "time",
 ]
 
