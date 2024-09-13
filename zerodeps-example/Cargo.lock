@@ -74,5 +74,5 @@ name = "zerodeps-example"
 version = "0.1.0"
 dependencies = [
  "merde",
- "merde-core",
+ "merde_core",
 ]

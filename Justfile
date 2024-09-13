@@ -9,5 +9,5 @@ check:
     cargo check
     cargo check --features=merde
     cargo tree --prefix none --no-dedupe | grep -v merde-core
-    cargo tree --prefix none --no-dedupe --features=merde | grep merde-core
+    cargo tree --prefix none --no-dedupe --features=merde | grep merde_core
     popd

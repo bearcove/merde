@@ -409,7 +409,7 @@ Your manifest could look like this:
 merde = { version = "4.0.0", default-features = false, features = ["core"] }
 ```
 
-And then you'd be able to use merde-provided types, like `CowStr`:
+And then you'd be able to use merde_provided types, like `CowStr`:
 
 ```rust
 use merde::CowStr;

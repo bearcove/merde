@@ -1,4 +1,4 @@
 [workspace]
 resolver = "2"
-members = ["merde", "merde-json", "merde-time", "merde-core"]
+members = ["merde", "merde_json", "merde_time", "merde_core"]
 exclude = ["zerodeps-example"]

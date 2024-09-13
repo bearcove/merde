@@ -26,14 +26,14 @@ path = "examples/into-static.rs"
 required-features = ["json"]
 
 [dependencies]
-merde-core = { version = "4.0.0", path = "../merde-core", optional = true }
-merde-json = { version = "4.0.0", path = "../merde-json", optional = true }
-merde-time = { version = "4.0.0", path = "../merde-time", optional = true }
+merde_core = { version = "4.0.0", path = "../merde_core", optional = true }
+merde_json = { version = "4.0.0", path = "../merde_json", optional = true }
+merde_time = { version = "4.0.0", path = "../merde_time", optional = true }
 
 [features]
 default = ["core", "deserialize"]
 full = ["core", "deserialize", "json", "time"]
 deserialize = ["core"]
-core = ["dep:merde-core"]
-json = ["dep:merde-json"]
-time = ["dep:merde-time"]
+core = ["dep:merde_core"]
+json = ["dep:merde_json"]
+time = ["dep:merde_time"]

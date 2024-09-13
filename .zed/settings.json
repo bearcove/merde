@@ -10,7 +10,7 @@
           "command": "clippy"
         },
         "cargo": {
-          "features": ["merde/full", "merde-time/full", "merde-json/full"]
+          "features": ["merde/full", "merde_time/full", "merde_json/full"]
         }
       }
     }

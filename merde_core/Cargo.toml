@@ -1,6 +1,6 @@
 [package]
 edition = "2021"
-name = "merde-core"
+name = "merde_core"
 version = "4.0.0"
 authors = ["Amos Wenger <amos@bearcove.net>"]
 description = "Base types for merde"
