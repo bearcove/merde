@@ -2,7 +2,7 @@ use std::borrow::Cow;
 use std::ops::Range;
 use std::str::{from_utf8, from_utf8_unchecked};
 
-use crate::jiter::errors::{json_err, json_error, JsonResult};
+use crate::jiter_lite::errors::{json_err, json_error, JsonResult};
 
 pub type Tape = Vec<u8>;
 
@@ -156,7 +156,7 @@ pub(crate) fn decode_chunk(
 
     #[cfg(target_arch = "aarch64")]
     {
-        crate::jiter::simd_aarch64::decode_string_chunk(data, index, ascii_only, allow_partial)
+        crate::jiter_lite::simd_aarch64::decode_string_chunk(data, index, ascii_only, allow_partial)
     }
     #[cfg(not(target_arch = "aarch64"))]
     {

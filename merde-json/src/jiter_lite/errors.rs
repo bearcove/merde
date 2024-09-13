@@ -149,8 +149,8 @@ impl std::fmt::Display for JsonError {
 
 macro_rules! json_error {
     ($error_type:ident, $index:expr) => {
-        crate::jiter::errors::JsonError::new(
-            crate::jiter::errors::JsonErrorType::$error_type,
+        crate::jiter_lite::errors::JsonError::new(
+            crate::jiter_lite::errors::JsonErrorType::$error_type,
             $index,
         )
     };
@@ -160,11 +160,11 @@ pub(crate) use json_error;
 
 macro_rules! json_err {
     ($error_type:ident, $index:expr) => {
-        Err(crate::jiter::errors::json_error!($error_type, $index))
+        Err(crate::jiter_lite::errors::json_error!($error_type, $index))
     };
 }
 
-use crate::jiter::Jiter;
+use crate::jiter_lite::jiter::Jiter;
 pub(crate) use json_err;
 
 /// Enum representing all JSON types.

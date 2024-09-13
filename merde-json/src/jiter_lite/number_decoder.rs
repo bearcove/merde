@@ -9,7 +9,7 @@ use lexical_parse_float::{
     format as lexical_format, FromLexicalWithOptions, Options as ParseFloatOptions,
 };
 
-use crate::jiter::errors::{json_err, json_error, JsonError, JsonResult};
+use crate::jiter_lite::errors::{json_err, json_error, JsonError, JsonResult};
 
 pub trait AbstractNumberDecoder {
     type Output;
@@ -179,7 +179,7 @@ fn consume_inf(
     allow_inf_nan: bool,
 ) -> JsonResult<usize> {
     if allow_inf_nan {
-        crate::jiter::parse::consume_infinity(data, index)
+        crate::jiter_lite::parse::consume_infinity(data, index)
     } else if positive {
         json_err!(ExpectedSomeValue, index)
     } else {
@@ -203,7 +203,7 @@ fn consume_inf_f64(
 
 fn consume_nan(data: &[u8], index: usize, allow_inf_nan: bool) -> JsonResult<(f64, usize)> {
     if allow_inf_nan {
-        let end = crate::jiter::parse::consume_nan(data, index)?;
+        let end = crate::jiter_lite::parse::consume_nan(data, index)?;
         Ok((f64::NAN, end))
     } else {
         json_err!(ExpectedSomeValue, index)
@@ -353,7 +353,7 @@ impl IntChunk {
 
         #[cfg(target_arch = "aarch64")]
         {
-            crate::jiter::simd_aarch64::decode_int_chunk(data, index)
+            crate::jiter_lite::simd_aarch64::decode_int_chunk(data, index)
         }
         #[cfg(not(target_arch = "aarch64"))]
         {
