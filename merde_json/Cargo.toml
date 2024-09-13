@@ -11,9 +11,12 @@ keywords = ["json", "serialization", "deserialization", "jiter"]
 categories = ["encoding", "parser-implementations"]
 
 [dependencies]
-jiter = "0.5.0"
+lexical-parse-float = { version = "0.8.5", features = ["format"] }
 merde_core = { version = "3.0.1", path = "../merde_core" }
+num-bigint = { version = "0.4.6", optional = true }
+num-traits = { version = "0.2.19", optional = true }
 
 [features]
 default = []
-full = []
+full = ["num-bigint"]
+num-bigint = ["dep:num-bigint", "dep:num-traits"]
