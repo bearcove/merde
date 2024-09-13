@@ -21,11 +21,22 @@ jobs:
           tool: cargo-hack
       - name: Check a few configurations
         run: |
-          cargo hack --feature-powerset check
+          cargo hack --feature-powerset --exclude-features=default,full check
       - name: Run examples
+        shell: bash
         run: |
           pushd merde
-          cargo run --features full --example simple
-          cargo run --features full --example mixed
-          cargo run --features full --example into_static
+          EXAMPLES=($(cd examples && for i in *; do echo "${i%.rs}"; done))
+          for example in "${EXAMPLES[@]}"; do
+            cargo run --features full --example "$example"
+          done
+          popd
+      - name: Test zerodeps-example
+        shell: bash
+        run: |
+          pushd zerodeps-example
+          cargo check
+          cargo check --features=merde
+          cargo tree --prefix none --no-dedupe | grep -v compact_str
+          cargo tree --prefix none --no-dedupe --features=merde | grep compact_str
           popd
