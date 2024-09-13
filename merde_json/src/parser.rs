@@ -56,6 +56,7 @@ pub(crate) fn jiter_to_value_with_peek<'j>(
             if let Ok(i) = iter.next_int() {
                 match i {
                     jiter::NumberInt::Int(i) => Value::Int(i),
+                    #[cfg(feature = "num-bigint")]
                     jiter::NumberInt::BigInt(_) => {
                         return Err(JsonError {
                             error_type: JsonErrorType::NumberOutOfRange,

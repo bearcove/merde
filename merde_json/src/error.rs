@@ -147,6 +147,7 @@ impl JsonFieldType {
             JsonValue::Null => JsonFieldType::Null,
             JsonValue::Bool(_) => JsonFieldType::Bool,
             JsonValue::Int(_) => JsonFieldType::Int,
+            #[cfg(feature = "num-bigint")]
             JsonValue::BigInt(_) => JsonFieldType::BigInt,
             JsonValue::Float(_) => JsonFieldType::Float,
             JsonValue::Str(_) => JsonFieldType::String,

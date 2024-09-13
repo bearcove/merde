@@ -11,9 +11,10 @@ keywords = ["json", "serialization", "deserialization", "jiter"]
 categories = ["encoding", "parser-implementations"]
 
 [dependencies]
-jiter = "0.5.0"
+ftl-jiter = { name = "jiter", version = "0.6.0", default-features = false }
 merde_core = { version = "3.0.1", path = "../merde_core" }
 
 [features]
 default = []
-full = []
+full = ["num-bigint"]
+num-bigint = ["ftl-jiter/num-bigint"]
