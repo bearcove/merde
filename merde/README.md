@@ -406,7 +406,7 @@ Your manifest could look like this:
 # in `Cargo.toml`
 
 [dependencies]
-merde = { version = "3.1", default-features = false, features = ["core"] }
+merde = { version = "4.0.0", default-features = false, features = ["core"] }
 ```
 
 And then you'd be able to use merde-provided types, like `CowStr`:
@@ -436,7 +436,7 @@ If your manifest looks more like this:
 # in `Cargo.toml`
 
 [dependencies]
-merde = { version = "3.1", default-features = false }
+merde = { version = "4.0.0", default-features = false }
 
 [features]
 default = []

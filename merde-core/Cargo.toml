@@ -1,7 +1,7 @@
 [package]
 edition = "2021"
 name = "merde-core"
-version = "3.0.1"
+version = "4.0.0"
 authors = ["Amos Wenger <amos@bearcove.net>"]
 description = "Base types for merde"
 license = "Apache-2.0 OR MIT"
