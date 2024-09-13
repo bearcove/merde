@@ -55,6 +55,7 @@ impl<'s> ValueDeserialize<'s> for Cow<'s, str> {
         match value {
             Some(Value::Str(s)) => match s {
                 CowStr::Borrowed(b) => Ok(Cow::Borrowed(b)),
+                #[allow(clippy::useless_conversion)]
                 CowStr::Owned(o) => Ok(Cow::Owned(o.into())),
             },
             Some(v) => Err(MerdeError::MismatchedType {

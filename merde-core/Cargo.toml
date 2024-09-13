@@ -11,4 +11,9 @@ keywords = ["merde", "serialization", "deserialization"]
 categories = ["encoding", "parser-implementations"]
 
 [dependencies]
-compact_str = "0.8.0"
+compact_str = { version = "0.8.0", optional = true }
+
+[features]
+default = []
+full = ["compact_str"]
+compact_str = ["dep:compact_str"]
