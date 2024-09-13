@@ -2,8 +2,7 @@ check:
     #!/bin/bash -eux
     cargo check --example simple --no-default-features --features=json
     cargo run --example simple --features=core,json
-    cargo check --no-default-features
-    cargo hack --feature-powerset check
+    cargo hack --feature-powerset --exclude-features=default,full check
     cargo test -F full
 
     pushd zerodeps-example
