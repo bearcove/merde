@@ -1,8 +1,9 @@
-use crate::jiter::errors::{json_error, JiterError, JsonType, LinePosition};
-use crate::jiter::number_decoder::{NumberAny, NumberFloat, NumberInt, NumberRange};
-use crate::jiter::parse::{Parser, Peek};
-use crate::jiter::string_decoder::{StringDecoder, StringDecoderRange, Tape};
-use crate::jiter::{JsonError, JsonErrorType};
+use crate::jiter_lite as jiter;
+
+use jiter::errors::{json_error, JiterError, JsonError, JsonErrorType, JsonType, LinePosition};
+use jiter::number_decoder::{NumberAny, NumberFloat, NumberInt, NumberRange};
+use jiter::parse::{Parser, Peek};
+use jiter::string_decoder::{StringDecoder, StringDecoderRange, Tape};
 
 pub type JiterResult<T> = Result<T, JiterError>;
 

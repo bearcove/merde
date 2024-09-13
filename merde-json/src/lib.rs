@@ -1,10 +1,10 @@
 #![deny(missing_docs)]
 #![doc = include_str!("../README.md")]
 
-mod jiter;
+mod jiter_lite;
 mod parser;
 
-use jiter::JiterError;
+use jiter_lite::errors::JiterError;
 use merde_core::{Array, CowStr, IntoStatic, Map, MerdeError, Value, ValueDeserialize};
 use parser::json_bytes_to_value;
 

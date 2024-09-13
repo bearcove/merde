@@ -1,3 +1,5 @@
+use crate::jiter_lite as jiter;
+
 use std::mem::transmute;
 #[rustfmt::skip]
 use std::arch::aarch64::{
@@ -34,10 +36,10 @@ use std::arch::aarch64::{
     vmul_u32 as simd_mul_u32_2,
     vpaddl_u32 as simd_add_u32_2,
 };
-use crate::jiter::JsonResult;
+use jiter::errors::JsonResult;
 
-use crate::jiter::number_decoder::{decode_int_chunk_fallback, IntChunk};
-use crate::jiter::string_decoder::StringChunk;
+use jiter::number_decoder::{decode_int_chunk_fallback, IntChunk};
+use jiter::string_decoder::StringChunk;
 
 type SimdVecu8_16 = uint8x16_t;
 type SimdVecu16_8 = uint16x8_t;

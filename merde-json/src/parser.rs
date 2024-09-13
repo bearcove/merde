@@ -1,4 +1,10 @@
-use crate::jiter::{Jiter, JiterError, NumberInt, Peek};
+use crate::jiter_lite as jiter;
+
+use jiter::errors::JiterError;
+use jiter::jiter::Jiter;
+use jiter::number_decoder::NumberInt;
+use jiter::parse::Peek;
+
 use merde_core::{CowStr, Map, Value};
 
 pub(crate) fn json_bytes_to_value(src: &[u8]) -> Result<Value<'_>, JiterError> {
@@ -60,7 +66,7 @@ pub(crate) fn jiter_to_value_with_peek<'j>(
                     NumberInt::Int(i) => Value::Int(i),
                     #[cfg(feature = "num-bigint")]
                     NumberInt::BigInt(_) => {
-                        use crate::jiter::{JsonError, JsonErrorType};
+                        use crate::jiter_lite::errors::{JsonError, JsonErrorType};
                         return Err(JsonError {
                             error_type: JsonErrorType::NumberOutOfRange,
                             index,

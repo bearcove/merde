@@ -1,9 +1,11 @@
 use std::fmt;
 use std::ops::Range;
 
-use crate::jiter::errors::{json_err, JsonResult, LinePosition};
-use crate::jiter::number_decoder::AbstractNumberDecoder;
-use crate::jiter::string_decoder::{AbstractStringDecoder, Tape};
+use crate::jiter_lite as jiter;
+
+use jiter::errors::{json_err, JsonResult, LinePosition};
+use jiter::number_decoder::AbstractNumberDecoder;
+use jiter::string_decoder::{AbstractStringDecoder, Tape};
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct Peek(u8);
