@@ -5,6 +5,7 @@ use std::{
     ops::Deref,
 };
 
+#[cfg(feature = "compact_str")]
 use compact_str::CompactString;
 
 use crate::IntoStatic;
@@ -17,7 +18,10 @@ use crate::IntoStatic;
 #[derive(Clone)]
 pub enum CowStr<'s> {
     Borrowed(&'s str),
+    #[cfg(feature = "compact_str")]
     Owned(CompactString),
+    #[cfg(not(feature = "compact_str"))]
+    Owned(String),
 }
 
 impl Deref for CowStr<'_> {
@@ -35,7 +39,8 @@ impl<'a> From<Cow<'a, str>> for CowStr<'a> {
     fn from(s: Cow<'a, str>) -> Self {
         match s {
             Cow::Borrowed(s) => CowStr::Borrowed(s),
-            Cow::Owned(s) => CowStr::Owned(CompactString::from(s)),
+            #[allow(clippy::useless_conversion)]
+            Cow::Owned(s) => CowStr::Owned(s.into()),
         }
     }
 }
@@ -48,13 +53,14 @@ impl<'s> From<&'s str> for CowStr<'s> {
 
 impl From<String> for CowStr<'_> {
     fn from(s: String) -> Self {
-        CowStr::Owned(CompactString::from(s))
+        #[allow(clippy::useless_conversion)]
+        CowStr::Owned(s.into())
     }
 }
 
 impl From<Box<str>> for CowStr<'_> {
     fn from(s: Box<str>) -> Self {
-        CowStr::Owned(CompactString::from(s))
+        CowStr::Owned(s.into())
     }
 }
 
@@ -68,6 +74,7 @@ impl From<CowStr<'_>> for String {
     fn from(s: CowStr<'_>) -> Self {
         match s {
             CowStr::Borrowed(s) => s.into(),
+            #[allow(clippy::useless_conversion)]
             CowStr::Owned(s) => s.into(),
         }
     }

@@ -8,6 +8,6 @@ check:
     pushd zerodeps-example
     cargo check
     cargo check --features=merde
-    cargo tree --prefix none --no-dedupe | grep -v compact_str
-    cargo tree --prefix none --no-dedupe --features=merde | grep compact_str
+    cargo tree --prefix none --no-dedupe | grep -v merde-core
+    cargo tree --prefix none --no-dedupe --features=merde | grep merde-core
     popd

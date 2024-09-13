@@ -6,7 +6,8 @@ publish = false
 
 [dependencies]
 merde = { version = "4.0.0", path = "../merde", default-features = false }
+merde-core = { version = "4.0.0", path = "../merde-core", default-features = false }
 
 [features]
 default = []
-merde = ["merde/core"]
+merde = ["merde/core", "merde-core/compact_str"]
