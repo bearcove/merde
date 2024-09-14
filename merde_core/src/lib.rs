@@ -40,3 +40,10 @@ where
 {
     T::from_value(Some(value))
 }
+
+rubicon::compatibility_check! {
+    ("merde_core_pkg_version", env!("CARGO_PKG_VERSION")),
+
+    #[cfg(feature = "compact_str")]
+    ("compact_str", "enabled")
+}

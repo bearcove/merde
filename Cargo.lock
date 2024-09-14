@@ -97,6 +97,7 @@ name = "merde_core"
 version = "4.0.2"
 dependencies = [
  "compact_str",
+ "rubicon",
  "serde",
 ]
 
@@ -176,6 +177,12 @@ checksum = "0fa76aaf39101c457836aec0ce2316dbdc3ab723cdda1c6bd4e6ad4208acaca7"
 dependencies = [
  "proc-macro2",
 ]
+
+[[package]]
+name = "rubicon"
+version = "3.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "395f129ed66e98909eca7113a855dd6f6a8ed611d39ac65dfd9270607065b119"
 
 [[package]]
 name = "rustversion"
