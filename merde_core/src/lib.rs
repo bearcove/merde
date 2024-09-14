@@ -21,6 +21,7 @@ mod value;
 pub use value::Value;
 
 mod deserialize;
+pub use deserialize::OwnedValueDeserialize;
 pub use deserialize::ValueDeserialize;
 
 /// Interpret a &[`Value`] as an instance of type `T`. This may involve

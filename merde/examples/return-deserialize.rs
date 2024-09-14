@@ -1,14 +1,15 @@
 use merde::json::JsonSerialize;
-use merde::{CowStr, IntoStatic, ValueDeserialize, WithLifetime};
+use merde::{CowStr, OwnedValueDeserialize, Value};
 
-fn deser_and_staticify<T>(s: String) -> Result<T, merde_json::MerdeJsonError<'static>>
+fn deser_and_return<T>(s: String) -> Result<T, merde_json::MerdeJsonError<'static>>
 where
-    for<'s> T: WithLifetime<'s>,
-    for<'s> <T as WithLifetime<'s>>::Lifetimed: ValueDeserialize<'s> + IntoStatic<Output = T>,
+    T: OwnedValueDeserialize,
 {
-    let deserialized: <T as WithLifetime>::Lifetimed =
-        merde_json::from_str_via_value(&s).map_err(|e| e.to_static())?;
-    Ok(deserialized.into_static())
+    // here `s` is a `String`, but pretend we're making
+    // a network request intead — the point is is that we
+    // need to borrow from a local from the function body.
+    let value: Value = merde_json::from_str_via_value(&s).map_err(|e| e.to_static())?;
+    Ok(T::owned_from_value(Some(value))?)
 }
 
 fn main() {
@@ -34,7 +35,7 @@ fn main() {
 
     assert_eq!(person, person2);
 
-    let person3 = deser_and_staticify::<Person>(serialized).unwrap();
+    let person3 = deser_and_return::<Person>(serialized).unwrap();
     println!("{:?}", person3);
 
     assert_eq!(person, person3);

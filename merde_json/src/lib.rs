@@ -5,7 +5,9 @@ mod jiter_lite;
 mod parser;
 
 use jiter_lite::errors::JiterError;
-use merde_core::{Array, CowStr, IntoStatic, Map, MerdeError, Value, ValueDeserialize};
+use merde_core::{
+    Array, CowStr, IntoStatic, Map, MerdeError, OwnedValueDeserialize, Value, ValueDeserialize,
+};
 use parser::json_bytes_to_value;
 
 use std::borrow::Cow;
@@ -595,6 +597,21 @@ where
         source: Some(s.into()),
     })?;
     Ok(merde_core::from_value(value)?)
+}
+
+/// Deserialize an instance of type `T` from a string of JSON text, making
+/// sure the result is owned.
+pub fn owned_from_str_via_value<T>(s: &str) -> Result<T, MerdeJsonError<'_>>
+where
+    T: OwnedValueDeserialize,
+{
+    let value = json_bytes_to_value(s.as_bytes()).map_err(|e| MerdeJsonError::JiterError {
+        err: e,
+        source: Some(s.into()),
+    })?;
+    Ok(merde_core::OwnedValueDeserialize::owned_from_value(Some(
+        value,
+    ))?)
 }
 
 /// Serialize the given data structure as a String of JSON.
