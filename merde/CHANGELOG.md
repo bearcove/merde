@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.5](https://github.com/bearcove/merde/compare/merde-v4.0.4...merde-v4.0.5) - 2024-09-14
+
+### Other
+
+- one more cfg-gate lacking
+
 ## [4.0.4](https://github.com/bearcove/merde/compare/merde-v4.0.3...merde-v4.0.4) - 2024-09-14
 
 ### Other
