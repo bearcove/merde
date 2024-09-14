@@ -50,7 +50,6 @@ macro_rules! impl_value_deserialize {
     };
 
     ($struct_name:ident { $($field:ident),+ }) => {
-        #[cfg(feature = "deserialize")]
         #[automatically_derived]
         impl<'s> $crate::ValueDeserialize<'s> for $struct_name
         {
