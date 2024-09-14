@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.1](https://github.com/bearcove/merde/compare/merde_core-v4.0.0...merde_core-v4.0.1) - 2024-09-14
+
+### Other
+
+- Add serde feature for merde/merde_core for CowStr
+
 ## [3.0.1](https://github.com/bearcove/merde/compare/merde_core-v3.0.0...merde_core-v3.0.1) - 2024-09-12
 
 ### Other
