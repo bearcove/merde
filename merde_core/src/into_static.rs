@@ -24,6 +24,7 @@ where
 {
     type Output = Cow<'static, T>;
 
+    #[inline(always)]
     fn into_static(self) -> Self::Output {
         match self {
             Cow::Borrowed(b) => Cow::Owned(b.to_owned()),
@@ -33,7 +34,7 @@ where
 }
 
 macro_rules! impl_into_static_passthru {
-    (($($ty:ty),+)) => {
+    ($($ty:ty),+) => {
         $(
             impl IntoStatic for $ty {
                 type Output = $ty;
@@ -47,9 +48,9 @@ macro_rules! impl_into_static_passthru {
     };
 }
 
-impl_into_static_passthru!((
-    u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, isize, bool, String
-));
+impl_into_static_passthru!(
+    String, u128, u64, u32, u16, u8, i128, i64, i32, i16, i8, bool, char, f32, f64, usize, isize
+);
 
 impl<T: IntoStatic> IntoStatic for Option<T> {
     type Output = Option<T::Output>;
@@ -98,5 +99,163 @@ impl<T: IntoStatic> IntoStatic for VecDeque<T> {
 
     fn into_static(self) -> Self::Output {
         self.into_iter().map(|v| v.into_static()).collect()
+    }
+}
+
+impl<T1: IntoStatic> IntoStatic for (T1,) {
+    type Output = (T1::Output,);
+
+    fn into_static(self) -> Self::Output {
+        (self.0.into_static(),)
+    }
+}
+
+impl<T1: IntoStatic, T2: IntoStatic> IntoStatic for (T1, T2) {
+    type Output = (T1::Output, T2::Output);
+
+    fn into_static(self) -> Self::Output {
+        (self.0.into_static(), self.1.into_static())
+    }
+}
+
+impl<T1: IntoStatic, T2: IntoStatic, T3: IntoStatic> IntoStatic for (T1, T2, T3) {
+    type Output = (T1::Output, T2::Output, T3::Output);
+
+    fn into_static(self) -> Self::Output {
+        (
+            self.0.into_static(),
+            self.1.into_static(),
+            self.2.into_static(),
+        )
+    }
+}
+
+impl<T1: IntoStatic, T2: IntoStatic, T3: IntoStatic, T4: IntoStatic> IntoStatic
+    for (T1, T2, T3, T4)
+{
+    type Output = (T1::Output, T2::Output, T3::Output, T4::Output);
+
+    fn into_static(self) -> Self::Output {
+        (
+            self.0.into_static(),
+            self.1.into_static(),
+            self.2.into_static(),
+            self.3.into_static(),
+        )
+    }
+}
+
+impl<T1: IntoStatic, T2: IntoStatic, T3: IntoStatic, T4: IntoStatic, T5: IntoStatic> IntoStatic
+    for (T1, T2, T3, T4, T5)
+{
+    type Output = (T1::Output, T2::Output, T3::Output, T4::Output, T5::Output);
+
+    fn into_static(self) -> Self::Output {
+        (
+            self.0.into_static(),
+            self.1.into_static(),
+            self.2.into_static(),
+            self.3.into_static(),
+            self.4.into_static(),
+        )
+    }
+}
+
+impl<
+        T1: IntoStatic,
+        T2: IntoStatic,
+        T3: IntoStatic,
+        T4: IntoStatic,
+        T5: IntoStatic,
+        T6: IntoStatic,
+    > IntoStatic for (T1, T2, T3, T4, T5, T6)
+{
+    type Output = (
+        T1::Output,
+        T2::Output,
+        T3::Output,
+        T4::Output,
+        T5::Output,
+        T6::Output,
+    );
+
+    fn into_static(self) -> Self::Output {
+        (
+            self.0.into_static(),
+            self.1.into_static(),
+            self.2.into_static(),
+            self.3.into_static(),
+            self.4.into_static(),
+            self.5.into_static(),
+        )
+    }
+}
+
+impl<
+        T1: IntoStatic,
+        T2: IntoStatic,
+        T3: IntoStatic,
+        T4: IntoStatic,
+        T5: IntoStatic,
+        T6: IntoStatic,
+        T7: IntoStatic,
+    > IntoStatic for (T1, T2, T3, T4, T5, T6, T7)
+{
+    type Output = (
+        T1::Output,
+        T2::Output,
+        T3::Output,
+        T4::Output,
+        T5::Output,
+        T6::Output,
+        T7::Output,
+    );
+
+    fn into_static(self) -> Self::Output {
+        (
+            self.0.into_static(),
+            self.1.into_static(),
+            self.2.into_static(),
+            self.3.into_static(),
+            self.4.into_static(),
+            self.5.into_static(),
+            self.6.into_static(),
+        )
+    }
+}
+
+impl<
+        T1: IntoStatic,
+        T2: IntoStatic,
+        T3: IntoStatic,
+        T4: IntoStatic,
+        T5: IntoStatic,
+        T6: IntoStatic,
+        T7: IntoStatic,
+        T8: IntoStatic,
+    > IntoStatic for (T1, T2, T3, T4, T5, T6, T7, T8)
+{
+    type Output = (
+        T1::Output,
+        T2::Output,
+        T3::Output,
+        T4::Output,
+        T5::Output,
+        T6::Output,
+        T7::Output,
+        T8::Output,
+    );
+
+    fn into_static(self) -> Self::Output {
+        (
+            self.0.into_static(),
+            self.1.into_static(),
+            self.2.into_static(),
+            self.3.into_static(),
+            self.4.into_static(),
+            self.5.into_static(),
+            self.6.into_static(),
+            self.7.into_static(),
+        )
     }
 }

@@ -11,5 +11,5 @@ pub struct Person<'s> {
 }
 
 merde::derive! {
-    impl (ValueDeserialize, JsonSerialize, IntoStatic) for Person<'s> { name, age }
+    impl (ValueDeserialize, JsonSerialize) for Person<'s> { name, age }
 }

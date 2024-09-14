@@ -11,7 +11,7 @@ struct Address<'s> {
 }
 
 merde::derive! {
-    impl (ValueDeserialize, IntoStatic) for Address<'s> {
+    impl (ValueDeserialize) for Address<'s> {
         street,
         city,
         state,
@@ -28,7 +28,7 @@ struct Person<'s> {
 }
 
 merde::derive! {
-    impl (ValueDeserialize, IntoStatic) for Person<'s> { name, age, address }
+    impl (ValueDeserialize) for Person<'s> { name, age, address }
 }
 
 fn get_person() -> Person<'static> {

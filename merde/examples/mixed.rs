@@ -1,9 +1,5 @@
-use merde::json::JsonSerialize;
-use merde::json::JsonSerializer;
 use merde::CowStr;
-use merde::MerdeError;
 use merde::Value;
-use merde::ValueDeserialize;
 
 #[derive(Debug, PartialEq)]
 struct MixedArray<'s> {
@@ -14,37 +10,8 @@ merde::derive! {
 }
 
 #[derive(Debug, PartialEq)]
-struct Items<'s> {
-    number: u32,
-    string: CowStr<'s>,
-    boolean: bool,
-}
-
-impl<'s> ValueDeserialize<'s> for Items<'s> {
-    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
-        let arr = value.ok_or(MerdeError::MissingValue)?.as_array()?;
-
-        Ok(Items {
-            number: arr.must_get(0)?,
-            string: arr.must_get(1)?,
-            boolean: arr.must_get(2)?,
-        })
-    }
-}
-
-impl JsonSerialize for Items<'_> {
-    fn json_serialize(&self, serializer: &mut JsonSerializer) {
-        serializer
-            .write_arr()
-            .elem(&self.number)
-            .elem(&self.string)
-            .elem(&self.boolean);
-    }
-}
-
-#[derive(Debug, PartialEq)]
 struct MixedArray2<'s> {
-    items: Items<'s>,
+    items: (u64, CowStr<'s>, bool),
 }
 merde::derive! {
     impl (JsonSerialize, ValueDeserialize) for MixedArray2<'s> { items }

@@ -182,6 +182,22 @@ impl<'s> ValueDeserialize<'s> for usize {
     }
 }
 
+impl<'s> ValueDeserialize<'s> for isize {
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+        match value {
+            Some(Value::Int(n)) => (*n).try_into().map_err(|_| MerdeError::OutOfRange),
+            Some(Value::Float(f)) => ((*f).round() as i64)
+                .try_into()
+                .map_err(|_| MerdeError::OutOfRange),
+            Some(v) => Err(MerdeError::MismatchedType {
+                expected: ValueType::Int,
+                found: v.value_type(),
+            }),
+            None => Err(MerdeError::MissingValue),
+        }
+    }
+}
+
 impl<'s> ValueDeserialize<'s> for bool {
     fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
         match value {
@@ -305,5 +321,360 @@ impl<'s> ValueDeserialize<'s> for Map<'s> {
     #[inline(always)]
     fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
         Self::from_value(value.cloned())
+    }
+}
+
+impl<'s, T1> ValueDeserialize<'s> for (T1,)
+where
+    T1: ValueDeserialize<'s>,
+{
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+        match value {
+            Some(Value::Array(arr)) if arr.len() == 1 => {
+                let t1 = T1::from_value_ref(Some(&arr[0]))?;
+                Ok((t1,))
+            }
+            Some(v) => Err(MerdeError::MismatchedType {
+                expected: ValueType::Array,
+                found: v.value_type(),
+            }),
+            None => Err(MerdeError::MissingValue),
+        }
+    }
+
+    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
+        match value {
+            Some(Value::Array(arr)) if arr.len() == 1 => {
+                let t1 = T1::from_value(Some(arr.into_iter().next().unwrap()))?;
+                Ok((t1,))
+            }
+            Some(v) => Err(MerdeError::MismatchedType {
+                expected: ValueType::Array,
+                found: v.value_type(),
+            }),
+            None => Err(MerdeError::MissingValue),
+        }
+    }
+}
+
+impl<'s, T1, T2> ValueDeserialize<'s> for (T1, T2)
+where
+    T1: ValueDeserialize<'s>,
+    T2: ValueDeserialize<'s>,
+{
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+        match value {
+            Some(Value::Array(arr)) if arr.len() == 2 => {
+                let t1 = T1::from_value_ref(Some(&arr[0]))?;
+                let t2 = T2::from_value_ref(Some(&arr[1]))?;
+                Ok((t1, t2))
+            }
+            Some(v) => Err(MerdeError::MismatchedType {
+                expected: ValueType::Array,
+                found: v.value_type(),
+            }),
+            None => Err(MerdeError::MissingValue),
+        }
+    }
+
+    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
+        match value {
+            Some(Value::Array(arr)) if arr.len() == 2 => {
+                let mut iter = arr.into_iter();
+                let t1 = T1::from_value(Some(iter.next().unwrap()))?;
+                let t2 = T2::from_value(Some(iter.next().unwrap()))?;
+                Ok((t1, t2))
+            }
+            Some(v) => Err(MerdeError::MismatchedType {
+                expected: ValueType::Array,
+                found: v.value_type(),
+            }),
+            None => Err(MerdeError::MissingValue),
+        }
+    }
+}
+
+impl<'s, T1, T2, T3> ValueDeserialize<'s> for (T1, T2, T3)
+where
+    T1: ValueDeserialize<'s>,
+    T2: ValueDeserialize<'s>,
+    T3: ValueDeserialize<'s>,
+{
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+        match value {
+            Some(Value::Array(arr)) if arr.len() == 3 => {
+                let t1 = T1::from_value_ref(Some(&arr[0]))?;
+                let t2 = T2::from_value_ref(Some(&arr[1]))?;
+                let t3 = T3::from_value_ref(Some(&arr[2]))?;
+                Ok((t1, t2, t3))
+            }
+            Some(v) => Err(MerdeError::MismatchedType {
+                expected: ValueType::Array,
+                found: v.value_type(),
+            }),
+            None => Err(MerdeError::MissingValue),
+        }
+    }
+
+    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
+        match value {
+            Some(Value::Array(arr)) if arr.len() == 3 => {
+                let mut iter = arr.into_iter();
+                let t1 = T1::from_value(Some(iter.next().unwrap()))?;
+                let t2 = T2::from_value(Some(iter.next().unwrap()))?;
+                let t3 = T3::from_value(Some(iter.next().unwrap()))?;
+                Ok((t1, t2, t3))
+            }
+            Some(v) => Err(MerdeError::MismatchedType {
+                expected: ValueType::Array,
+                found: v.value_type(),
+            }),
+            None => Err(MerdeError::MissingValue),
+        }
+    }
+}
+
+impl<'s, T1, T2, T3, T4> ValueDeserialize<'s> for (T1, T2, T3, T4)
+where
+    T1: ValueDeserialize<'s>,
+    T2: ValueDeserialize<'s>,
+    T3: ValueDeserialize<'s>,
+    T4: ValueDeserialize<'s>,
+{
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+        match value {
+            Some(Value::Array(arr)) if arr.len() == 4 => {
+                let t1 = T1::from_value_ref(Some(&arr[0]))?;
+                let t2 = T2::from_value_ref(Some(&arr[1]))?;
+                let t3 = T3::from_value_ref(Some(&arr[2]))?;
+                let t4 = T4::from_value_ref(Some(&arr[3]))?;
+                Ok((t1, t2, t3, t4))
+            }
+            Some(v) => Err(MerdeError::MismatchedType {
+                expected: ValueType::Array,
+                found: v.value_type(),
+            }),
+            None => Err(MerdeError::MissingValue),
+        }
+    }
+
+    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
+        match value {
+            Some(Value::Array(arr)) if arr.len() == 4 => {
+                let mut iter = arr.into_iter();
+                let t1 = T1::from_value(Some(iter.next().unwrap()))?;
+                let t2 = T2::from_value(Some(iter.next().unwrap()))?;
+                let t3 = T3::from_value(Some(iter.next().unwrap()))?;
+                let t4 = T4::from_value(Some(iter.next().unwrap()))?;
+                Ok((t1, t2, t3, t4))
+            }
+            Some(v) => Err(MerdeError::MismatchedType {
+                expected: ValueType::Array,
+                found: v.value_type(),
+            }),
+            None => Err(MerdeError::MissingValue),
+        }
+    }
+}
+
+impl<'s, T1, T2, T3, T4, T5> ValueDeserialize<'s> for (T1, T2, T3, T4, T5)
+where
+    T1: ValueDeserialize<'s>,
+    T2: ValueDeserialize<'s>,
+    T3: ValueDeserialize<'s>,
+    T4: ValueDeserialize<'s>,
+    T5: ValueDeserialize<'s>,
+{
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+        match value {
+            Some(Value::Array(arr)) if arr.len() == 5 => {
+                let t1 = T1::from_value_ref(Some(&arr[0]))?;
+                let t2 = T2::from_value_ref(Some(&arr[1]))?;
+                let t3 = T3::from_value_ref(Some(&arr[2]))?;
+                let t4 = T4::from_value_ref(Some(&arr[3]))?;
+                let t5 = T5::from_value_ref(Some(&arr[4]))?;
+                Ok((t1, t2, t3, t4, t5))
+            }
+            Some(v) => Err(MerdeError::MismatchedType {
+                expected: ValueType::Array,
+                found: v.value_type(),
+            }),
+            None => Err(MerdeError::MissingValue),
+        }
+    }
+
+    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
+        match value {
+            Some(Value::Array(arr)) if arr.len() == 5 => {
+                let mut iter = arr.into_iter();
+                let t1 = T1::from_value(Some(iter.next().unwrap()))?;
+                let t2 = T2::from_value(Some(iter.next().unwrap()))?;
+                let t3 = T3::from_value(Some(iter.next().unwrap()))?;
+                let t4 = T4::from_value(Some(iter.next().unwrap()))?;
+                let t5 = T5::from_value(Some(iter.next().unwrap()))?;
+                Ok((t1, t2, t3, t4, t5))
+            }
+            Some(v) => Err(MerdeError::MismatchedType {
+                expected: ValueType::Array,
+                found: v.value_type(),
+            }),
+            None => Err(MerdeError::MissingValue),
+        }
+    }
+}
+
+impl<'s, T1, T2, T3, T4, T5, T6> ValueDeserialize<'s> for (T1, T2, T3, T4, T5, T6)
+where
+    T1: ValueDeserialize<'s>,
+    T2: ValueDeserialize<'s>,
+    T3: ValueDeserialize<'s>,
+    T4: ValueDeserialize<'s>,
+    T5: ValueDeserialize<'s>,
+    T6: ValueDeserialize<'s>,
+{
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+        match value {
+            Some(Value::Array(arr)) if arr.len() == 6 => {
+                let t1 = T1::from_value_ref(Some(&arr[0]))?;
+                let t2 = T2::from_value_ref(Some(&arr[1]))?;
+                let t3 = T3::from_value_ref(Some(&arr[2]))?;
+                let t4 = T4::from_value_ref(Some(&arr[3]))?;
+                let t5 = T5::from_value_ref(Some(&arr[4]))?;
+                let t6 = T6::from_value_ref(Some(&arr[5]))?;
+                Ok((t1, t2, t3, t4, t5, t6))
+            }
+            Some(v) => Err(MerdeError::MismatchedType {
+                expected: ValueType::Array,
+                found: v.value_type(),
+            }),
+            None => Err(MerdeError::MissingValue),
+        }
+    }
+
+    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
+        match value {
+            Some(Value::Array(arr)) if arr.len() == 6 => {
+                let mut iter = arr.into_iter();
+                let t1 = T1::from_value(Some(iter.next().unwrap()))?;
+                let t2 = T2::from_value(Some(iter.next().unwrap()))?;
+                let t3 = T3::from_value(Some(iter.next().unwrap()))?;
+                let t4 = T4::from_value(Some(iter.next().unwrap()))?;
+                let t5 = T5::from_value(Some(iter.next().unwrap()))?;
+                let t6 = T6::from_value(Some(iter.next().unwrap()))?;
+                Ok((t1, t2, t3, t4, t5, t6))
+            }
+            Some(v) => Err(MerdeError::MismatchedType {
+                expected: ValueType::Array,
+                found: v.value_type(),
+            }),
+            None => Err(MerdeError::MissingValue),
+        }
+    }
+}
+
+impl<'s, T1, T2, T3, T4, T5, T6, T7> ValueDeserialize<'s> for (T1, T2, T3, T4, T5, T6, T7)
+where
+    T1: ValueDeserialize<'s>,
+    T2: ValueDeserialize<'s>,
+    T3: ValueDeserialize<'s>,
+    T4: ValueDeserialize<'s>,
+    T5: ValueDeserialize<'s>,
+    T6: ValueDeserialize<'s>,
+    T7: ValueDeserialize<'s>,
+{
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+        match value {
+            Some(Value::Array(arr)) if arr.len() == 7 => {
+                let t1 = T1::from_value_ref(Some(&arr[0]))?;
+                let t2 = T2::from_value_ref(Some(&arr[1]))?;
+                let t3 = T3::from_value_ref(Some(&arr[2]))?;
+                let t4 = T4::from_value_ref(Some(&arr[3]))?;
+                let t5 = T5::from_value_ref(Some(&arr[4]))?;
+                let t6 = T6::from_value_ref(Some(&arr[5]))?;
+                let t7 = T7::from_value_ref(Some(&arr[6]))?;
+                Ok((t1, t2, t3, t4, t5, t6, t7))
+            }
+            Some(v) => Err(MerdeError::MismatchedType {
+                expected: ValueType::Array,
+                found: v.value_type(),
+            }),
+            None => Err(MerdeError::MissingValue),
+        }
+    }
+
+    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
+        match value {
+            Some(Value::Array(arr)) if arr.len() == 7 => {
+                let mut iter = arr.into_iter();
+                let t1 = T1::from_value(Some(iter.next().unwrap()))?;
+                let t2 = T2::from_value(Some(iter.next().unwrap()))?;
+                let t3 = T3::from_value(Some(iter.next().unwrap()))?;
+                let t4 = T4::from_value(Some(iter.next().unwrap()))?;
+                let t5 = T5::from_value(Some(iter.next().unwrap()))?;
+                let t6 = T6::from_value(Some(iter.next().unwrap()))?;
+                let t7 = T7::from_value(Some(iter.next().unwrap()))?;
+                Ok((t1, t2, t3, t4, t5, t6, t7))
+            }
+            Some(v) => Err(MerdeError::MismatchedType {
+                expected: ValueType::Array,
+                found: v.value_type(),
+            }),
+            None => Err(MerdeError::MissingValue),
+        }
+    }
+}
+
+impl<'s, T1, T2, T3, T4, T5, T6, T7, T8> ValueDeserialize<'s> for (T1, T2, T3, T4, T5, T6, T7, T8)
+where
+    T1: ValueDeserialize<'s>,
+    T2: ValueDeserialize<'s>,
+    T3: ValueDeserialize<'s>,
+    T4: ValueDeserialize<'s>,
+    T5: ValueDeserialize<'s>,
+    T6: ValueDeserialize<'s>,
+    T7: ValueDeserialize<'s>,
+    T8: ValueDeserialize<'s>,
+{
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+        match value {
+            Some(Value::Array(arr)) if arr.len() == 8 => {
+                let t1 = T1::from_value_ref(Some(&arr[0]))?;
+                let t2 = T2::from_value_ref(Some(&arr[1]))?;
+                let t3 = T3::from_value_ref(Some(&arr[2]))?;
+                let t4 = T4::from_value_ref(Some(&arr[3]))?;
+                let t5 = T5::from_value_ref(Some(&arr[4]))?;
+                let t6 = T6::from_value_ref(Some(&arr[5]))?;
+                let t7 = T7::from_value_ref(Some(&arr[6]))?;
+                let t8 = T8::from_value_ref(Some(&arr[7]))?;
+                Ok((t1, t2, t3, t4, t5, t6, t7, t8))
+            }
+            Some(v) => Err(MerdeError::MismatchedType {
+                expected: ValueType::Array,
+                found: v.value_type(),
+            }),
+            None => Err(MerdeError::MissingValue),
+        }
+    }
+
+    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
+        match value {
+            Some(Value::Array(arr)) if arr.len() == 8 => {
+                let mut iter = arr.into_iter();
+                let t1 = T1::from_value(Some(iter.next().unwrap()))?;
+                let t2 = T2::from_value(Some(iter.next().unwrap()))?;
+                let t3 = T3::from_value(Some(iter.next().unwrap()))?;
+                let t4 = T4::from_value(Some(iter.next().unwrap()))?;
+                let t5 = T5::from_value(Some(iter.next().unwrap()))?;
+                let t6 = T6::from_value(Some(iter.next().unwrap()))?;
+                let t7 = T7::from_value(Some(iter.next().unwrap()))?;
+                let t8 = T8::from_value(Some(iter.next().unwrap()))?;
+                Ok((t1, t2, t3, t4, t5, t6, t7, t8))
+            }
+            Some(v) => Err(MerdeError::MismatchedType {
+                expected: ValueType::Array,
+                found: v.value_type(),
+            }),
+            None => Err(MerdeError::MissingValue),
+        }
     }
 }

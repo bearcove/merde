@@ -1,13 +1,5 @@
 use merde::json::JsonSerialize;
-use merde::{CowStr, IntoStatic, ValueDeserialize};
-
-trait WithLifetime<'s> {
-    type Lifetimed: 's;
-}
-
-impl<'a, 's> WithLifetime<'s> for Person<'a> {
-    type Lifetimed = Person<'s>;
-}
+use merde::{CowStr, IntoStatic, ValueDeserialize, WithLifetime};
 
 fn deser_and_staticify<T>(s: String) -> Result<T, merde_json::MerdeJsonError<'static>>
 where
@@ -57,7 +49,7 @@ struct Address<'s> {
 }
 
 merde::derive! {
-    impl (JsonSerialize, ValueDeserialize, IntoStatic) for Address<'s> {
+    impl (JsonSerialize, ValueDeserialize) for Address<'s> {
         street,
         city,
         state,
@@ -73,5 +65,5 @@ struct Person<'s> {
 }
 
 merde::derive! {
-    impl (JsonSerialize, ValueDeserialize, IntoStatic) for Person<'s> { name, age, address }
+    impl (JsonSerialize, ValueDeserialize) for Person<'s> { name, age, address }
 }

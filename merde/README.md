@@ -305,7 +305,7 @@ struct Message<'s> {
 }
 
 merde::derive! {
-    impl (ValueDeserialize, JsonSerialize, IntoStatic)
+    impl (ValueDeserialize, JsonSerialize)
     for Message<'s> { kind, payload }
 }
 
@@ -421,7 +421,7 @@ struct Person<'s> {
 }
 
 merde::derive! {
-    impl (ValueDeserialize, JsonSerialize, IntoStatic) for Person<'s> { name, age }
+    impl (ValueDeserialize, JsonSerialize) for Person<'s> { name, age }
 }
 ```
 
@@ -461,7 +461,7 @@ pub struct Person<'s> {
 }
 
 merde::derive! {
-    impl (ValueDeserialize, JsonSerialize, IntoStatic) for Person<'s> { name, age }
+    impl (ValueDeserialize, JsonSerialize) for Person<'s> { name, age }
 }
 ```
 

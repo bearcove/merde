@@ -3,7 +3,7 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-use crate::{value::Value, CowStr, MerdeError, ValueDeserialize};
+use crate::{value::Value, CowStr, IntoStatic, MerdeError, ValueDeserialize};
 
 /// A map, dictionary, object, whatever — with string keys.
 #[derive(Debug, PartialEq, Clone)]
@@ -22,6 +22,31 @@ impl<'s> Map<'s> {
     pub fn with(mut self, key: impl Into<CowStr<'s>>, value: impl Into<Value<'s>>) -> Self {
         self.insert(key.into(), value.into());
         self
+    }
+
+    pub fn into_inner(self) -> HashMap<CowStr<'s>, Value<'s>> {
+        self.0
+    }
+}
+
+impl IntoStatic for Map<'_> {
+    type Output = Map<'static>;
+
+    #[inline(always)]
+    fn into_static(self) -> <Self as IntoStatic>::Output {
+        Map(self
+            .into_iter()
+            .map(|(k, v)| (k.into_static(), v.into_static()))
+            .collect())
+    }
+}
+
+impl<'s> IntoIterator for Map<'s> {
+    type Item = (CowStr<'s>, Value<'s>);
+    type IntoIter = std::collections::hash_map::IntoIter<CowStr<'s>, Value<'s>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
     }
 }
 
