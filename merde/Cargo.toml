@@ -35,5 +35,8 @@ default = ["core", "deserialize"]
 full = ["core", "deserialize", "json", "time"]
 deserialize = ["core"]
 core = ["dep:merde_core"]
+compact_str = ["merde_core/compact_str"]
+serde = ["merde_core/serde"]
+
 json = ["dep:merde_json"]
 time = ["dep:merde_time"]

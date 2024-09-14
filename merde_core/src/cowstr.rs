@@ -125,3 +125,34 @@ impl IntoStatic for CowStr<'_> {
         }
     }
 }
+
+#[cfg(feature = "serde")]
+mod serde_impls {
+    use super::*;
+
+    use serde::{Deserialize, Serialize};
+
+    impl Serialize for CowStr<'_> {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer,
+        {
+            serializer.serialize_str(self)
+        }
+    }
+
+    impl<'de> Deserialize<'de> for CowStr<'_> {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            #[cfg(feature = "compact_str")]
+            let s = compact_str::CompactString::deserialize(deserializer)?;
+
+            #[cfg(not(feature = "compact_str"))]
+            let s = String::deserialize(deserializer)?;
+
+            Ok(CowStr::Owned(s))
+        }
+    }
+}
