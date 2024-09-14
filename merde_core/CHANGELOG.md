@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.2](https://github.com/bearcove/merde/compare/merde_core-v4.0.1...merde_core-v4.0.2) - 2024-09-14
+
+### Other
+
+- Add more PartialEq implementations for CowStr to allow 'cow_str == blah'
+
 ## [4.0.1](https://github.com/bearcove/merde/compare/merde_core-v4.0.0...merde_core-v4.0.1) - 2024-09-14
 
 ### Other
