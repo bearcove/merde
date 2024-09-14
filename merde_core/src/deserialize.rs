@@ -1,6 +1,37 @@
 use std::{borrow::Cow, hash::Hash, str::FromStr};
 
-use crate::{Array, CowStr, Map, MerdeError, Value, ValueType};
+use crate::{Array, CowStr, IntoStatic, Map, MerdeError, Value, ValueType, WithLifetime};
+
+/// Lifetime-erased version of [`ValueDeserialize`] — if you want to declare a function
+/// that returns something that is deserialized from a local, that something you return
+/// needs to be owned, which is really hard to express normally — that's where `OwnedValueDeserialize`
+/// comes in.
+///
+/// For more detail, see the `return-deserialize` example.
+pub trait OwnedValueDeserialize
+where
+    Self: Sized + 'static,
+{
+    fn owned_from_value_ref(value: Option<&Value<'_>>) -> Result<Self, MerdeError>;
+    fn owned_from_value(value: Option<Value<'_>>) -> Result<Self, MerdeError>;
+}
+
+impl<T> OwnedValueDeserialize for T
+where
+    T: 'static,
+    for<'s> T: WithLifetime<'s>,
+    for<'s> <T as WithLifetime<'s>>::Lifetimed: ValueDeserialize<'s> + IntoStatic<Output = T>,
+{
+    fn owned_from_value_ref<'val, 's>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+        let t = <T as WithLifetime<'s>>::Lifetimed::from_value_ref(value)?;
+        Ok(t.into_static())
+    }
+
+    fn owned_from_value<'s>(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
+        let t = <T as WithLifetime<'s>>::Lifetimed::from_value(value)?;
+        Ok(t.into_static())
+    }
+}
 
 /// Types that can be deserialized from a [`Value`].
 ///
