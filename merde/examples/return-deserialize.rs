@@ -1,13 +1,21 @@
 use merde::json::JsonSerialize;
 use merde::{CowStr, IntoStatic, ValueDeserialize};
 
-fn deser_and_staticify<T>(
-    s: String,
-) -> Result<<T as IntoStatic>::Output, merde_json::MerdeJsonError<'static>>
+trait WithLifetime<'s> {
+    type Lifetimed: 's;
+}
+
+impl<'a, 's> WithLifetime<'s> for Person<'a> {
+    type Lifetimed = Person<'s>;
+}
+
+fn deser_and_staticify<T>(s: String) -> Result<T, merde_json::MerdeJsonError<'static>>
 where
-    for<'s> T: ValueDeserialize<'s> + IntoStatic,
+    for<'s> T: WithLifetime<'s>,
+    for<'s> <T as WithLifetime<'s>>::Lifetimed: ValueDeserialize<'s> + IntoStatic<Output = T>,
 {
-    let deserialized: T = merde_json::from_str_via_value(&s).map_err(|e| e.to_static())?;
+    let deserialized: <T as WithLifetime>::Lifetimed =
+        merde_json::from_str_via_value(&s).map_err(|e| e.to_static())?;
     Ok(deserialized.into_static())
 }
 
