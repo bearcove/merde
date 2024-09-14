@@ -22,6 +22,6 @@ time = { version = "0.3.36", features = ["macros"] }
 default = []
 full = ["merde", "json", "serialize", "deserialize"]
 merde = ["dep:merde_core"]
-json = ["merde", "dep:merde_json"]
+json = ["merde", "dep:merde_json", "serialize"]
 serialize = ["time/formatting"]
-deserialize = ["time/parsing"]
+deserialize = ["merde", "time/parsing"]

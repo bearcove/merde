@@ -54,32 +54,14 @@ where
 }
 
 #[cfg(feature = "merde")]
-mod merde_impls {}
-
-#[cfg(feature = "json")]
-mod merde_json_impls {
+mod merde_impls {
     use super::*;
-
-    use time::OffsetDateTime;
 
     impl merde_core::IntoStatic for Rfc3339<OffsetDateTime> {
         type Output = Rfc3339<OffsetDateTime>;
 
         fn into_static(self) -> Self::Output {
             self
-        }
-    }
-
-    #[cfg(feature = "serialize")]
-    impl merde_json::JsonSerialize for Rfc3339<time::OffsetDateTime> {
-        fn json_serialize(&self, s: &mut merde_json::JsonSerializer) {
-            // Note: we assume there's no need to escape the string
-            let buf = s.as_mut_vec();
-            buf.push(b'"');
-            self.0
-                .format_into(buf, &time::format_description::well_known::Rfc3339)
-                .unwrap();
-            buf.push(b'"');
         }
     }
 
@@ -104,6 +86,24 @@ mod merde_json_impls {
                 Some(v) => Self::from_value_ref(Some(&v)),
                 None => Self::from_value_ref(None),
             }
+        }
+    }
+}
+
+#[cfg(feature = "json")]
+mod merde_json_impls {
+    use super::*;
+
+    #[cfg(feature = "serialize")]
+    impl merde_json::JsonSerialize for Rfc3339<time::OffsetDateTime> {
+        fn json_serialize(&self, s: &mut merde_json::JsonSerializer) {
+            // Note: we assume there's no need to escape the string
+            let buf = s.as_mut_vec();
+            buf.push(b'"');
+            self.0
+                .format_into(buf, &time::format_description::well_known::Rfc3339)
+                .unwrap();
+            buf.push(b'"');
         }
     }
 }

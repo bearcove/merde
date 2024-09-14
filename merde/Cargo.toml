@@ -28,15 +28,17 @@ required-features = ["json"]
 [dependencies]
 merde_core = { version = "4.0.2", path = "../merde_core", optional = true }
 merde_json = { version = "4.0.2", path = "../merde_json", optional = true }
-merde_time = { version = "4.0.2", path = "../merde_time", optional = true }
+merde_time = { version = "4.0.2", path = "../merde_time", optional = true, features = [
+    "merde",
+] }
 
 [features]
 default = ["core", "deserialize"]
 full = ["core", "deserialize", "json", "time"]
-deserialize = ["core"]
+deserialize = ["core", "merde_time/deserialize"]
 core = ["dep:merde_core"]
 compact_str = ["merde_core/compact_str"]
 serde = ["merde_core/serde"]
 
-json = ["dep:merde_json"]
+json = ["dep:merde_json", "merde_time/json"]
 time = ["dep:merde_time"]
