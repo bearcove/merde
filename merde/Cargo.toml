@@ -25,6 +25,11 @@ name = "into-static"
 path = "examples/into-static.rs"
 required-features = ["json"]
 
+[[example]]
+name = "return-deserialize"
+path = "examples/return-deserialize.rs"
+required-features = ["json"]
+
 [dependencies]
 merde_core = { version = "4.0.2", path = "../merde_core", optional = true }
 merde_json = { version = "4.0.2", path = "../merde_json", optional = true }
