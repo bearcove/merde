@@ -355,6 +355,45 @@ impl<'s> ValueDeserialize<'s> for Map<'s> {
     }
 }
 
+impl<'s, T> ValueDeserialize<'s> for Box<T>
+where
+    T: ValueDeserialize<'s>,
+{
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+        T::from_value_ref(value).map(Box::new)
+    }
+
+    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
+        T::from_value(value).map(Box::new)
+    }
+}
+
+impl<'s, T> ValueDeserialize<'s> for std::rc::Rc<T>
+where
+    T: ValueDeserialize<'s>,
+{
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+        T::from_value_ref(value).map(std::rc::Rc::new)
+    }
+
+    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
+        T::from_value(value).map(std::rc::Rc::new)
+    }
+}
+
+impl<'s, T> ValueDeserialize<'s> for std::sync::Arc<T>
+where
+    T: ValueDeserialize<'s>,
+{
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+        T::from_value_ref(value).map(std::sync::Arc::new)
+    }
+
+    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
+        T::from_value(value).map(std::sync::Arc::new)
+    }
+}
+
 impl<'s, T1> ValueDeserialize<'s> for (T1,)
 where
     T1: ValueDeserialize<'s>,
