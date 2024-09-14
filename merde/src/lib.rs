@@ -16,10 +16,10 @@ pub use merde_time as time;
 pub use merde_core::*;
 
 #[doc(hidden)]
+#[cfg(feature = "deserialize")]
 #[macro_export]
 macro_rules! impl_value_deserialize {
     ($struct_name:ident <$lifetime:lifetime> { $($field:ident),+ }) => {
-        #[cfg(feature = "deserialize")]
         #[automatically_derived]
         impl<$lifetime> $crate::ValueDeserialize<$lifetime> for $struct_name<$lifetime>
         {
@@ -82,10 +82,17 @@ macro_rules! impl_value_deserialize {
 }
 
 #[doc(hidden)]
+#[cfg(not(feature = "deserialize"))]
 #[macro_export]
+macro_rules! impl_value_deserialize {
+    ($($tt:tt)*) => {};
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(feature = "core")]
 macro_rules! impl_into_static {
     ($struct_name:ident <$lifetime:lifetime> { $($field:ident),+ }) => {
-        #[cfg(feature = "core")]
         #[automatically_derived]
         impl<$lifetime> $crate::IntoStatic for $struct_name<$lifetime> {
             type Output = $struct_name<'static>;
@@ -102,7 +109,6 @@ macro_rules! impl_into_static {
     };
 
     ($struct_name:ident { $($field:ident),+ }) => {
-        #[cfg(feature = "core")]
         #[automatically_derived]
         impl $crate::IntoStatic for $struct_name {
             type Output = $struct_name;
@@ -117,9 +123,16 @@ macro_rules! impl_into_static {
 
 #[doc(hidden)]
 #[macro_export]
+#[cfg(not(feature = "core"))]
+macro_rules! impl_into_static {
+    ($($tt:tt)*) => {};
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(all(feature = "core", feature = "json"))]
 macro_rules! impl_json_serialize {
     ($struct_name:ident < $lifetime:lifetime > { $($field:ident),+ }) => {
-        #[cfg(all(feature = "core", feature = "json"))]
         #[automatically_derived]
         impl<$lifetime> $crate::json::JsonSerialize for $struct_name<$lifetime> {
             fn json_serialize(&self, serializer: &mut $crate::json::JsonSerializer) {
@@ -135,7 +148,6 @@ macro_rules! impl_json_serialize {
     };
 
     ($struct_name:ident { $($field:ident),+ }) => {
-        #[cfg(all(feature = "core", feature = "json"))]
         #[automatically_derived]
         impl $crate::json::JsonSerialize for $struct_name {
             fn json_serialize(&self, serializer: &mut $crate::json::JsonSerializer) {
@@ -149,6 +161,13 @@ macro_rules! impl_json_serialize {
             }
         }
     };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(all(feature = "core", feature = "json")))]
+macro_rules! impl_json_serialize {
+    ($($tt:tt)*) => {};
 }
 
 #[doc(hidden)]
