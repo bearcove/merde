@@ -24,6 +24,46 @@ pub enum CowStr<'s> {
     Owned(String),
 }
 
+impl<'s> CowStr<'s> {
+    pub fn from_utf8(s: &'s [u8]) -> Result<Self, std::str::Utf8Error> {
+        Ok(Self::Borrowed(std::str::from_utf8(s)?))
+    }
+
+    pub fn from_utf8_lossy(s: &'s [u8]) -> Self {
+        #[cfg(feature = "compact_str")]
+        {
+            Self::Owned(CompactString::from_utf8_lossy(s))
+        }
+        #[cfg(not(feature = "compact_str"))]
+        {
+            String::from_utf8_lossy(s).into()
+        }
+    }
+
+    /// # Safety
+    ///
+    /// This function is unsafe because it does not check that the bytes are valid UTF-8.
+    pub unsafe fn from_utf8_unchecked(s: &'s [u8]) -> Self {
+        #[cfg(feature = "compact_str")]
+        {
+            Self::Owned(CompactString::from_utf8_unchecked(s))
+        }
+        #[cfg(not(feature = "compact_str"))]
+        {
+            Self::Borrowed(std::str::from_utf8_unchecked(s))
+        }
+    }
+}
+
+impl AsRef<str> for CowStr<'_> {
+    fn as_ref(&self) -> &str {
+        match self {
+            CowStr::Borrowed(s) => s,
+            CowStr::Owned(s) => s.as_str(),
+        }
+    }
+}
+
 impl Deref for CowStr<'_> {
     type Target = str;
 
