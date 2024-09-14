@@ -1,6 +1,6 @@
 [package]
 name = "merde"
-version = "4.0.4"
+version = "4.0.5"
 edition = "2021"
 authors = ["Amos Wenger <amos@bearcove.net>"]
 description = "Serialize and deserialize with declarative macros"
