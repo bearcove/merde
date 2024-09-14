@@ -39,14 +39,14 @@ checksum = "49f1f14873335454500d59611f1cf4a4b0f786f9ac11f4312a78e4cf2566695b"
 
 [[package]]
 name = "merde"
-version = "4.0.1"
+version = "4.0.2"
 dependencies = [
  "merde_core",
 ]
 
 [[package]]
 name = "merde_core"
-version = "4.0.1"
+version = "4.0.2"
 dependencies = [
  "compact_str",
 ]
