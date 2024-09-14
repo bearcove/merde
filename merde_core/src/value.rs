@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{array::Array, map::Map, CowStr, MerdeError, ValueType};
+use crate::{array::Array, map::Map, CowStr, IntoStatic, MerdeError, ValueType};
 
 /// Think [`serde_json::Value`](https://docs.rs/serde_json/1.0.128/serde_json/enum.Value.html), but with a small string optimization,
 /// copy-on-write strings, etc. Might include other value types later.
@@ -13,6 +13,23 @@ pub enum Value<'s> {
     Bool(bool),
     Array(Array<'s>),
     Map(Map<'s>),
+}
+
+impl IntoStatic for Value<'_> {
+    type Output = Value<'static>;
+
+    #[inline(always)]
+    fn into_static(self) -> <Self as IntoStatic>::Output {
+        match self {
+            Value::Int(i) => Value::Int(i),
+            Value::Float(f) => Value::Float(f),
+            Value::Str(s) => Value::Str(s.into_static()),
+            Value::Null => Value::Null,
+            Value::Bool(b) => Value::Bool(b),
+            Value::Array(arr) => Value::Array(arr.into_static()),
+            Value::Map(map) => Value::Map(map.into_static()),
+        }
+    }
 }
 
 impl<'s> From<i64> for Value<'s> {

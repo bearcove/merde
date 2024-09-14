@@ -365,12 +365,123 @@ impl<T: JsonSerialize> JsonSerialize for &[T] {
     }
 }
 
-impl<V: JsonSerialize> JsonSerialize for &[(&str, V)] {
+impl<T1: JsonSerialize> JsonSerialize for (T1,) {
     fn json_serialize(&self, serializer: &mut JsonSerializer) {
-        let mut guard = serializer.write_obj();
-        for (key, value) in *self {
-            guard.pair(key.as_ref(), value);
-        }
+        let mut guard = serializer.write_arr();
+        guard.elem(&self.0);
+    }
+}
+
+impl<T1: JsonSerialize, T2: JsonSerialize> JsonSerialize for (T1, T2) {
+    fn json_serialize(&self, serializer: &mut JsonSerializer) {
+        let mut guard = serializer.write_arr();
+        guard.elem(&self.0);
+        guard.elem(&self.1);
+    }
+}
+
+impl<T1: JsonSerialize, T2: JsonSerialize, T3: JsonSerialize> JsonSerialize for (T1, T2, T3) {
+    fn json_serialize(&self, serializer: &mut JsonSerializer) {
+        let mut guard = serializer.write_arr();
+        guard.elem(&self.0);
+        guard.elem(&self.1);
+        guard.elem(&self.2);
+    }
+}
+
+impl<T1: JsonSerialize, T2: JsonSerialize, T3: JsonSerialize, T4: JsonSerialize> JsonSerialize
+    for (T1, T2, T3, T4)
+{
+    fn json_serialize(&self, serializer: &mut JsonSerializer) {
+        let mut guard = serializer.write_arr();
+        guard.elem(&self.0);
+        guard.elem(&self.1);
+        guard.elem(&self.2);
+        guard.elem(&self.3);
+    }
+}
+
+impl<
+        T1: JsonSerialize,
+        T2: JsonSerialize,
+        T3: JsonSerialize,
+        T4: JsonSerialize,
+        T5: JsonSerialize,
+    > JsonSerialize for (T1, T2, T3, T4, T5)
+{
+    fn json_serialize(&self, serializer: &mut JsonSerializer) {
+        let mut guard = serializer.write_arr();
+        guard.elem(&self.0);
+        guard.elem(&self.1);
+        guard.elem(&self.2);
+        guard.elem(&self.3);
+        guard.elem(&self.4);
+    }
+}
+
+impl<
+        T1: JsonSerialize,
+        T2: JsonSerialize,
+        T3: JsonSerialize,
+        T4: JsonSerialize,
+        T5: JsonSerialize,
+        T6: JsonSerialize,
+    > JsonSerialize for (T1, T2, T3, T4, T5, T6)
+{
+    fn json_serialize(&self, serializer: &mut JsonSerializer) {
+        let mut guard = serializer.write_arr();
+        guard.elem(&self.0);
+        guard.elem(&self.1);
+        guard.elem(&self.2);
+        guard.elem(&self.3);
+        guard.elem(&self.4);
+        guard.elem(&self.5);
+    }
+}
+
+impl<
+        T1: JsonSerialize,
+        T2: JsonSerialize,
+        T3: JsonSerialize,
+        T4: JsonSerialize,
+        T5: JsonSerialize,
+        T6: JsonSerialize,
+        T7: JsonSerialize,
+    > JsonSerialize for (T1, T2, T3, T4, T5, T6, T7)
+{
+    fn json_serialize(&self, serializer: &mut JsonSerializer) {
+        let mut guard = serializer.write_arr();
+        guard.elem(&self.0);
+        guard.elem(&self.1);
+        guard.elem(&self.2);
+        guard.elem(&self.3);
+        guard.elem(&self.4);
+        guard.elem(&self.5);
+        guard.elem(&self.6);
+    }
+}
+
+impl<
+        T1: JsonSerialize,
+        T2: JsonSerialize,
+        T3: JsonSerialize,
+        T4: JsonSerialize,
+        T5: JsonSerialize,
+        T6: JsonSerialize,
+        T7: JsonSerialize,
+        T8: JsonSerialize,
+    > JsonSerialize for (T1, T2, T3, T4, T5, T6, T7, T8)
+{
+    fn json_serialize(&self, serializer: &mut JsonSerializer) {
+        let mut guard = serializer.write_arr();
+        guard.elem(&self.0);
+        guard.elem(&self.1);
+        guard.elem(&self.2);
+        guard.elem(&self.3);
+        guard.elem(&self.4);
+        guard.elem(&self.5);
+        guard.elem(&self.6);
+        guard.elem(&self.7);
     }
 }
 

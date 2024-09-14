@@ -1,6 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use crate::{value::Value, MerdeError, ValueDeserialize};
+use crate::{value::Value, IntoStatic, MerdeError, ValueDeserialize};
 
 /// An array of [`Value`] items
 #[derive(Debug, PartialEq, Clone)]
@@ -10,6 +10,28 @@ pub struct Array<'s>(pub Vec<Value<'s>>);
 impl<'s> Array<'s> {
     pub fn new() -> Self {
         Array(Vec::new())
+    }
+
+    pub fn into_inner(self) -> Vec<Value<'s>> {
+        self.0
+    }
+}
+
+impl IntoStatic for Array<'_> {
+    type Output = Array<'static>;
+
+    #[inline(always)]
+    fn into_static(self) -> <Self as IntoStatic>::Output {
+        Array(self.0.into_iter().map(|v| v.into_static()).collect())
+    }
+}
+
+impl<'s> IntoIterator for Array<'s> {
+    type Item = Value<'s>;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
     }
 }
 

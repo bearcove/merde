@@ -129,6 +129,32 @@ macro_rules! impl_into_static {
 
 #[doc(hidden)]
 #[macro_export]
+#[cfg(feature = "core")]
+macro_rules! impl_with_lifetime {
+    ($struct_name:ident <$lifetime:lifetime> { $($field:ident),+ }) => {
+        impl<$lifetime, 'instantiated_lifetime> $crate::WithLifetime<'instantiated_lifetime>
+            for $struct_name<$lifetime>
+        {
+            type Lifetimed = $struct_name<'instantiated_lifetime>;
+        }
+    };
+
+    ($struct_name:ident { $($field:ident),+ }) => {
+        impl<'s> $crate::WithLifetime<'s> for $struct_name {
+            type Lifetimed = $struct_name;
+        }
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(feature = "core"))]
+macro_rules! impl_with_lifetime {
+    ($($tt:tt)*) => {};
+}
+
+#[doc(hidden)]
+#[macro_export]
 #[cfg(all(feature = "core", feature = "json"))]
 macro_rules! impl_json_serialize {
     ($struct_name:ident < $lifetime:lifetime > { $($field:ident),+ }) => {
@@ -184,19 +210,14 @@ macro_rules! impl_trait {
     // with lifetime param
     (@impl ValueDeserialize, $struct_name:ident <$lifetime:lifetime> { $($field:ident),+ }) => {
         $crate::impl_value_deserialize!($struct_name <$lifetime> { $($field),+ });
+        $crate::impl_into_static!($struct_name <$lifetime> { $($field),+ });
+        $crate::impl_with_lifetime!($struct_name <$lifetime> { $($field),+ });
     };
     // l
     (@impl ValueDeserialize, $struct_name:ident { $($field:ident),+ }) => {
         $crate::impl_value_deserialize!($struct_name { $($field),+ });
-    };
-
-    // with lifetime param
-    (@impl IntoStatic, $struct_name:ident <$lifetime:lifetime> { $($field:ident),+ }) => {
-        $crate::impl_into_static!($struct_name <$lifetime> { $($field),+ });
-    };
-    // without lifetime param
-    (@impl IntoStatic, $struct_name:ident { $($field:ident),+ }) => {
         $crate::impl_into_static!($struct_name { $($field),+ });
+        $crate::impl_with_lifetime!($struct_name { $($field),+ });
     };
 }
 
@@ -220,7 +241,7 @@ macro_rules! impl_trait {
 /// }
 ///
 /// merde::derive! {
-///     impl(JsonSerialize, ValueDeserialize, IntoStatic) for MyStruct<'s> {
+///     impl (JsonSerialize, ValueDeserialize) for MyStruct<'s> {
 ///         field1,
 ///         field2,
 ///         field3
@@ -240,7 +261,7 @@ macro_rules! impl_trait {
 #[macro_export]
 macro_rules! derive {
     // cow variants
-    (impl($($trait:ident),+) for $struct_name:ident <$lifetime:lifetime> { $($field:ident),+ }) => {
+    (impl ($($trait:ident),+) for $struct_name:ident <$lifetime:lifetime> { $($field:ident),+ }) => {
         $crate::derive!(@step1 { $($trait),+ } $struct_name <$lifetime> { $($field),+ });
     };
     (@step1 { $trait:ident, $($rest_traits:ident),* } $struct_name:ident <$lifetime:lifetime> $fields:tt) => {
@@ -253,7 +274,7 @@ macro_rules! derive {
     (@step1 { } $struct_name:ident <$lifetime:lifetime> $fields:tt) => {};
 
     // owned variants
-    (impl($($trait:ident),+) for $struct_name:ident { $($field:ident),+ }) => {
+    (impl ($($trait:ident),+) for $struct_name:ident { $($field:ident),+ }) => {
         $crate::derive!(@step1 { $($trait),+ } $struct_name { $($field),+ });
     };
     (@step1 { $trait:ident, $($rest_traits:ident),* } $struct_name:ident $fields:tt) => {
@@ -284,7 +305,7 @@ mod json_tests {
         }
 
         derive! {
-            impl(JsonSerialize, ValueDeserialize) for SecondStruct<'s> {
+            impl (JsonSerialize, ValueDeserialize) for SecondStruct<'s> {
                 string_field,
                 int_field
             }
@@ -310,7 +331,7 @@ mod json_tests {
         }
 
         derive! {
-            impl(JsonSerialize, ValueDeserialize) for ComplexStruct<'s> {
+            impl (JsonSerialize, ValueDeserialize) for ComplexStruct<'s> {
                 string_field,
                 u8_field,
                 u16_field,

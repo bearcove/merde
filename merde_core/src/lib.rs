@@ -14,6 +14,9 @@ pub use error::ValueType;
 mod into_static;
 pub use into_static::IntoStatic;
 
+mod with_lifetime;
+pub use with_lifetime::WithLifetime;
+
 mod value;
 pub use value::Value;
 
