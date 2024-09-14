@@ -89,9 +89,33 @@ impl From<CowStr<'_>> for Box<str> {
     }
 }
 
-impl PartialEq for CowStr<'_> {
-    fn eq(&self, other: &Self) -> bool {
+impl<'a, 'b> PartialEq<CowStr<'a>> for CowStr<'b> {
+    fn eq(&self, other: &CowStr<'a>) -> bool {
         self.deref() == other.deref()
+    }
+}
+
+impl PartialEq<&str> for CowStr<'_> {
+    fn eq(&self, other: &&str) -> bool {
+        self.deref() == *other
+    }
+}
+
+impl PartialEq<CowStr<'_>> for &str {
+    fn eq(&self, other: &CowStr<'_>) -> bool {
+        *self == other.deref()
+    }
+}
+
+impl PartialEq<String> for CowStr<'_> {
+    fn eq(&self, other: &String) -> bool {
+        self.deref() == other.as_str()
+    }
+}
+
+impl PartialEq<CowStr<'_>> for String {
+    fn eq(&self, other: &CowStr<'_>) -> bool {
+        self.as_str() == other.deref()
     }
 }
 
@@ -154,5 +178,24 @@ mod serde_impls {
 
             Ok(CowStr::Owned(s))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_partialeq_with_str() {
+        let cow_str1 = CowStr::Borrowed("hello");
+        let cow_str2 = CowStr::Borrowed("hello");
+        let cow_str3 = CowStr::Borrowed("world");
+
+        assert_eq!(cow_str1, "hello");
+        assert_eq!("hello", cow_str1);
+        assert_eq!(cow_str1, cow_str2);
+        assert_ne!(cow_str1, "world");
+        assert_ne!("world", cow_str1);
+        assert_ne!(cow_str1, cow_str3);
     }
 }
