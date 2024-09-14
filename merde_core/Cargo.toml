@@ -12,8 +12,10 @@ categories = ["encoding", "parser-implementations"]
 
 [dependencies]
 compact_str = { version = "0.8.0", optional = true }
+serde = { version = "1", optional = true }
 
 [features]
 default = []
-full = ["compact_str"]
+full = ["compact_str", "serde"]
 compact_str = ["dep:compact_str"]
+serde = ["dep:serde", "compact_str/serde"]

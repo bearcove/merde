@@ -41,11 +41,11 @@ checksum = "49f1f14873335454500d59611f1cf4a4b0f786f9ac11f4312a78e4cf2566695b"
 name = "merde"
 version = "4.0.0"
 dependencies = [
- "merde-core",
+ "merde_core",
 ]
 
 [[package]]
-name = "merde-core"
+name = "merde_core"
 version = "4.0.0"
 dependencies = [
  "compact_str",
@@ -74,5 +74,4 @@ name = "zerodeps-example"
 version = "0.1.0"
 dependencies = [
  "merde",
- "merde_core",
 ]
