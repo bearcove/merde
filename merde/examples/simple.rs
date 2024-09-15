@@ -17,7 +17,7 @@ fn main() {
             "city": "Anytown",
             "state": "CA",
             "zip": 12345
-        }
+        },
     }
     "#;
 
