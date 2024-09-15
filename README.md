@@ -27,7 +27,7 @@ Then head over to the crate documentations:
 
 It's pronounced "murr-day", because we're merializing and demerializing things.
 
-It's also someone you may hear a French person yell when they're sick of waiting
+It's also something you may hear a French person yell when they're sick of waiting
 for things to build, just before "j'en ai marre!!"
 
 ### Why?
