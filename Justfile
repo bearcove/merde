@@ -11,3 +11,10 @@ check:
     cargo tree --prefix none --no-dedupe | grep -v merde-core
     cargo tree --prefix none --no-dedupe --features=merde | grep merde_core
     popd
+
+    pushd merde
+    EXAMPLES=($(cd examples && for i in *; do echo "${i%.rs}"; done))
+    for example in "${EXAMPLES[@]}"; do
+      cargo run --features full --example "$example"
+    done
+    popd
