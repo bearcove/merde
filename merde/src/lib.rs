@@ -126,25 +126,33 @@ macro_rules! impl_value_deserialize {
         $($variant_str:literal => $variant:ident),+ $(,)?
     }) => {
         #[automatically_derived]
-        impl $crate::ValueDeserialize for $enum_name {
-            fn from_value_ref<'val>(
-                value: Option<&'val $crate::Value<'_>>,
+        impl<'s> $crate::ValueDeserialize<'s> for $enum_name {
+            fn from_value_ref(
+                value: Option<&$crate::Value<'s>>,
             ) -> Result<Self, $crate::MerdeError> {
                 #[allow(unused_imports)]
                 use $crate::MerdeError;
 
-                let obj = value.ok_or(MerdeError::MissingValue)?.as_map()?;
-                Ok($enum_name::$variant(obj.must_get(stringify!($variant_str))?))
+                let map = value.ok_or(MerdeError::MissingValue)?.as_map()?;
+                let (key, val) = map.iter().next().ok_or(MerdeError::MissingValue)?;
+                match key.as_ref() {
+                    $($variant_str => Ok($enum_name::$variant($crate::ValueDeserialize::from_value_ref(Some(val))?)),)*
+                    _ => Err(MerdeError::UnknownProperty(key.to_string())),
+                }
             }
 
             fn from_value(
-                value: Option<$crate::Value<'_>>,
+                value: Option<$crate::Value<'s>>,
             ) -> Result<Self, $crate::MerdeError> {
                 #[allow(unused_imports)]
                 use $crate::MerdeError;
 
-                let mut obj = value.ok_or(MerdeError::MissingValue)?.into_map()?;
-                Ok($enum_name::$variant(obj.must_remove(stringify!($variant_str))?))
+                let map = value.ok_or(MerdeError::MissingValue)?.into_map()?;
+                let (key, val) = map.into_iter().next().ok_or(MerdeError::MissingValue)?;
+                match key.as_ref() {
+                    $($variant_str => Ok($enum_name::$variant($crate::ValueDeserialize::from_value(Some(val))?)),)*
+                    _ => Err(MerdeError::UnknownProperty(key.to_string())),
+                }
             }
         }
     };
