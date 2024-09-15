@@ -19,6 +19,46 @@ pub use merde_core::*;
 #[cfg(feature = "deserialize")]
 #[macro_export]
 macro_rules! impl_value_deserialize {
+    // owned tuple struct (transparent)
+    (struct $struct_name:ident transparent) => {
+        #[automatically_derived]
+        impl $crate::ValueDeserialize for $struct_name {
+            #[inline(always)]
+            fn from_value_ref<'val>(
+                value: Option<&'val $crate::Value<'_>>,
+            ) -> Result<Self, $crate::MerdeError> {
+                Ok($struct_name($crate::ValueDeserialize::from_value_ref(value)?))
+            }
+
+            #[inline(always)]
+            fn from_value(
+                value: Option<$crate::Value<'_>>,
+            ) -> Result<Self, $crate::MerdeError> {
+                Ok($struct_name($crate::ValueDeserialize::from_value(value)?))
+            }
+        }
+    };
+
+    // lifetimed tuple struct (transparent)
+    (enum $struct_name:ident <$lifetime:lifetime> transparent) => {
+        #[automatically_derived]
+        impl<$lifetime> $crate::ValueDeserialize<$lifetime> for $struct_name<$lifetime> {
+            #[inline(always)]
+            fn from_value_ref<'val>(
+                value: Option<&'val $crate::Value<$lifetime>>,
+            ) -> Result<Self, $crate::MerdeError> {
+                Ok($struct_name($crate::ValueDeserialize::from_value_ref(value)?))
+            }
+
+            #[inline(always)]
+            fn from_value(
+                value: Option<$crate::Value<$lifetime>>,
+            ) -> Result<Self, $crate::MerdeError> {
+                Ok($struct_name($crate::ValueDeserialize::from_value(value)?))
+            }
+        }
+    };
+
     // owned struct
     (struct $struct_name:ident { $($field:ident),+ }) => {
         #[automatically_derived]
@@ -144,46 +184,6 @@ macro_rules! impl_value_deserialize {
             }
         }
     };
-
-    // owned tuple struct (transparent)
-    (struct $struct_name:ident transparent) => {
-        #[automatically_derived]
-        impl $crate::ValueDeserialize for $struct_name {
-            #[inline(always)]
-            fn from_value_ref<'val>(
-                value: Option<&'val $crate::Value<'_>>,
-            ) -> Result<Self, $crate::MerdeError> {
-                Ok($struct_name($crate::ValueDeserialize::from_value_ref(value)?))
-            }
-
-            #[inline(always)]
-            fn from_value(
-                value: Option<$crate::Value<'_>>,
-            ) -> Result<Self, $crate::MerdeError> {
-                Ok($struct_name($crate::ValueDeserialize::from_value(value)?))
-            }
-        }
-    };
-
-    // lifetimed tuple struct (transparent)
-    (enum $struct_name:ident <$lifetime:lifetime> transparent) => {
-        #[automatically_derived]
-        impl<$lifetime> $crate::ValueDeserialize<$lifetime> for $struct_name<$lifetime> {
-            #[inline(always)]
-            fn from_value_ref<'val>(
-                value: Option<&'val $crate::Value<$lifetime>>,
-            ) -> Result<Self, $crate::MerdeError> {
-                Ok($struct_name($crate::ValueDeserialize::from_value_ref(value)?))
-            }
-
-            #[inline(always)]
-            fn from_value(
-                value: Option<$crate::Value<$lifetime>>,
-            ) -> Result<Self, $crate::MerdeError> {
-                Ok($struct_name($crate::ValueDeserialize::from_value(value)?))
-            }
-        }
-    };
 }
 
 #[doc(hidden)]
@@ -197,6 +197,32 @@ macro_rules! impl_value_deserialize {
 #[macro_export]
 #[cfg(feature = "core")]
 macro_rules! impl_into_static {
+    // owned tuple struct (transparent)
+    (struct $struct_name:ident transparent) => {
+        #[automatically_derived]
+        impl $crate::IntoStatic for $struct_name {
+            type Output = $struct_name;
+
+            #[inline(always)]
+            fn into_static(self) -> Self::Output {
+                self
+            }
+        }
+    };
+
+    // lifetimed tuple struct (transparent)
+    (struct $struct_name:ident <$lifetime:lifetime> transparent) => {
+        #[automatically_derived]
+        impl<$lifetime> $crate::IntoStatic for $struct_name<$lifetime> {
+            type Output = $struct_name<$lifetime>;
+
+            #[inline(always)]
+            fn into_static(self) -> Self::Output {
+                Self(self.0.into_static())
+            }
+        }
+    };
+
     // owned struct
     (struct $struct_name:ident { $($field:ident),+ }) => {
         #[automatically_derived]
@@ -260,32 +286,6 @@ macro_rules! impl_into_static {
             }
         }
     };
-
-    // owned tuple struct (transparent)
-    (struct $struct_name:ident transparent) => {
-        #[automatically_derived]
-        impl $crate::IntoStatic for $struct_name {
-            type Output = $struct_name;
-
-            #[inline(always)]
-            fn into_static(self) -> Self::Output {
-                self
-            }
-        }
-    };
-
-    // lifetimed tuple struct (transparent)
-    (struct $struct_name:ident <$lifetime:lifetime> transparent) => {
-        #[automatically_derived]
-        impl<$lifetime> $crate::IntoStatic for $struct_name<$lifetime> {
-            type Output = $struct_name<$lifetime>;
-
-            #[inline(always)]
-            fn into_static(self) -> Self::Output {
-                Self(self.0.into_static())
-            }
-        }
-    };
 }
 
 #[doc(hidden)]
@@ -299,6 +299,20 @@ macro_rules! impl_into_static {
 #[macro_export]
 #[cfg(feature = "core")]
 macro_rules! impl_with_lifetime {
+    // owned tuple struct (transparent)
+    (struct $struct_name:ident transparent) => {
+        impl<'s> $crate::WithLifetime<'s> for $struct_name {
+            type Lifetimed = $struct_name;
+        }
+    };
+
+    // lifetimed tuple struct (transparent)
+    (struct $struct_name:ident <$lifetime:lifetime> transparent) => {
+        impl<'s> $crate::WithLifetime<'s> for $struct_name<$lifetime> {
+            type Lifetimed = $struct_name<$lifetime>;
+        }
+    };
+
     // owned struct
     (struct $struct_name:ident { $($field:ident),+ }) => {
         impl<'s> $crate::WithLifetime<'s> for $struct_name {
@@ -332,20 +346,6 @@ macro_rules! impl_with_lifetime {
             type Lifetimed = $enum_name<$lifetime>;
         }
     };
-
-    // owned tuple struct (transparent)
-    (struct $struct_name:ident transparent) => {
-        impl<'s> $crate::WithLifetime<'s> for $struct_name {
-            type Lifetimed = $struct_name;
-        }
-    };
-
-    // lifetimed tuple struct (transparent)
-    (struct $struct_name:ident <$lifetime:lifetime> transparent) => {
-        impl<'s> $crate::WithLifetime<'s> for $struct_name<$lifetime> {
-            type Lifetimed = $struct_name<$lifetime>;
-        }
-    };
 }
 
 #[doc(hidden)]
@@ -359,6 +359,26 @@ macro_rules! impl_with_lifetime {
 #[macro_export]
 #[cfg(all(feature = "core", feature = "json"))]
 macro_rules! impl_json_serialize {
+    // owned tuple struct (transparent)
+    (struct $struct_name:ident transparent) => {
+        #[automatically_derived]
+        impl<$lifetime> $crate::json::JsonSerialize for $struct_name<$lifetime> {
+            fn json_serialize(&self, serializer: &mut $crate::json::JsonSerializer) {
+                self.0.json_serialize(serializer)
+            }
+        }
+    };
+
+    // lifetimed tuple struct (transparent)
+    (struct $struct_name:ident <$lifetime:lifetime> transparent) => {
+        #[automatically_derived]
+        impl<$lifetime> $crate::json::JsonSerialize for $struct_name<$lifetime> {
+            fn json_serialize(&self, serializer: &mut $crate::json::JsonSerializer) {
+                self.0.json_serialize(serializer)
+            }
+        }
+    };
+
     // lifetimed struct
     (struct $struct_name:ident < $lifetime:lifetime > { $($field:ident),+ }) => {
         #[automatically_derived]
@@ -431,26 +451,6 @@ macro_rules! impl_json_serialize {
                         }
                     )+
                 }
-            }
-        }
-    };
-
-    // owned tuple struct (transparent)
-    (struct $struct_name:ident transparent) => {
-        #[automatically_derived]
-        impl<$lifetime> $crate::json::JsonSerialize for $struct_name<$lifetime> {
-            fn json_serialize(&self, serializer: &mut $crate::json::JsonSerializer) {
-                self.0.json_serialize(serializer)
-            }
-        }
-    };
-
-    // lifetimed tuple struct (transparent)
-    (struct $struct_name:ident <$lifetime:lifetime> transparent) => {
-        #[automatically_derived]
-        impl<$lifetime> $crate::json::JsonSerialize for $struct_name<$lifetime> {
-            fn json_serialize(&self, serializer: &mut $crate::json::JsonSerializer) {
-                self.0.json_serialize(serializer)
             }
         }
     };
@@ -576,6 +576,32 @@ macro_rules! impl_trait {
 /// for this — or a proc macro, see [serde](https://serde.rs/)'s serde_derive.
 #[macro_export]
 macro_rules! derive {
+    // owned tuple structs (transparent)
+    (impl ($($trait:ident),+) for struct $struct_name:ident transparent) => {
+        $crate::derive!(@step1 { $($trait),+ } struct $struct_name transparent);
+    };
+    (@step1 { $trait:ident, $($rest_traits:ident),* } struct $struct_name:ident transparent) => {
+        $crate::impl_trait!(@impl $trait, struct $struct_name transparent);
+        $crate::derive!(@step1 { $($rest_traits),* } struct $struct_name transparent);
+    };
+    (@step1 { $trait:ident } struct $struct_name:ident transparent) => {
+        $crate::impl_trait!(@impl $trait, struct $struct_name transparent);
+    };
+    (@step1 { } struct $struct_name:ident transparent) => {};
+
+    // lifetimed tuple structs (transparent)
+    (impl ($($trait:ident),+) for struct $struct_name:ident <$lifetime:lifetime> transparent) => {
+        $crate::derive!(@step1 { $($trait),+ } struct $struct_name <$lifetime> transparent);
+    };
+    (@step1 { $trait:ident, $($rest_traits:ident),* } struct $struct_name:ident <$lifetime:lifetime> transparent) => {
+        $crate::impl_trait!(@impl $trait, struct $struct_name <$lifetime> transparent);
+        $crate::derive!(@step1 { $($rest_traits),* } struct $struct_name <$lifetime> transparent);
+    };
+    (@step1 { $trait:ident } struct $struct_name:ident <$lifetime:lifetime> transparent) => {
+        $crate::impl_trait!(@impl $trait, struct $struct_name <$lifetime> transparent);
+    };
+    (@step1 { } struct $enum_name:ident <$lifetime:lifetime> transparent) => {};
+
     // owned structs
     (impl ($($trait:ident),+) for struct $struct_name:ident { $($field:ident),+ }) => {
         $crate::derive!(@step1 { $($trait),+ } struct $struct_name { $($field),+ });
@@ -639,32 +665,6 @@ macro_rules! derive {
         $crate::impl_trait!(@impl $trait, enum $enum_name <$lifetime> externally_tagged $variants);
     };
     (@step1 { } enum $enum_name:ident <$lifetime:lifetime> externally_tagged $variants:tt) => {};
-
-    // owned tuple structs (transparent)
-    (impl ($($trait:ident),+) for struct $struct_name:ident transparent) => {
-        $crate::derive!(@step1 { $($trait),+ } struct $struct_name transparent);
-    };
-    (@step1 { $trait:ident, $($rest_traits:ident),* } struct $struct_name:ident transparent) => {
-        $crate::impl_trait!(@impl $trait, struct $struct_name transparent);
-        $crate::derive!(@step1 { $($rest_traits),* } struct $struct_name transparent);
-    };
-    (@step1 { $trait:ident } struct $struct_name:ident transparent) => {
-        $crate::impl_trait!(@impl $trait, struct $struct_name transparent);
-    };
-    (@step1 { } struct $struct_name:ident transparent) => {};
-
-    // lifetimed tuple structs (transparent)
-    (impl ($($trait:ident),+) for struct $struct_name:ident <$lifetime:lifetime> transparent) => {
-        $crate::derive!(@step1 { $($trait),+ } struct $struct_name <$lifetime> transparent);
-    };
-    (@step1 { $trait:ident, $($rest_traits:ident),* } struct $struct_name:ident <$lifetime:lifetime> transparent) => {
-        $crate::impl_trait!(@impl $trait, struct $struct_name <$lifetime> transparent);
-        $crate::derive!(@step1 { $($rest_traits),* } struct $struct_name <$lifetime> transparent);
-    };
-    (@step1 { $trait:ident } struct $struct_name:ident <$lifetime:lifetime> transparent) => {
-        $crate::impl_trait!(@impl $trait, struct $struct_name <$lifetime> transparent);
-    };
-    (@step1 { } struct $enum_name:ident <$lifetime:lifetime> transparent) => {};
 }
 
 #[cfg(test)]
