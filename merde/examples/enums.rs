@@ -27,6 +27,7 @@ enum Event<'s> {
     MouseUp(MouseUp),
     MouseDown(MouseDown),
     TextInput(TextInput<'s>),
+    StringStuff(StringStuff<'s>),
 }
 
 merde::derive! {
@@ -35,6 +36,7 @@ merde::derive! {
         "mouseup" => MouseUp,
         "mousedown" => MouseDown,
         "textinput" => TextInput,
+        "stringstuff" => StringStuff,
     }
 }
 
@@ -70,3 +72,9 @@ struct TextInput<'s> {
 }
 
 merde::derive! { impl (JsonSerialize, ValueDeserialize) for struct TextInput<'s> { text } }
+
+struct StringStuff<'s>(CowStr<'s>);
+
+merde::derive! {
+    impl (JsonSerialize, ValueDeserialize) for struct StringStuff<'s> transparent
+}
