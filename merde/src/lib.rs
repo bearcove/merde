@@ -605,6 +605,39 @@ macro_rules! impl_trait {
 ///   r#""foobar""#
 /// );
 /// ```
+///
+/// Externally tagged enums are also supported. For both owned and lifetimed variants:
+///
+/// ```rust
+/// enum MyEnum {
+///     Variant1(String),
+///     Variant2(i32),
+/// }
+///
+/// merde::derive! {
+///     impl (JsonSerialize, ValueDeserialize) for enum MyEnum
+///     externally_tagged {
+///         "variant1" => Variant1,
+///         "variant2" => Variant2,
+///     }
+/// }
+///
+/// enum MyLifetimedEnum<'a> {
+///     Variant1(merde::CowStr<'a>),
+///     Variant2(i32),
+/// }
+///
+/// merde::derive! {
+///     impl (JsonSerialize, ValueDeserialize) for enum MyLifetimedEnum<'a>
+///     externally_tagged {
+///         "variant1" => Variant1,
+///         "variant2" => Variant2,
+///     }
+/// }
+/// ```
+///
+/// This will serialize `MyEnum::Variant1("hello".into())` as `{"variant1":"hello"}`,
+/// and `MyEnum::Variant2(42)` as `{"variant2":42}`.
 #[macro_export]
 macro_rules! derive {
     // owned tuple structs (transparent)
