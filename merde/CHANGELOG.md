@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.0.0](https://github.com/bearcove/merde/compare/merde-v4.0.5...merde-v5.0.0) - 2024-09-15
+
+### Added
+
+- Introduce OwnedValueDeserialize
+- [**breaking**] Introduce WithLifetime trait
+
+### Other
+
+- Doc for externally-tagged enums
+- Add doc in derive for tuple structs
+- Add doc for enums & tuple structs
+- done with tuple structs
+- rejiggle order
+- wip tuple structs
+- Allow deriving for externally-tagged enums
+- WIP enum support
+- Require 'struct' prefix when deriving valuedeserialize etc.
+- Introduce WithLifetime trait (thanks @JaSpa)
+- Showcase 'impl is not general enough' problem
+
 ## [4.0.5](https://github.com/bearcove/merde/compare/merde-v4.0.4...merde-v4.0.5) - 2024-09-14
 
 ### Other

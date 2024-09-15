@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.0.0](https://github.com/bearcove/merde/compare/merde_json-v4.0.2...merde_json-v5.0.0) - 2024-09-15
+
+### Added
+
+- Introduce OwnedValueDeserialize
+- [**breaking**] Introduce WithLifetime trait
+
 ## [4.0.2](https://github.com/bearcove/merde/compare/merde_json-v4.0.1...merde_json-v4.0.2) - 2024-09-14
 
 ### Other

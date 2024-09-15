@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.0.0](https://github.com/bearcove/merde/compare/merde_core-v4.0.2...merde_core-v5.0.0) - 2024-09-15
+
+### Added
+
+- Introduce OwnedValueDeserialize
+- [**breaking**] Introduce WithLifetime trait
+
+### Other
+
+- Implement ValueDeserialize for Box<T>, Rc<T>, Arc<T>
+- Add rubicon compat check to merde_core, closes [#58](https://github.com/bearcove/merde/pull/58)
+- Provide from_utf8 family of functions + AsRef<str> for CowStr
+
 ## [4.0.2](https://github.com/bearcove/merde/compare/merde_core-v4.0.1...merde_core-v4.0.2) - 2024-09-14
 
 ### Other

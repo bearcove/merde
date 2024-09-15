@@ -85,7 +85,7 @@ dependencies = [
 
 [[package]]
 name = "merde"
-version = "4.0.5"
+version = "5.0.0"
 dependencies = [
  "merde_core",
  "merde_json",
@@ -94,7 +94,7 @@ dependencies = [
 
 [[package]]
 name = "merde_core"
-version = "4.0.2"
+version = "5.0.0"
 dependencies = [
  "compact_str",
  "rubicon",
@@ -103,7 +103,7 @@ dependencies = [
 
 [[package]]
 name = "merde_json"
-version = "4.0.2"
+version = "5.0.0"
 dependencies = [
  "lexical-parse-float",
  "merde_core",
@@ -113,7 +113,7 @@ dependencies = [
 
 [[package]]
 name = "merde_time"
-version = "4.0.3"
+version = "4.0.4"
 dependencies = [
  "merde_core",
  "merde_json",

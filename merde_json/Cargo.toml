@@ -1,6 +1,6 @@
 [package]
 name = "merde_json"
-version = "4.0.2"
+version = "5.0.0"
 edition = "2021"
 authors = ["Amos Wenger <amos@bearcove.net>"]
 description = "JSON serialization and deserialization for merde, via jiter"
@@ -12,7 +12,7 @@ categories = ["encoding", "parser-implementations"]
 
 [dependencies]
 lexical-parse-float = { version = "0.8.5", features = ["format"] }
-merde_core = { version = "4.0.2", path = "../merde_core" }
+merde_core = { version = "5.0.0", path = "../merde_core" }
 num-bigint = { version = "0.4.6", optional = true }
 num-traits = { version = "0.2.19", optional = true }
 
