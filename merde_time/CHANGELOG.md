@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.4](https://github.com/bearcove/merde/compare/merde_time-v4.0.3...merde_time-v4.0.4) - 2024-09-15
+
+### Other
+
+- updated the following local packages: merde_core, merde_json
+
 ## [4.0.3](https://github.com/bearcove/merde/compare/merde_time-v4.0.2...merde_time-v4.0.3) - 2024-09-14
 
 ### Other
