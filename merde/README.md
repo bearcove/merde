@@ -112,8 +112,8 @@ struct Name<'s> {
 `serde` is really flexible here, letting you have types with multiple lifetimes, not
 all of which are related to the input string.
 
-`merde` only handles the simplest of cases: structs without a lifetime parameter
-are the simple case, since they're always owned / `'static` (by definition):
+`merde` only handles "simple" cases: structs without a lifetime parameter
+are the simplest, since they're always owned / `'static` (by definition):
 
 ```rust
 #[derive(Debug)]
@@ -156,6 +156,77 @@ which dereferences to `&str` like you'd expect, but instead of using
 [`String`](https://doc.rust-lang.org/std/string/struct.String.html) as its owned type, it uses
 [`compact_str::CompactString`](https://docs.rs/compact_str/0.8.0/compact_str/struct.CompactString.html),
 which stores strings of up to 24 bytes inline!
+
+As of merde v5, "transparent" tuple structs are supported (aka "newtypes"):
+
+```rust
+use merde::CowStr;
+
+#[derive(Debug)]
+struct Wrapper<'s>(CowStr<'s>);
+
+merde::derive! {
+    impl (ValueDeserialize, JsonSerialize)
+    for struct Wrapper<'s> transparent
+}
+
+fn main() {
+    let input = r#"["Hello, World!"]"#;
+    let wrapper: Vec<Wrapper> = merde::json::from_str_via_value(input).unwrap();
+    println!("Wrapped value: {:?}", wrapper);
+}
+```
+
+Enums are also supported, only externally-tagged ones for now, and you need
+to specify field names and variant names:
+
+```rust
+#[derive(Debug)]
+enum Event {
+    MouseUp(MouseUp),
+    MouseDown(MouseDown),
+}
+
+merde::derive! {
+    impl (JsonSerialize, ValueDeserialize) for enum Event
+    externally_tagged {
+        "mouseup" => MouseUp,
+        "mousedown" => MouseDown,
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct MouseUp {
+    x: i32,
+    y: i32,
+}
+
+merde::derive! {
+    impl (JsonSerialize, ValueDeserialize) for struct MouseUp {
+        x,
+        y
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct MouseDown {
+    x: i32,
+    y: i32,
+}
+
+merde::derive! {
+    impl (JsonSerialize, ValueDeserialize) for struct MouseDown {
+        x,
+        y
+    }
+}
+
+fn main() {
+    let input = r#"{"mouseup": {"x": 100, "y": 200}}"#;
+    let event: Event = merde::json::from_str_via_value(input).unwrap();
+    println!("Event: {:?}", event);
+}
+```
 
 ### Interlude: why not `&'s str`?
 
