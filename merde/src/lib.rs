@@ -241,7 +241,7 @@ macro_rules! impl_trait {
 /// }
 ///
 /// merde::derive! {
-///     impl (JsonSerialize, ValueDeserialize) for MyStruct<'s> {
+///     impl (JsonSerialize, ValueDeserialize) for struct MyStruct<'s> {
 ///         field1,
 ///         field2,
 ///         field3
@@ -260,31 +260,31 @@ macro_rules! impl_trait {
 /// for this — or a proc macro, see [serde](https://serde.rs/)'s serde_derive.
 #[macro_export]
 macro_rules! derive {
-    // cow variants
-    (impl ($($trait:ident),+) for $struct_name:ident <$lifetime:lifetime> { $($field:ident),+ }) => {
-        $crate::derive!(@step1 { $($trait),+ } $struct_name <$lifetime> { $($field),+ });
+    // lifetimed structs
+    (impl ($($trait:ident),+) for struct $struct_name:ident <$lifetime:lifetime> { $($field:ident),+ }) => {
+        $crate::derive!(@step1 { $($trait),+ } struct $struct_name <$lifetime> { $($field),+ });
     };
-    (@step1 { $trait:ident, $($rest_traits:ident),* } $struct_name:ident <$lifetime:lifetime> $fields:tt) => {
+    (@step1 { $trait:ident, $($rest_traits:ident),* } struct $struct_name:ident <$lifetime:lifetime> $fields:tt) => {
         $crate::impl_trait!(@impl $trait, $struct_name <$lifetime> $fields);
-        $crate::derive!(@step1 { $($rest_traits),* } $struct_name <$lifetime> $fields);
+        $crate::derive!(@step1 { $($rest_traits),* } struct $struct_name <$lifetime> $fields);
     };
-    (@step1 { $trait:ident } $struct_name:ident <$lifetime:lifetime> $fields:tt) => {
+    (@step1 { $trait:ident } struct $struct_name:ident <$lifetime:lifetime> $fields:tt) => {
         $crate::impl_trait!(@impl $trait, $struct_name <$lifetime> $fields);
     };
-    (@step1 { } $struct_name:ident <$lifetime:lifetime> $fields:tt) => {};
+    (@step1 { } struct $struct_name:ident <$lifetime:lifetime> $fields:tt) => {};
 
-    // owned variants
-    (impl ($($trait:ident),+) for $struct_name:ident { $($field:ident),+ }) => {
-        $crate::derive!(@step1 { $($trait),+ } $struct_name { $($field),+ });
+    // owned structs
+    (impl ($($trait:ident),+) for struct $struct_name:ident { $($field:ident),+ }) => {
+        $crate::derive!(@step1 { $($trait),+ } struct $struct_name { $($field),+ });
     };
-    (@step1 { $trait:ident, $($rest_traits:ident),* } $struct_name:ident $fields:tt) => {
+    (@step1 { $trait:ident, $($rest_traits:ident),* } struct $struct_name:ident $fields:tt) => {
         $crate::impl_trait!(@impl $trait, $struct_name $fields);
-        $crate::derive!(@step1 { $($rest_traits),* } $struct_name $fields);
+        $crate::derive!(@step1 { $($rest_traits),* } struct $struct_name $fields);
     };
-    (@step1 { $trait:ident } $struct_name:ident $fields:tt) => {
+    (@step1 { $trait:ident } struct $struct_name:ident $fields:tt) => {
         $crate::impl_trait!(@impl $trait, $struct_name $fields);
     };
-    (@step1 { } $struct_name:ident $fields:tt) => {};
+    (@step1 { } struct $struct_name:ident $fields:tt) => {};
 }
 
 #[cfg(test)]
@@ -305,7 +305,7 @@ mod json_tests {
         }
 
         derive! {
-            impl (JsonSerialize, ValueDeserialize) for SecondStruct<'s> {
+            impl (JsonSerialize, ValueDeserialize) for struct SecondStruct<'s> {
                 string_field,
                 int_field
             }
@@ -331,7 +331,7 @@ mod json_tests {
         }
 
         derive! {
-            impl (JsonSerialize, ValueDeserialize) for ComplexStruct<'s> {
+            impl (JsonSerialize, ValueDeserialize) for struct ComplexStruct<'s> {
                 string_field,
                 u8_field,
                 u16_field,
