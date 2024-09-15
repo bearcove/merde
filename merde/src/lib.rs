@@ -121,8 +121,8 @@ macro_rules! impl_value_deserialize {
                 #[allow(unused_imports)]
                 use $crate::MerdeError;
 
-                let obj = value.ok_or(MerdeError::MissingValue)?.as_map()?;
-                let (key, val) = obj.iter().next().ok_or(MerdeError::MissingValue)?;
+                let map = value.ok_or(MerdeError::MissingValue)?.as_map()?;
+                let (key, val) = map.iter().next().ok_or(MerdeError::MissingValue)?;
                 match key.as_ref() {
                     $($variant_str => Ok($enum_name::$variant($crate::ValueDeserialize::from_value_ref(Some(val))?)),)*
                     _ => Err(MerdeError::UnknownProperty(key.to_string())),
@@ -135,8 +135,8 @@ macro_rules! impl_value_deserialize {
                 #[allow(unused_imports)]
                 use $crate::MerdeError;
 
-                let obj = value.ok_or(MerdeError::MissingValue)?.as_map()?;
-                let (key, val) = obj.into_iter().next().ok_or(MerdeError::MissingValue)?;
+                let map = value.ok_or(MerdeError::MissingValue)?.into_map()?;
+                let (key, val) = map.into_iter().next().ok_or(MerdeError::MissingValue)?;
                 match key.as_ref() {
                     $($variant_str => Ok($enum_name::$variant($crate::ValueDeserialize::from_value(Some(val))?)),)*
                     _ => Err(MerdeError::UnknownProperty(key.to_string())),
@@ -321,7 +321,7 @@ macro_rules! impl_json_serialize {
                 match self {
                     $(
                         Self::$variant(value) => {
-                            guard.pair(stringify!($variant_str), &value);
+                            guard.pair($variant_str, &value);
                         }
                     )+
                 }
@@ -343,7 +343,7 @@ macro_rules! impl_json_serialize {
                 match self {
                     $(
                         Self::$variant(value) => {
-                            guard.pair(stringify!($variant_str), &value);
+                            guard.pair($variant_str, &value);
                         }
                     )+
                 }

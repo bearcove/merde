@@ -3,7 +3,23 @@ use merde::CowStr;
 fn main() {
     use merde::json::JsonSerialize;
 
-    // TODO: fill out
+    let events = vec![
+        Event::MouseUp(MouseUp { x: 10, y: 20 }),
+        Event::MouseDown(MouseDown { x: 30, y: 40 }),
+        Event::TextInput(TextInput {
+            text: "Hello".into(),
+        }),
+    ];
+
+    for event in events {
+        let json = event.to_json_string();
+        println!("JSON: {}", json);
+        let deserialized: Event = merde::json::from_str_via_value(&json).unwrap();
+        println!("Deserialized: {:?}", deserialized);
+        assert_eq!(event, deserialized);
+    }
+
+    println!("All events successfully round-tripped through JSON!");
 }
 
 #[derive(Debug, PartialEq, Eq)]
