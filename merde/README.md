@@ -51,7 +51,7 @@ struct Point {
 }
 
 merde::derive! {
-    impl (ValueDeserialize, JsonSerialize) for Point { x, y }
+    impl (ValueDeserialize, JsonSerialize) for struct Point { x, y }
 }
 
 fn main() {
@@ -124,7 +124,7 @@ struct Name {
 }
 
 merde::derive! {
-    impl (ValueDeserialize, JsonSerialize) for Name { first, middle, last }
+    impl (ValueDeserialize, JsonSerialize) for struct Name { first, middle, last }
 }
 ```
 
@@ -142,9 +142,8 @@ struct Name<'s> {
 }
 
 merde::derive! {
-    //                                              👇
-    impl (ValueDeserialize, JsonSerialize) for Name<'s> { first, middle, last }
-    //                                              👆
+    //                                                     👇
+    impl (ValueDeserialize, JsonSerialize) for struct Name<'s> { first, middle, last }
 }
 ```
 
@@ -172,7 +171,7 @@ struct Name<'s> {
 }
 
 merde::derive! {
-    impl (ValueDeserialize, JsonSerialize) for Name<'s> { first, middle, last }
+    impl (ValueDeserialize, JsonSerialize) for struct Nam<'s> { first, middle, last }
 }
 ```
 
@@ -181,7 +180,7 @@ error[E0277]: the trait bound `&str: ValueDeserialize<'_>` is not satisfied
   --> merde/src/lib.rs:183:1
    |
 12 | / merde::derive! {
-13 | |     impl (ValueDeserialize, JsonSerialize) for Name<'s> { first, middle, last }
+13 | |     impl (ValueDeserialize, JsonSerialize) for struct Name<'s> { first, middle, last }
 14 | | }
    | |_^ the trait `ValueDeserialize<'_>` is not implemented for `&str`
 ```
@@ -259,7 +258,7 @@ struct Message<'s> {
 
 merde::derive! {
     impl (ValueDeserialize, JsonSerialize)
-    for Message<'s> { kind, payload }
+    for struct Message<'s> { kind, payload }
 }
 
 // well this is already fishy, where does the `'s` come from?
@@ -292,8 +291,7 @@ error[E0515]: cannot return value referencing local variable `s`
     |         ^^^^^^^ returns a value referencing data owned by the current function
 ```
 
-That's where the `IntoStatic` trait comes from — which you can also derive
-with `merde::derive!`:
+That's where the `IntoStatic` trait comes in! Which you get for free when "deriving" `ValueDeserialize`!
 
 ```rust
 use merde::IntoStatic;
@@ -306,7 +304,7 @@ struct Message<'s> {
 
 merde::derive! {
     impl (ValueDeserialize, JsonSerialize)
-    for Message<'s> { kind, payload }
+    for struct Message<'s> { kind, payload }
 }
 
 fn recv_and_deserialize() -> Message<'static> {
@@ -372,7 +370,7 @@ struct Person<'s> {
 }
 
 merde::derive! {
-    impl (ValueDeserialize, JsonSerialize) for Person<'s> { name, birth }
+    impl (ValueDeserialize, JsonSerialize) for struct Person<'s> { name, birth }
 }
 
 fn main() {
@@ -421,7 +419,7 @@ struct Person<'s> {
 }
 
 merde::derive! {
-    impl (ValueDeserialize, JsonSerialize) for Person<'s> { name, age }
+    impl (ValueDeserialize, JsonSerialize) for struct Person<'s> { name, age }
 }
 ```
 
@@ -461,7 +459,7 @@ pub struct Person<'s> {
 }
 
 merde::derive! {
-    impl (ValueDeserialize, JsonSerialize) for Person<'s> { name, age }
+    impl (ValueDeserialize, JsonSerialize) for struct Person<'s> { name, age }
 }
 ```
 

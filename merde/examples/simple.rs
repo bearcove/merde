@@ -55,7 +55,7 @@ struct Address<'s> {
 }
 
 merde::derive! {
-    impl (JsonSerialize, ValueDeserialize) for Address<'s> {
+    impl (JsonSerialize, ValueDeserialize) for struct Address<'s> {
         street,
         city,
         state,
@@ -72,5 +72,5 @@ struct Person<'s> {
 }
 
 merde::derive! {
-    impl (JsonSerialize, ValueDeserialize) for Person<'s> { name, age, address }
+    impl (JsonSerialize, ValueDeserialize) for struct Person<'s> { name, age, address }
 }
