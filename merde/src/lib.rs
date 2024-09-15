@@ -40,7 +40,7 @@ macro_rules! impl_value_deserialize {
     };
 
     // lifetimed tuple struct (transparent)
-    (enum $struct_name:ident <$lifetime:lifetime> transparent) => {
+    (struct $struct_name:ident <$lifetime:lifetime> transparent) => {
         #[automatically_derived]
         impl<$lifetime> $crate::ValueDeserialize<$lifetime> for $struct_name<$lifetime> {
             #[inline(always)]

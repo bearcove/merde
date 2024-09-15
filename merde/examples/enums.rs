@@ -73,6 +73,7 @@ struct TextInput<'s> {
 
 merde::derive! { impl (JsonSerialize, ValueDeserialize) for struct TextInput<'s> { text } }
 
+#[derive(Debug, PartialEq, Eq)]
 struct StringStuff<'s>(CowStr<'s>);
 
 merde::derive! {
