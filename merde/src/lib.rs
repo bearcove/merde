@@ -22,17 +22,17 @@ macro_rules! impl_value_deserialize {
     // owned tuple struct (transparent)
     (struct $struct_name:ident transparent) => {
         #[automatically_derived]
-        impl $crate::ValueDeserialize for $struct_name {
+        impl<'s> $crate::ValueDeserialize<'s> for $struct_name {
             #[inline(always)]
             fn from_value_ref<'val>(
-                value: Option<&'val $crate::Value<'_>>,
+                value: Option<&'val $crate::Value<'s>>,
             ) -> Result<Self, $crate::MerdeError> {
                 Ok($struct_name($crate::ValueDeserialize::from_value_ref(value)?))
             }
 
             #[inline(always)]
             fn from_value(
-                value: Option<$crate::Value<'_>>,
+                value: Option<$crate::Value<'s>>,
             ) -> Result<Self, $crate::MerdeError> {
                 Ok($struct_name($crate::ValueDeserialize::from_value(value)?))
             }
@@ -65,7 +65,7 @@ macro_rules! impl_value_deserialize {
         impl<'s> $crate::ValueDeserialize<'s> for $struct_name
         {
             fn from_value_ref(
-                value: Option<&$crate::Value<'_>>,
+                value: Option<&$crate::Value<'s>>,
             ) -> Result<Self, $crate::MerdeError> {
                 #[allow(unused_imports)]
                 use $crate::MerdeError;
@@ -77,7 +77,7 @@ macro_rules! impl_value_deserialize {
             }
 
             fn from_value(
-                value: Option<$crate::Value<'_>>,
+                value: Option<$crate::Value<'s>>,
             ) -> Result<Self, $crate::MerdeError> {
                 #[allow(unused_imports)]
                 use $crate::MerdeError;
@@ -309,6 +309,7 @@ macro_rules! impl_into_static {
 macro_rules! impl_with_lifetime {
     // owned tuple struct (transparent)
     (struct $struct_name:ident transparent) => {
+        #[automatically_derived]
         impl<'s> $crate::WithLifetime<'s> for $struct_name {
             type Lifetimed = $struct_name;
         }
@@ -316,6 +317,7 @@ macro_rules! impl_with_lifetime {
 
     // lifetimed tuple struct (transparent)
     (struct $struct_name:ident <$lifetime:lifetime> transparent) => {
+        #[automatically_derived]
         impl<'s> $crate::WithLifetime<'s> for $struct_name<$lifetime> {
             type Lifetimed = $struct_name<$lifetime>;
         }
@@ -323,6 +325,7 @@ macro_rules! impl_with_lifetime {
 
     // owned struct
     (struct $struct_name:ident { $($field:ident),+ }) => {
+        #[automatically_derived]
         impl<'s> $crate::WithLifetime<'s> for $struct_name {
             type Lifetimed = $struct_name;
         }
@@ -330,6 +333,7 @@ macro_rules! impl_with_lifetime {
 
     // lifetimed struct
     (struct $struct_name:ident <$lifetime:lifetime> { $($field:ident),+ }) => {
+        #[automatically_derived]
         impl<$lifetime, 'instantiated_lifetime> $crate::WithLifetime<'instantiated_lifetime>
             for $struct_name<$lifetime>
         {
@@ -341,6 +345,7 @@ macro_rules! impl_with_lifetime {
     (enum $enum_name:ident externally_tagged {
         $($variant_str:literal => $variant:ident),+ $(,)?
     }) => {
+        #[automatically_derived]
         impl<'s> $crate::WithLifetime<'s> for $enum_name {
             type Lifetimed = $enum_name;
         }
@@ -350,6 +355,7 @@ macro_rules! impl_with_lifetime {
     (enum $enum_name:ident <$lifetime:lifetime> externally_tagged {
         $($variant_str:literal => $variant:ident),+ $(,)?
     }) => {
+        #[automatically_derived]
         impl<'s> $crate::WithLifetime<'s> for $enum_name<$lifetime> {
             type Lifetimed = $enum_name<$lifetime>;
         }
@@ -370,7 +376,7 @@ macro_rules! impl_json_serialize {
     // owned tuple struct (transparent)
     (struct $struct_name:ident transparent) => {
         #[automatically_derived]
-        impl<$lifetime> $crate::json::JsonSerialize for $struct_name<$lifetime> {
+        impl $crate::json::JsonSerialize for $struct_name {
             fn json_serialize(&self, serializer: &mut $crate::json::JsonSerializer) {
                 self.0.json_serialize(serializer)
             }
@@ -547,41 +553,58 @@ macro_rules! impl_trait {
 
 /// Derives the specified traits for a struct.
 ///
-/// This macro can be used to generate implementations of [`JsonSerialize`], [`ValueDeserialize`],
-/// and [`IntoStatic`] traits for a given struct.
+/// This macro can be used to generate implementations of [`JsonSerialize`] and [`ValueDeserialize`],
+/// traits for a given struct.
 ///
 /// # Usage
 ///
 /// ```rust
-/// use merde::ValueDeserialize;
-/// use merde::CowStr;
-/// use merde::json::JsonSerialize;
-///
-/// #[derive(Debug, PartialEq)]
 /// struct MyStruct<'s> {
-///     field1: CowStr<'s>,
-///     field2: i32,
-///     field3: bool,
+///     a: merde::CowStr<'s>,
+///     b: i32,
+///     c: bool,
 /// }
 ///
 /// merde::derive! {
-///     impl (JsonSerialize, ValueDeserialize) for struct MyStruct<'s> {
-///         field1,
-///         field2,
-///         field3
-///     }
+///     impl (JsonSerialize, ValueDeserialize) for struct MyStruct<'s> { a, b, c }
 /// }
 /// ```
 ///
-/// In this example, all three traits are derived, of course you can omit the ones you don't need.
+/// In this example, both traits are derived, of course you can omit the ones you don't need.
 ///
-/// The struct must have exactly one lifetime parameter. Additionally, even if there are no
-/// borrowed fields, the struct must include a `_phantom` field of type `PhantomData<&'a ()>`,
-/// where `'a` is the lifetime parameter.
+/// Structs without lifetime parameters are also allowed: the macro can tell the difference
+/// from the fact that the lifetime parameter is not present in the invocation:
 ///
-/// Implementing other variants (no lifetimes, multiple lifetimes, etc.) with declarative macros
-/// would be too complicated. At this point we'd want a whole parser / compiler / code generator
-/// for this — or a proc macro, see [serde](https://serde.rs/)'s serde_derive.
+/// ```rust
+/// struct MyStruct {
+///     a: String,
+///     b: i32,
+///     c: bool,
+/// }
+///
+/// merde::derive! {
+///     //                                no lifetime param here 👇
+///     impl (JsonSerialize, ValueDeserialize) for struct MyStruct { a, b, c }
+/// }
+/// ```
+///
+/// 1-tuple structs (newtypes) are supported, only in the "transparent" style: serializing
+/// a `String` or a `MyStruct` will give `"foobar"` all the same, as if the newtype wrapper
+/// was stripped, or, well, transparent:
+///
+/// ```rust
+/// struct MyStruct(String);
+///
+/// merde::derive! {
+///     impl (JsonSerialize, ValueDeserialize) for struct MyStruct transparent
+/// }
+///
+/// use merde::json::JsonSerialize;
+/// assert_eq!(
+///   MyStruct("foobar".into()).to_json_string(),
+///   r#""foobar""#
+/// );
+/// ```
 #[macro_export]
 macro_rules! derive {
     // owned tuple structs (transparent)
@@ -776,7 +799,7 @@ mod doctest_playground {
 
     ////////////////////////////////////////////////////////////////////////////////
 
-    // (insert doctest here for testing)
+    // (insert doctest here for testing, with `#[test]` above fn main())
 
     ////////////////////////////////////////////////////////////////////////////////
 }
