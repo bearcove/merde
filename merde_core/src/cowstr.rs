@@ -29,6 +29,17 @@ impl<'s> CowStr<'s> {
         Ok(Self::Borrowed(std::str::from_utf8(s)?))
     }
 
+    pub fn from_utf8_owned(s: Vec<u8>) -> Result<Self, std::str::Utf8Error> {
+        #[cfg(feature = "compact_str")]
+        {
+            Ok(Self::Owned(CompactString::from_utf8(s)?))
+        }
+        #[cfg(not(feature = "compact_str"))]
+        {
+            Ok(String::from_utf8(s).map_err(|e| e.utf8_error())?.into())
+        }
+    }
+
     pub fn from_utf8_lossy(s: &'s [u8]) -> Self {
         #[cfg(feature = "compact_str")]
         {
@@ -221,6 +232,29 @@ mod serde_impls {
     }
 }
 
+#[cfg(feature = "rusqlite")]
+mod rusqlite_impls {
+    use super::*;
+    use rusqlite::{types::FromSql, types::FromSqlError, types::ToSql, Result as RusqliteResult};
+
+    impl ToSql for CowStr<'_> {
+        fn to_sql(&self) -> RusqliteResult<rusqlite::types::ToSqlOutput<'_>> {
+            Ok(rusqlite::types::ToSqlOutput::Borrowed(self.as_ref().into()))
+        }
+    }
+
+    impl FromSql for CowStr<'_> {
+        fn column_result(value: rusqlite::types::ValueRef<'_>) -> Result<Self, FromSqlError> {
+            match value {
+                rusqlite::types::ValueRef::Text(s) => Ok(CowStr::from_utf8(s)
+                    .map_err(|e| FromSqlError::Other(Box::new(e)))?
+                    .into_static()),
+                _ => Err(FromSqlError::InvalidType),
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -237,5 +271,37 @@ mod tests {
         assert_ne!(cow_str1, "world");
         assert_ne!("world", cow_str1);
         assert_ne!(cow_str1, cow_str3);
+    }
+
+    #[cfg(feature = "rusqlite")]
+    #[test]
+    fn test_rusqlite_integration() -> Result<(), Box<dyn std::error::Error>> {
+        use rusqlite::Connection;
+
+        // Create an in-memory database
+        let conn = Connection::open_in_memory()?;
+
+        // Create a table
+        conn.execute(
+            "CREATE TABLE test_table (id INTEGER PRIMARY KEY, value TEXT)",
+            [],
+        )?;
+
+        // Insert a CowStr value
+        let cow_str = CowStr::from("Hello, Rusqlite!");
+        conn.execute("INSERT INTO test_table (value) VALUES (?1)", [&cow_str])?;
+
+        // Retrieve the value
+        let mut stmt = conn.prepare("SELECT value FROM test_table")?;
+        let mut rows = stmt.query([])?;
+
+        if let Some(row) = rows.next()? {
+            let retrieved: CowStr = row.get(0)?;
+            assert_eq!(retrieved, "Hello, Rusqlite!");
+        } else {
+            panic!("No rows returned");
+        }
+
+        Ok(())
     }
 }
