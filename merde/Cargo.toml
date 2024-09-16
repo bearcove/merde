@@ -44,11 +44,14 @@ merde_time = { version = "4.0.4", path = "../merde_time", optional = true, featu
 
 [features]
 default = ["core", "deserialize"]
-full = ["core", "deserialize", "json", "time"]
-deserialize = ["core", "merde_time/deserialize"]
+full = ["core", "deserialize", "json", "time", "rusqlite", "compact_str"]
 core = ["dep:merde_core"]
+deserialize = ["core", "merde_time/deserialize"]
+# merde_core re-exports
 compact_str = ["merde_core/compact_str"]
 serde = ["merde_core/serde"]
+rusqlite = ["merde_core/rusqlite"]
 
+# non-core crates
 json = ["dep:merde_json", "merde_time/json"]
 time = ["dep:merde_time"]
