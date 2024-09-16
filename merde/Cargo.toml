@@ -40,13 +40,14 @@ merde_core = { version = "5.0.0", path = "../merde_core", optional = true }
 merde_json = { version = "5.0.0", path = "../merde_json", optional = true }
 merde_time = { version = "4.0.4", path = "../merde_time", optional = true, features = [
     "merde",
+    "deserialize",
 ] }
 
 [features]
 default = ["core", "deserialize"]
 full = ["core", "deserialize", "json", "time", "rusqlite", "compact_str"]
 core = ["dep:merde_core"]
-deserialize = ["core", "merde_time/deserialize"]
+deserialize = ["core"]
 # merde_core re-exports
 compact_str = ["merde_core/compact_str"]
 serde = ["merde_core/serde"]
