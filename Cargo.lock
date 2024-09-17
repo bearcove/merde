@@ -251,9 +251,9 @@ dependencies = [
 
 [[package]]
 name = "rubicon"
-version = "3.4.2"
+version = "3.4.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "395f129ed66e98909eca7113a855dd6f6a8ed611d39ac65dfd9270607065b119"
+checksum = "3fc22ef360e9a31aa1dbef6cf95d54b08c9594c2f7c09c152e4c5e64a0be8c68"
 
 [[package]]
 name = "rusqlite"
