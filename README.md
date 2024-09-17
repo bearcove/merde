@@ -6,7 +6,7 @@
 
 ![The merde logo: a glorious poop floating above a pair of hands](https://github.com/user-attachments/assets/763d60e0-5101-48af-bc72-f96f516a5d0f)
 
-_Logo by [MisiasArt](https://misiasart.carrd.co)_
+_Logo by [MisiasArt](https://misiasart.com)_
 
 A simpler (and slightly shittier) take on [serde](https://crates.io/crates/serde)
 

@@ -6,7 +6,7 @@
 
 ![The merde logo: a glorious poop floating above a pair of hands](https://github.com/user-attachments/assets/763d60e0-5101-48af-bc72-f96f516a5d0f)
 
-_Logo by [MisiasArt](https://misiasart.carrd.co)_
+_Logo by [MisiasArt](https://misiasart.com)_
 
 The `merde` family of crates aims to provide a lighter, simpler, and
 build-time-friendly alternative to `serde`.
