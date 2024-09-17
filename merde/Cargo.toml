@@ -1,6 +1,6 @@
 [package]
 name = "merde"
-version = "5.0.4"
+version = "5.0.5"
 edition = "2021"
 authors = ["Amos Wenger <amos@bearcove.net>"]
 description = "Serialize and deserialize with declarative macros"
@@ -36,9 +36,9 @@ path = "examples/enums.rs"
 required-features = ["json"]
 
 [dependencies]
-merde_core = { version = "5.0.4", path = "../merde_core", optional = true }
-merde_json = { version = "5.0.4", path = "../merde_json", optional = true }
-merde_time = { version = "4.0.8", path = "../merde_time", optional = true, features = [
+merde_core = { version = "5.0.5", path = "../merde_core", optional = true }
+merde_json = { version = "5.0.5", path = "../merde_json", optional = true }
+merde_time = { version = "4.0.9", path = "../merde_time", optional = true, features = [
     "merde",
     "deserialize",
 ] }

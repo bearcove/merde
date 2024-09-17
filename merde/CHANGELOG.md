@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.0.5](https://github.com/bearcove/merde/compare/merde-v5.0.4...merde-v5.0.5) - 2024-09-17
+
+### Other
+
+- update Cargo.lock dependencies
+
 ## [5.0.4](https://github.com/bearcove/merde/compare/merde-v5.0.3...merde-v5.0.4) - 2024-09-17
 
 ### Other

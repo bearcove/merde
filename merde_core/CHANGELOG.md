@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.0.5](https://github.com/bearcove/merde/compare/merde_core-v5.0.4...merde_core-v5.0.5) - 2024-09-17
+
+### Fixed
+
+- require rubicon 3.4.9
+
 ## [5.0.4](https://github.com/bearcove/merde/compare/merde_core-v5.0.3...merde_core-v5.0.4) - 2024-09-17
 
 ### Fixed
