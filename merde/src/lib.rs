@@ -192,6 +192,40 @@ macro_rules! impl_value_deserialize {
             }
         }
     };
+
+    // owned enum (externally tagged, string-like)
+    (enum $enum_name:ident string_like {
+        $($variant_str:literal => $variant:ident),+ $(,)?
+    }) => {
+        #[automatically_derived]
+        impl<'s> $crate::ValueDeserialize<'s> for $enum_name {
+            fn from_value_ref(
+                value: Option<&$crate::Value<'s>>,
+            ) -> Result<Self, $crate::MerdeError> {
+                #[allow(unused_imports)]
+                use $crate::MerdeError;
+
+                let s = value.ok_or(MerdeError::MissingValue)?.as_str()?;
+                match s.as_ref() {
+                    $($variant_str => Ok($enum_name::$variant),)*
+                    _ => Err(MerdeError::UnknownProperty(s.to_string())),
+                }
+            }
+
+            fn from_value(
+                value: Option<$crate::Value<'s>>,
+            ) -> Result<Self, $crate::MerdeError> {
+                #[allow(unused_imports)]
+                use $crate::MerdeError;
+
+                let s = value.ok_or(MerdeError::MissingValue)?.into_str()?;
+                match s.as_ref() {
+                    $($variant_str => Ok($enum_name::$variant),)*
+                    _ => Err(MerdeError::UnknownProperty(s.to_string())),
+                }
+            }
+        }
+    };
 }
 
 #[doc(hidden)]
@@ -222,11 +256,11 @@ macro_rules! impl_into_static {
     (struct $struct_name:ident <$lifetime:lifetime> transparent) => {
         #[automatically_derived]
         impl<$lifetime> $crate::IntoStatic for $struct_name<$lifetime> {
-            type Output = $struct_name<$lifetime>;
+            type Output = $struct_name<'static>;
 
             #[inline(always)]
             fn into_static(self) -> Self::Output {
-                Self(self.0.into_static())
+                $struct_name(self.0.into_static())
             }
         }
     };
@@ -282,15 +316,30 @@ macro_rules! impl_into_static {
     }) => {
         #[automatically_derived]
         impl<$lifetime> $crate::IntoStatic for $enum_name<$lifetime> {
-            type Output = $enum_name<$lifetime>;
+            type Output = $enum_name<'static>;
 
             #[inline(always)]
             fn into_static(self) -> Self::Output {
                 match self {
                     $(
-                        Self::$variant(value) => Self::$variant(value.into_static()),
+                        Self::$variant(value) => $enum_name::$variant(value.into_static()),
                     )+
                 }
+            }
+        }
+    };
+
+    // owned enum (string-like)
+    (enum $enum_name:ident string_like {
+        $($variant_str:literal => $variant:ident),+ $(,)?
+    }) => {
+        #[automatically_derived]
+        impl $crate::IntoStatic for $enum_name {
+            type Output = $enum_name;
+
+            #[inline(always)]
+            fn into_static(self) -> Self::Output {
+                self
             }
         }
     };
@@ -356,8 +405,20 @@ macro_rules! impl_with_lifetime {
         $($variant_str:literal => $variant:ident),+ $(,)?
     }) => {
         #[automatically_derived]
-        impl<'s> $crate::WithLifetime<'s> for $enum_name<$lifetime> {
-            type Lifetimed = $enum_name<$lifetime>;
+        impl<$lifetime, 'instantiated_lifetime> $crate::WithLifetime<'instantiated_lifetime>
+            for $enum_name<$lifetime>
+        {
+            type Lifetimed = $enum_name<'instantiated_lifetime>;
+        }
+    };
+
+    // owned enum (string-like)
+    (enum $enum_name:ident string_like {
+        $($variant_str:literal => $variant:ident),+ $(,)?
+    }) => {
+        #[automatically_derived]
+        impl<'s> $crate::WithLifetime<'s> for $enum_name {
+            type Lifetimed = $enum_name;
         }
     };
 }
@@ -468,6 +529,27 @@ macro_rules! impl_json_serialize {
             }
         }
     };
+
+    // owned enum (string-like)
+    (enum $enum_name:ident string_like {
+        $($variant_str:literal => $variant:ident),+ $(,)?
+    }) => {
+        #[automatically_derived]
+        impl $crate::json::JsonSerialize for $enum_name {
+            fn json_serialize(&self, serializer: &mut $crate::json::JsonSerializer) {
+                #[allow(unused_imports)]
+                use $crate::MerdeError;
+
+                match self {
+                    $(
+                        Self::$variant => {
+                            serializer.write_str($variant_str);
+                        }
+                    )+
+                }
+            }
+        }
+    };
 }
 
 #[doc(hidden)]
@@ -480,6 +562,8 @@ macro_rules! impl_json_serialize {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! impl_trait {
+    //------------------------------------------------------------------------------------
+
     // owned struct
     (@impl JsonSerialize, struct $struct_name:ident { $($field:ident),+ }) => {
         $crate::impl_json_serialize!(struct $struct_name { $($field),+ });
@@ -504,6 +588,14 @@ macro_rules! impl_trait {
             $($variant_str => $variant),+
         });
     };
+    // owned enum (string-like)
+    (@impl JsonSerialize, enum $enum_name:ident string_like {
+        $($variant_str:literal => $variant:ident),+ $(,)?
+    }) => {
+        $crate::impl_json_serialize!(enum $enum_name string_like {
+            $($variant_str => $variant),+
+        });
+    };
     // owned tuple struct (transparent)
     (@impl JsonSerialize, struct $struct_name:ident transparent) => {
         $crate::impl_json_serialize!(struct $struct_name transparent);
@@ -512,6 +604,8 @@ macro_rules! impl_trait {
     (@impl JsonSerialize, struct $struct_name:ident <$lifetime:lifetime> transparent) => {
         $crate::impl_json_serialize!(struct $struct_name <$lifetime> transparent);
     };
+
+    //------------------------------------------------------------------------------------
 
     // owned struct
     (@impl ValueDeserialize, struct $struct_name:ident { $($field:ident),+ }) => {
@@ -532,6 +626,12 @@ macro_rules! impl_trait {
         $crate::impl_value_deserialize!(enum $enum_name externally_tagged {
             $($variant_str => $variant),+
         });
+        $crate::impl_into_static!(enum $enum_name externally_tagged {
+            $($variant_str => $variant),+
+        });
+        $crate::impl_with_lifetime!(enum $enum_name externally_tagged {
+            $($variant_str => $variant),+
+        });
     };
     // lifetimed enum (externally tagged)
     (@impl ValueDeserialize, enum $enum_name:ident <$lifetime:lifetime> externally_tagged {
@@ -540,14 +640,38 @@ macro_rules! impl_trait {
         $crate::impl_value_deserialize!(enum $enum_name <$lifetime> externally_tagged {
             $($variant_str => $variant),+
         });
+        $crate::impl_into_static!(enum $enum_name <$lifetime> externally_tagged {
+            $($variant_str => $variant),+
+        });
+        $crate::impl_with_lifetime!(enum $enum_name <$lifetime> externally_tagged {
+            $($variant_str => $variant),+
+        });
+    };
+    // owned enum (string-like)
+    (@impl ValueDeserialize, enum $enum_name:ident string_like {
+        $($variant_str:literal => $variant:ident),+ $(,)?
+    }) => {
+        $crate::impl_value_deserialize!(enum $enum_name string_like {
+            $($variant_str => $variant),+
+        });
+        $crate::impl_into_static!(enum $enum_name string_like {
+            $($variant_str => $variant),+
+        });
+        $crate::impl_with_lifetime!(enum $enum_name string_like {
+            $($variant_str => $variant),+
+        });
     };
     // owned tuple struct (transparent)
     (@impl ValueDeserialize, struct $struct_name:ident transparent) => {
         $crate::impl_value_deserialize!(struct $struct_name transparent);
+        $crate::impl_into_static!(struct $struct_name transparent);
+        $crate::impl_with_lifetime!(struct $struct_name transparent);
     };
     // lifetimed tuple struct (transparent)
     (@impl ValueDeserialize, struct $struct_name:ident <$lifetime:lifetime> transparent) => {
         $crate::impl_value_deserialize!(struct $struct_name <$lifetime> transparent);
+        $crate::impl_into_static!(struct $struct_name <$lifetime> transparent);
+        $crate::impl_with_lifetime!(struct $struct_name <$lifetime> transparent);
     };
 }
 
@@ -628,7 +752,7 @@ macro_rules! impl_trait {
 /// }
 ///
 /// merde::derive! {
-///     impl (JsonSerialize, ValueDeserialize) for enum MyLifetimedEnum<'a>
+///     impl (JsonSerialize, ValueDeserialize) for enum MyLifetimedEnum<'wot>
 ///     externally_tagged {
 ///         "variant1" => Variant1,
 ///         "variant2" => Variant2,
@@ -729,6 +853,25 @@ macro_rules! derive {
         $crate::impl_trait!(@impl $trait, enum $enum_name <$lifetime> externally_tagged $variants);
     };
     (@step1 { } enum $enum_name:ident <$lifetime:lifetime> externally_tagged $variants:tt) => {};
+
+    // owned enums (string-like)
+    (impl ($($trait:ident),+) for enum $enum_name:ident
+    string_like {
+        $($variant_str:literal => $variant:ident),+ $(,)?
+    }) => {
+        $crate::derive!(@step1 { $($trait),+ } enum $enum_name string_like {
+            $($variant_str => $variant),+
+        });
+    };
+    (@step1 { $trait:ident, $($rest_traits:ident),* } enum $enum_name:ident
+    string_like $variants:tt) => {
+        $crate::impl_trait!(@impl $trait, enum $enum_name string_like $variants);
+        $crate::derive!(@step1 { $($rest_traits),* } enum $enum_name string_like $variants);
+    };
+    (@step1 { $trait:ident } enum $enum_name:ident string_like $variants:tt) => {
+        $crate::impl_trait!(@impl $trait, enum $enum_name string_like $variants);
+    };
+    (@step1 { } enum $enum_name:ident string_like $variants:tt) => {};
 }
 
 #[cfg(test)]

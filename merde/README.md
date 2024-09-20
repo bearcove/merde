@@ -228,6 +228,34 @@ fn main() {
 }
 ```
 
+"string-like" enums are also supported, like so:
+
+```rust
+#[derive(Debug)]
+enum Emergency {
+    Cuddle,
+    Smoothie,
+    Naptime,
+    Playtime,
+}
+
+merde::derive! {
+    impl (JsonSerialize, ValueDeserialize) for enum Emergency
+    string_like {
+        "cuddle" => Cuddle,
+        "smoothie" => Smoothie,
+        "naptime" => Naptime,
+        "playtime" => Playtime,
+    }
+}
+
+fn main() {
+    let input = r#"["cuddle", "smoothie", "playtime"]"#;
+    let emergencies: Vec<Emergency> = merde::json::from_str_via_value(input).unwrap();
+    println!("Emergencies: {:?}", emergencies);
+}
+```
+
 ### Interlude: why not `&'s str`?
 
 You'll notice that `ValueDeserialize` is not implemented for `&'s str`, ie.

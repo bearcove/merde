@@ -9,6 +9,8 @@ fn main() {
         Event::TextInput(TextInput {
             text: "Hello".into(),
         }),
+        Event::StringStuff(StringStuff("Some string".into())),
+        Event::Emergency(Emergency::NoPizzaLeft),
     ];
 
     for event in events {
@@ -28,6 +30,7 @@ enum Event<'s> {
     MouseDown(MouseDown),
     TextInput(TextInput<'s>),
     StringStuff(StringStuff<'s>),
+    Emergency(Emergency),
 }
 
 merde::derive! {
@@ -37,6 +40,7 @@ merde::derive! {
         "mousedown" => MouseDown,
         "textinput" => TextInput,
         "stringstuff" => StringStuff,
+        "emergency" => Emergency,
     }
 }
 
@@ -78,4 +82,19 @@ struct StringStuff<'s>(CowStr<'s>);
 
 merde::derive! {
     impl (JsonSerialize, ValueDeserialize) for struct StringStuff<'s> transparent
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum Emergency {
+    NoPizzaLeft,
+    CuddlesRequired,
+    SmoothieReady,
+}
+
+merde::derive! {
+    impl (JsonSerialize, ValueDeserialize) for enum Emergency string_like {
+        "nopizza" => NoPizzaLeft,
+        "cuddles" => CuddlesRequired,
+        "smoothie" => SmoothieReady,
+    }
 }
