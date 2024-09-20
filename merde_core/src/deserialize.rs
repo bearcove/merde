@@ -229,6 +229,34 @@ impl<'s> ValueDeserialize<'s> for isize {
     }
 }
 
+impl<'s> ValueDeserialize<'s> for f32 {
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+        match value {
+            Some(Value::Float(f)) => Ok(*f as f32),
+            Some(Value::Int(i)) => Ok(*i as f32),
+            Some(v) => Err(MerdeError::MismatchedType {
+                expected: ValueType::Float,
+                found: v.value_type(),
+            }),
+            None => Err(MerdeError::MissingValue),
+        }
+    }
+}
+
+impl<'s> ValueDeserialize<'s> for f64 {
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+        match value {
+            Some(Value::Float(f)) => Ok(*f),
+            Some(Value::Int(i)) => Ok(*i as f64),
+            Some(v) => Err(MerdeError::MismatchedType {
+                expected: ValueType::Float,
+                found: v.value_type(),
+            }),
+            None => Err(MerdeError::MissingValue),
+        }
+    }
+}
+
 impl<'s> ValueDeserialize<'s> for bool {
     fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
         match value {

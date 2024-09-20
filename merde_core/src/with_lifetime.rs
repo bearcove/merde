@@ -59,10 +59,10 @@ impl_with_lifetime!(
     i8,
     bool,
     char,
-    f32,
-    f64,
     usize,
     isize,
+    f32,
+    f64,
 );
 
 impl<'s> WithLifetime<'s> for () {

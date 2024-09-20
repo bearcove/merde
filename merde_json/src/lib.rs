@@ -325,6 +325,18 @@ impl JsonSerialize for isize {
     }
 }
 
+impl JsonSerialize for f32 {
+    fn json_serialize(&self, serializer: &mut JsonSerializer) {
+        serializer.write_f64(*self as f64);
+    }
+}
+
+impl JsonSerialize for f64 {
+    fn json_serialize(&self, serializer: &mut JsonSerializer) {
+        serializer.write_f64(*self);
+    }
+}
+
 impl JsonSerialize for bool {
     fn json_serialize(&self, serializer: &mut JsonSerializer) {
         serializer.write_bool(*self);

@@ -49,7 +49,7 @@ macro_rules! impl_into_static_passthru {
 }
 
 impl_into_static_passthru!(
-    String, u128, u64, u32, u16, u8, i128, i64, i32, i16, i8, bool, char, f32, f64, usize, isize
+    String, u128, u64, u32, u16, u8, i128, i64, i32, i16, i8, bool, char, usize, isize, f32, f64
 );
 
 impl<T: IntoStatic> IntoStatic for Option<T> {
