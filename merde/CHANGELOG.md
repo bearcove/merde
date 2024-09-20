@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.1.0](https://github.com/bearcove/merde/compare/merde-v5.0.5...merde-v5.1.0) - 2024-09-20
+
+### Added
+
+- Add support for string-like enums
+
 ## [5.0.5](https://github.com/bearcove/merde/compare/merde-v5.0.4...merde-v5.0.5) - 2024-09-17
 
 ### Other

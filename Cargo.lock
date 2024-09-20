@@ -143,7 +143,7 @@ dependencies = [
 
 [[package]]
 name = "merde"
-version = "5.0.5"
+version = "5.1.0"
 dependencies = [
  "merde_core",
  "merde_json",
