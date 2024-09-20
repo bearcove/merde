@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.1.0](https://github.com/bearcove/merde/compare/merde_core-v5.0.5...merde_core-v5.1.0) - 2024-09-20
+
+### Added
+
+- Add JsonSerialize and ValueDeserialize impls for f32, f64
+
 ## [5.0.5](https://github.com/bearcove/merde/compare/merde_core-v5.0.4...merde_core-v5.0.5) - 2024-09-17
 
 ### Fixed
