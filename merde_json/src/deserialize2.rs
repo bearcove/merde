@@ -6,7 +6,6 @@ use merde_core::{
 
 use crate::{
     jiter_lite::{errors::JiterError, jiter::Jiter, parse::Peek},
-    parser::cowify,
     MerdeJsonError,
 };
 
@@ -193,16 +192,25 @@ impl<'s> Deserializer<'s> for JsonDeserializer<'s> {
     }
 }
 
+pub(crate) fn cowify<'j>(src: &'j [u8], s: &str) -> CowStr<'j> {
+    if src.as_ptr_range().contains(&s.as_ptr()) {
+        CowStr::Borrowed(unsafe {
+            std::str::from_utf8_unchecked(std::slice::from_raw_parts(s.as_ptr(), s.len()))
+        })
+    } else {
+        CowStr::Owned(s.into())
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use crate::deserialize2::cowify;
+
+    use super::JsonDeserializer;
+    use merde_core::{Array, CowStr, Deserialize, Deserializer, Event, EventType, Map, MerdeError};
     use std::{
         future::Future,
         task::{Context, Poll, RawWaker, RawWakerVTable, Waker},
-    };
-
-    use super::JsonDeserializer;
-    use merde_core::{
-        Array, Map, MerdeError, {Deserialize, Deserializer, Event, EventType},
     };
 
     #[derive(Debug, PartialEq)]
@@ -406,5 +414,16 @@ mod tests {
             }
             _ => panic!("returned poll pending for some reason?"),
         }
+    }
+
+    #[test]
+    fn test_cowify() {
+        let src = "That's a subset!";
+        let s = &src[4..8];
+        assert_eq!(cowify(src.as_bytes(), s), CowStr::Borrowed(s));
+
+        let src = "Not a subset";
+        let s = "indeed not";
+        assert_eq!(cowify(src.as_bytes(), s), CowStr::Owned(s.into()));
     }
 }
