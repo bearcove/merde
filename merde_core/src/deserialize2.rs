@@ -173,19 +173,7 @@ pub trait Deserializer<'s>: std::fmt::Debug {
     async fn t_starting_with<T: Deserializable<'s>>(
         &mut self,
         starter: Option<Event<'s>>,
-    ) -> Result<T, Self::Error<'s>> {
-        // TODO: when too much stack space is used, stash this,
-        // return Poll::Pending, to continue deserializing with
-        // a shallower stack.
-
-        // that's the whole trick — for now, we just recurse as usual
-
-        // if let Some(starter) = starter {
-        //     T::deserialize(&mut WithStarter(self, Some(starter))).await
-        // } else {
-        T::deserialize(self).await
-        // }
-    }
+    ) -> Result<T, Self::Error<'s>>;
 
     fn t_starting_with_boxed<'d, T: Deserializable<'s> + 'd>(
         &'d mut self,
@@ -195,27 +183,6 @@ pub trait Deserializer<'s>: std::fmt::Debug {
         's: 'd,
     {
         Box::pin(self.t_starting_with(starter))
-    }
-}
-
-#[derive(Debug)]
-struct WithStarter<'d, 's, D>(&'d mut D, Option<Event<'s>>)
-where
-    D: ?Sized;
-
-impl<'d, 's, D> Deserializer<'s> for WithStarter<'d, 's, D>
-where
-    D: Deserializer<'s> + ?Sized,
-{
-    type Error<'es> = D::Error<'es>;
-
-    fn next(&mut self) -> Result<Event<'s>, Self::Error<'s>> {
-        if let Some(ev) = self.1.take() {
-            self.1 = None;
-            Ok(ev)
-        } else {
-            self.0.next()
-        }
     }
 }
 
