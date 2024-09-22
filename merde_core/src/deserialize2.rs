@@ -213,6 +213,13 @@ pub trait Deserialize<'s>: Sized {
     async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
     where
         D: Deserializer<'s> + ?Sized;
+
+    fn from_option(value: Option<Self>, field_name: CowStr<'s>) -> Result<Self, MerdeError<'s>> {
+        match value {
+            Some(value) => Ok(value),
+            None => Err(MerdeError::MissingProperty(field_name)),
+        }
+    }
 }
 
 impl<'s> Deserialize<'s> for i64 {
@@ -393,6 +400,28 @@ impl<'s> Deserialize<'s> for Cow<'s, str> {
             CowStr::Borrowed(s) => Cow::Borrowed(s),
             CowStr::Owned(s) => Cow::Owned(s.to_string()),
         })
+    }
+}
+
+impl<'s, T: Deserialize<'s>> Deserialize<'s> for Option<T> {
+    async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
+    where
+        D: Deserializer<'s> + ?Sized,
+    {
+        match de.next()? {
+            Event::Null => Ok(None),
+            ev => {
+                let value = de.t_starting_with(Some(ev)).await?;
+                Ok(Some(value))
+            }
+        }
+    }
+
+    fn from_option(value: Option<Self>, _field_name: CowStr<'s>) -> Result<Self, MerdeError<'s>> {
+        match value {
+            Some(value) => Ok(value),
+            None => Ok(None),
+        }
     }
 }
 
