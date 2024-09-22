@@ -410,6 +410,88 @@ impl<'s, T: Deserialize<'s>> Deserialize<'s> for Vec<T> {
     }
 }
 
+impl<'s, K, V> Deserialize<'s> for std::collections::HashMap<K, V>
+where
+    K: Deserialize<'s> + Eq + std::hash::Hash,
+    V: Deserialize<'s>,
+{
+    async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
+    where
+        D: Deserializer<'s> + ?Sized,
+    {
+        de.next()?.into_map_start()?;
+        let mut map = std::collections::HashMap::new();
+
+        loop {
+            match de.next()? {
+                Event::MapEnd => break,
+                ev => {
+                    let key: K = de.t_starting_with(Some(ev)).await?;
+                    let value: V = de.t().await?;
+                    map.insert(key, value);
+                }
+            }
+        }
+
+        Ok(map)
+    }
+}
+
+impl<'s> Deserialize<'s> for Map<'s> {
+    async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
+    where
+        D: Deserializer<'s> + ?Sized,
+    {
+        de.next()?.into_map_start()?;
+        let mut map = Map::new();
+
+        loop {
+            match de.next()? {
+                Event::MapEnd => break,
+                Event::Str(key) => {
+                    let value: Value<'s> = de.t().await?;
+                    map.insert(key, value);
+                }
+                ev => {
+                    return Err(MerdeError::UnexpectedEvent {
+                        got: EventType::from(&ev),
+                        expected: &[EventType::Str, EventType::MapEnd],
+                    }
+                    .into())
+                }
+            }
+        }
+
+        Ok(map)
+    }
+}
+
+impl<'s> Deserialize<'s> for Array<'s> {
+    async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
+    where
+        D: Deserializer<'s> + ?Sized,
+    {
+        let array_start = de.next()?.into_array_start()?;
+        let mut array = if let Some(size) = array_start.size_hint {
+            Array::with_capacity(size)
+        } else {
+            Array::new()
+        };
+
+        loop {
+            match de.next()? {
+                Event::ArrayEnd => break,
+                ev => {
+                    let item: Value<'s> = de.t_starting_with(Some(ev)).await?;
+                    array.push(item);
+                }
+            }
+        }
+
+        Ok(array)
+    }
+}
+
 impl<'s> Deserialize<'s> for Value<'s> {
     async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
     where
@@ -468,5 +550,181 @@ impl<'s> Deserialize<'s> for Value<'s> {
             }
             .into()),
         }
+    }
+}
+
+impl<'s, T1> Deserialize<'s> for (T1,)
+where
+    T1: Deserialize<'s>,
+{
+    async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
+    where
+        D: Deserializer<'s> + ?Sized,
+    {
+        de.next()?.into_array_start()?;
+        let t1 = de.t().await?;
+        de.next()?.into_array_end()?;
+        Ok((t1,))
+    }
+}
+
+impl<'s, T1, T2> Deserialize<'s> for (T1, T2)
+where
+    T1: Deserialize<'s>,
+    T2: Deserialize<'s>,
+{
+    async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
+    where
+        D: Deserializer<'s> + ?Sized,
+    {
+        de.next()?.into_array_start()?;
+        let t1 = de.t().await?;
+        let t2 = de.t().await?;
+        de.next()?.into_array_end()?;
+        Ok((t1, t2))
+    }
+}
+
+impl<'s, T1, T2, T3> Deserialize<'s> for (T1, T2, T3)
+where
+    T1: Deserialize<'s>,
+    T2: Deserialize<'s>,
+    T3: Deserialize<'s>,
+{
+    async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
+    where
+        D: Deserializer<'s> + ?Sized,
+    {
+        de.next()?.into_array_start()?;
+        let t1 = de.t().await?;
+        let t2 = de.t().await?;
+        let t3 = de.t().await?;
+        de.next()?.into_array_end()?;
+        Ok((t1, t2, t3))
+    }
+}
+
+impl<'s, T1, T2, T3, T4> Deserialize<'s> for (T1, T2, T3, T4)
+where
+    T1: Deserialize<'s>,
+    T2: Deserialize<'s>,
+    T3: Deserialize<'s>,
+    T4: Deserialize<'s>,
+{
+    async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
+    where
+        D: Deserializer<'s> + ?Sized,
+    {
+        de.next()?.into_array_start()?;
+        let t1 = de.t().await?;
+        let t2 = de.t().await?;
+        let t3 = de.t().await?;
+        let t4 = de.t().await?;
+        de.next()?.into_array_end()?;
+        Ok((t1, t2, t3, t4))
+    }
+}
+
+impl<'s, T1, T2, T3, T4, T5> Deserialize<'s> for (T1, T2, T3, T4, T5)
+where
+    T1: Deserialize<'s>,
+    T2: Deserialize<'s>,
+    T3: Deserialize<'s>,
+    T4: Deserialize<'s>,
+    T5: Deserialize<'s>,
+{
+    async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
+    where
+        D: Deserializer<'s> + ?Sized,
+    {
+        de.next()?.into_array_start()?;
+        let t1 = de.t().await?;
+        let t2 = de.t().await?;
+        let t3 = de.t().await?;
+        let t4 = de.t().await?;
+        let t5 = de.t().await?;
+        de.next()?.into_array_end()?;
+        Ok((t1, t2, t3, t4, t5))
+    }
+}
+
+impl<'s, T1, T2, T3, T4, T5, T6> Deserialize<'s> for (T1, T2, T3, T4, T5, T6)
+where
+    T1: Deserialize<'s>,
+    T2: Deserialize<'s>,
+    T3: Deserialize<'s>,
+    T4: Deserialize<'s>,
+    T5: Deserialize<'s>,
+    T6: Deserialize<'s>,
+{
+    async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
+    where
+        D: Deserializer<'s> + ?Sized,
+    {
+        de.next()?.into_array_start()?;
+        let t1 = de.t().await?;
+        let t2 = de.t().await?;
+        let t3 = de.t().await?;
+        let t4 = de.t().await?;
+        let t5 = de.t().await?;
+        let t6 = de.t().await?;
+        de.next()?.into_array_end()?;
+        Ok((t1, t2, t3, t4, t5, t6))
+    }
+}
+
+impl<'s, T1, T2, T3, T4, T5, T6, T7> Deserialize<'s> for (T1, T2, T3, T4, T5, T6, T7)
+where
+    T1: Deserialize<'s>,
+    T2: Deserialize<'s>,
+    T3: Deserialize<'s>,
+    T4: Deserialize<'s>,
+    T5: Deserialize<'s>,
+    T6: Deserialize<'s>,
+    T7: Deserialize<'s>,
+{
+    async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
+    where
+        D: Deserializer<'s> + ?Sized,
+    {
+        de.next()?.into_array_start()?;
+        let t1 = de.t().await?;
+        let t2 = de.t().await?;
+        let t3 = de.t().await?;
+        let t4 = de.t().await?;
+        let t5 = de.t().await?;
+        let t6 = de.t().await?;
+        let t7 = de.t().await?;
+        de.next()?.into_array_end()?;
+        Ok((t1, t2, t3, t4, t5, t6, t7))
+    }
+}
+
+impl<'s, T1, T2, T3, T4, T5, T6, T7, T8> Deserialize<'s> for (T1, T2, T3, T4, T5, T6, T7, T8)
+where
+    T1: Deserialize<'s>,
+    T2: Deserialize<'s>,
+    T3: Deserialize<'s>,
+    T4: Deserialize<'s>,
+    T5: Deserialize<'s>,
+    T6: Deserialize<'s>,
+    T7: Deserialize<'s>,
+    T8: Deserialize<'s>,
+{
+    async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
+    where
+        D: Deserializer<'s> + ?Sized,
+    {
+        de.next()?.into_array_start()?;
+        let t1 = de.t().await?;
+        let t2 = de.t().await?;
+        let t3 = de.t().await?;
+        let t4 = de.t().await?;
+        let t5 = de.t().await?;
+        let t6 = de.t().await?;
+        let t7 = de.t().await?;
+        let t8 = de.t().await?;
+        de.next()?.into_array_end()?;
+        Ok((t1, t2, t3, t4, t5, t6, t7, t8))
     }
 }

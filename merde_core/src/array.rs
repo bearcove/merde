@@ -12,6 +12,10 @@ impl<'s> Array<'s> {
         Array(Vec::new())
     }
 
+    pub fn with_capacity(capacity: usize) -> Self {
+        Array(Vec::with_capacity(capacity))
+    }
+
     pub fn into_inner(self) -> Vec<Value<'s>> {
         self.0
     }
