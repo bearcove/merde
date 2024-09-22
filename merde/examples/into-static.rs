@@ -11,7 +11,7 @@ struct Address<'s> {
 }
 
 merde::derive! {
-    impl (ValueDeserialize) for struct Address<'s> {
+    impl (Deserialize) for struct Address<'s> {
         street,
         city,
         state,
@@ -28,7 +28,7 @@ struct Person<'s> {
 }
 
 merde::derive! {
-    impl (ValueDeserialize) for struct Person<'s> { name, age, address }
+    impl (Deserialize) for struct Person<'s> { name, age, address }
 }
 
 fn get_person() -> Person<'static> {
@@ -45,9 +45,7 @@ fn get_person() -> Person<'static> {
     }
     "#;
 
-    merde_json::from_str_via_value::<Person>(input)
-        .unwrap()
-        .into_static()
+    merde_json::from_str::<Person>(input).unwrap().into_static()
 }
 
 fn main() {
