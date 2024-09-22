@@ -1,7 +1,7 @@
 //! An experimental JSON deserializer implementation
 
 use merde_core::{
-    deserialize2::{ArrayStart, Deserializable, Deserializer, Event},
+    deserialize2::{ArrayStart, Deserialize, Deserializer, Event},
     CowStr,
 };
 
@@ -174,7 +174,7 @@ impl<'s> Deserializer<'s> for JsonDeserializer<'s> {
         Ok(ev)
     }
 
-    async fn t_starting_with<T: Deserializable<'s>>(
+    async fn t_starting_with<T: Deserialize<'s>>(
         &mut self,
         starter: Option<Event<'s>>,
     ) -> Result<T, Self::Error<'s>> {
@@ -203,7 +203,7 @@ mod tests {
 
     use super::JsonDeserializer;
     use merde_core::{
-        deserialize2::{Deserializable, Deserializer, Event},
+        deserialize2::{Deserialize, Deserializer, Event},
         Array, Map, MerdeError, ValueType,
     };
 
@@ -213,7 +213,7 @@ mod tests {
         pub kind: bool,
     }
 
-    impl<'s> Deserializable<'s> for Sample {
+    impl<'s> Deserialize<'s> for Sample {
         async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
         where
             D: Deserializer<'s> + ?Sized,
@@ -326,7 +326,7 @@ mod tests {
                 Ok(ev)
             }
 
-            async fn t_starting_with<T: Deserializable<'s>>(
+            async fn t_starting_with<T: Deserialize<'s>>(
                 &mut self,
                 starter: Option<Event<'s>>,
             ) -> Result<T, Self::Error<'s>> {
