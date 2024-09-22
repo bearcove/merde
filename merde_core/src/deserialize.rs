@@ -318,7 +318,10 @@ where
             Some(Value::Map(obj)) => {
                 let mut map = std::collections::HashMap::new();
                 for (key, val) in obj.iter() {
-                    let parsed_key = K::from_str(key).map_err(|_| MerdeError::InvalidKey)?;
+                    let parsed_key = K::from_str(key).map_err(|_| MerdeError::InvalidKey {
+                        key: key.clone().into_static(),
+                        type_name: std::any::type_name::<K>(),
+                    })?;
                     let parsed_value = V::from_value_ref(Some(val))?;
                     map.insert(parsed_key, parsed_value);
                 }
