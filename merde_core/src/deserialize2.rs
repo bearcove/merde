@@ -4,7 +4,7 @@ use std::{
     task::{Context, Poll, RawWaker, RawWakerVTable, Waker},
 };
 
-use crate::{Array, CowStr, Map, MerdeError, Value, ValueType};
+use crate::{Array, CowStr, Map, MerdeError, Value};
 
 #[derive(Debug)]
 pub enum Event<'s> {
@@ -57,9 +57,9 @@ impl<'s> Event<'s> {
     pub fn into_i64(self) -> Result<i64, MerdeError<'static>> {
         match self {
             Event::Int(i) => Ok(i),
-            _ => Err(MerdeError::MismatchedType {
-                expected: ValueType::Int,
-                found: ValueType::from(&self),
+            _ => Err(MerdeError::UnexpectedEvent {
+                got: EventType::from(&self),
+                expected: &[EventType::Int],
             }),
         }
     }
@@ -67,9 +67,9 @@ impl<'s> Event<'s> {
     pub fn into_f64(self) -> Result<f64, MerdeError<'static>> {
         match self {
             Event::Float(f) => Ok(f),
-            _ => Err(MerdeError::MismatchedType {
-                expected: ValueType::Float,
-                found: ValueType::from(&self),
+            _ => Err(MerdeError::UnexpectedEvent {
+                got: EventType::from(&self),
+                expected: &[EventType::Float],
             }),
         }
     }
@@ -77,9 +77,9 @@ impl<'s> Event<'s> {
     pub fn into_str(self) -> Result<CowStr<'s>, MerdeError<'static>> {
         match self {
             Event::Str(s) => Ok(s),
-            _ => Err(MerdeError::MismatchedType {
-                expected: ValueType::String,
-                found: ValueType::from(&self),
+            _ => Err(MerdeError::UnexpectedEvent {
+                got: EventType::from(&self),
+                expected: &[EventType::Str],
             }),
         }
     }
@@ -87,9 +87,9 @@ impl<'s> Event<'s> {
     pub fn into_bool(self) -> Result<bool, MerdeError<'static>> {
         match self {
             Event::Bool(b) => Ok(b),
-            _ => Err(MerdeError::MismatchedType {
-                expected: ValueType::Bool,
-                found: ValueType::from(&self),
+            _ => Err(MerdeError::UnexpectedEvent {
+                got: EventType::from(&self),
+                expected: &[EventType::Bool],
             }),
         }
     }
@@ -97,9 +97,9 @@ impl<'s> Event<'s> {
     pub fn into_null(self) -> Result<(), MerdeError<'static>> {
         match self {
             Event::Null => Ok(()),
-            _ => Err(MerdeError::MismatchedType {
-                expected: ValueType::Null,
-                found: ValueType::from(&self),
+            _ => Err(MerdeError::UnexpectedEvent {
+                got: EventType::from(&self),
+                expected: &[EventType::Null],
             }),
         }
     }
@@ -107,9 +107,9 @@ impl<'s> Event<'s> {
     pub fn into_map_start(self) -> Result<(), MerdeError<'static>> {
         match self {
             Event::MapStart => Ok(()),
-            _ => Err(MerdeError::MismatchedType {
-                expected: ValueType::Map,
-                found: ValueType::from(&self),
+            _ => Err(MerdeError::UnexpectedEvent {
+                got: EventType::from(&self),
+                expected: &[EventType::MapStart],
             }),
         }
     }
@@ -117,9 +117,9 @@ impl<'s> Event<'s> {
     pub fn into_map_end(self) -> Result<(), MerdeError<'static>> {
         match self {
             Event::MapEnd => Ok(()),
-            _ => Err(MerdeError::MismatchedType {
-                expected: ValueType::Map,
-                found: ValueType::from(&self),
+            _ => Err(MerdeError::UnexpectedEvent {
+                got: EventType::from(&self),
+                expected: &[EventType::MapEnd],
             }),
         }
     }
@@ -127,9 +127,9 @@ impl<'s> Event<'s> {
     pub fn into_array_start(self) -> Result<ArrayStart, MerdeError<'static>> {
         match self {
             Event::ArrayStart(array_start) => Ok(array_start),
-            _ => Err(MerdeError::MismatchedType {
-                expected: ValueType::Array,
-                found: ValueType::from(&self),
+            _ => Err(MerdeError::UnexpectedEvent {
+                got: EventType::from(&self),
+                expected: &[EventType::ArrayStart],
             }),
         }
     }
@@ -137,25 +137,10 @@ impl<'s> Event<'s> {
     pub fn into_array_end(self) -> Result<(), MerdeError<'static>> {
         match self {
             Event::ArrayEnd => Ok(()),
-            _ => Err(MerdeError::MismatchedType {
-                expected: ValueType::Array,
-                found: ValueType::from(&self),
+            _ => Err(MerdeError::UnexpectedEvent {
+                got: EventType::from(&self),
+                expected: &[EventType::ArrayEnd],
             }),
-        }
-    }
-}
-
-impl From<&Event<'_>> for ValueType {
-    fn from(value: &Event<'_>) -> Self {
-        match value {
-            Event::Int(_) => ValueType::Int,
-            Event::Float(_) => ValueType::Float,
-            Event::Str(_) => ValueType::String,
-            Event::Bool(_) => ValueType::Bool,
-            Event::Null => ValueType::Null,
-            Event::MapStart => ValueType::Map,
-            Event::ArrayStart { .. } => ValueType::Array,
-            _ => panic!("Invalid event for ValueType conversion"),
         }
     }
 }
@@ -226,9 +211,9 @@ impl<'s> Deserialize<'s> for i64 {
             Event::Int(i) => i,
             Event::Float(f) => f as _,
             ev => {
-                return Err(MerdeError::MismatchedType {
-                    expected: ValueType::Int,
-                    found: ValueType::from(&ev),
+                return Err(MerdeError::UnexpectedEvent {
+                    got: EventType::from(&ev),
+                    expected: &[EventType::Int, EventType::Float],
                 }
                 .into())
             }
@@ -345,9 +330,9 @@ impl<'s> Deserialize<'s> for f64 {
             Event::Float(f) => f,
             Event::Int(i) => i as f64,
             ev => {
-                return Err(MerdeError::MismatchedType {
-                    expected: ValueType::Float,
-                    found: ValueType::from(&ev),
+                return Err(MerdeError::UnexpectedEvent {
+                    got: EventType::from(&ev),
+                    expected: &[EventType::Float, EventType::Int],
                 }
                 .into())
             }
