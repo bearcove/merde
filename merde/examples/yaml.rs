@@ -11,7 +11,7 @@ struct ComplexStruct {
 }
 
 merde::derive! {
-    impl (Deserialize, JsonSerialize) for struct ComplexStruct {
+    impl (Deserialize) for struct ComplexStruct {
         name,
         age,
         hobbies,
