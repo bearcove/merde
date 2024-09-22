@@ -203,8 +203,8 @@ mod tests {
 
     use super::JsonDeserializer;
     use merde_core::{
-        deserialize2::{Deserialize, Deserializer, Event},
-        Array, Map, MerdeError, ValueType,
+        deserialize2::{Deserialize, Deserializer, Event, EventType},
+        Array, Map, MerdeError,
     };
 
     #[derive(Debug, PartialEq)]
@@ -241,9 +241,9 @@ mod tests {
                         break;
                     }
                     ev => {
-                        return Err(MerdeError::MismatchedType {
-                            expected: ValueType::String,
-                            found: ValueType::from(&ev),
+                        return Err(MerdeError::UnexpectedEvent {
+                            got: EventType::from(&ev),
+                            expected: &[EventType::Str],
                         }
                         .into())
                     }
