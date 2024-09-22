@@ -1,12 +1,10 @@
 //! An experimental JSON deserializer implementation
 
-use merde_core::{
-    deserialize2::{ArrayStart, Deserializable, Deserializer, Event},
-    CowStr, IntoStatic,
-};
+use merde_core::deserialize2::{ArrayStart, Deserializable, Deserializer, Event};
 
 use crate::{
     jiter_lite::{errors::JiterError, jiter::Jiter, parse::Peek},
+    parser::cowify,
     MerdeJsonError,
 };
 
@@ -46,9 +44,9 @@ fn jiter_error(source: &str, err: JiterError) -> MerdeJsonError<'_> {
 }
 
 impl<'s> Deserializer<'s> for JsonDeserializer<'s> {
-    type Error = MerdeJsonError<'s>;
+    type Error<'es> = MerdeJsonError<'es>;
 
-    fn pop(&mut self) -> Result<Event, Self::Error> {
+    fn pop(&mut self) -> Result<Event<'s>, Self::Error<'s>> {
         if let Some(ev) = self.queue.take() {
             return Ok(ev);
         }
@@ -61,7 +59,8 @@ impl<'s> Deserializer<'s> for JsonDeserializer<'s> {
             {
                 Some(key) => {
                     *self.stack.last_mut().unwrap() = StackItem::ObjectValue;
-                    return Ok(Event::Str(key.into()));
+                    let key = cowify(self.source.as_bytes(), key);
+                    return Ok(Event::Str(key));
                 }
                 None => {
                     // end of the object/map!
@@ -116,7 +115,8 @@ impl<'s> Deserializer<'s> for JsonDeserializer<'s> {
                 .jiter
                 .known_str()
                 .map_err(|err| jiter_error(self.source, err))?;
-            Event::Str(s.into())
+            let s = cowify(self.source.as_bytes(), s);
+            Event::Str(s)
         } else if peek == Peek::Array {
             self.jiter
                 .known_array()
@@ -130,7 +130,8 @@ impl<'s> Deserializer<'s> for JsonDeserializer<'s> {
                 .map_err(|err| jiter_error(self.source, err))?;
             self.stack.push(StackItem::ObjectKey);
             if let Some(key) = key {
-                self.queue = Some(Event::Str(CowStr::from(key).into_static()))
+                let key = cowify(self.source.as_bytes(), key);
+                self.queue = Some(Event::Str(key))
             }
             Event::MapStart
         } else {
@@ -139,7 +140,7 @@ impl<'s> Deserializer<'s> for JsonDeserializer<'s> {
         Ok(ev)
     }
 
-    async fn t<T: Deserializable>(&mut self) -> Result<T, Self::Error> {
+    async fn t<T: Deserializable>(&mut self) -> Result<T, Self::Error<'s>> {
         todo!()
     }
 }
@@ -164,7 +165,7 @@ mod tests {
     }
 
     impl Deserializable for Sample {
-        async fn deserialize<'s, D>(de: &mut D) -> Result<Self, D::Error>
+        async fn deserialize<'s, D>(de: &mut D) -> Result<Self, D::Error<'s>>
         where
             D: Deserializer<'s>,
         {

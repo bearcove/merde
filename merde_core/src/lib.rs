@@ -36,7 +36,7 @@ where
 }
 
 /// Interpret a [`Value`] as an instance of type `T`.
-pub fn from_value<'s, T>(value: Value<'s>) -> Result<T, MerdeError>
+pub fn from_value<'s, T>(value: Value<'s>) -> Result<T, MerdeError<'s>>
 where
     T: ValueDeserialize<'s>,
 {
