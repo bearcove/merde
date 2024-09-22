@@ -2,7 +2,7 @@
 // Error Handling and Field Type
 // -------------------------------------------------------------------------
 
-use crate::{CowStr, IntoStatic, Value};
+use crate::{deserialize2::EventType, CowStr, IntoStatic, Value};
 
 /// A content-less variant of the [`Value`] enum, used for reporting errors, see [`MerdeError::MismatchedType`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -79,6 +79,11 @@ pub enum MerdeError<'s> {
     /// While parsing a datetime, we got an error
     InvalidDateTimeValue,
 
+    UnexpectedEvent {
+        got: EventType,
+        expected: &'static [EventType],
+    },
+
     /// An I/O error occurred.
     Io(std::io::Error),
 }
@@ -104,6 +109,9 @@ impl IntoStatic for MerdeError<'_> {
             },
             MerdeError::InvalidDateTimeValue => MerdeError::InvalidDateTimeValue,
             MerdeError::Io(e) => MerdeError::Io(e),
+            MerdeError::UnexpectedEvent { got, expected } => {
+                MerdeError::UnexpectedEvent { got, expected }
+            }
         }
     }
 }
@@ -151,6 +159,13 @@ impl std::fmt::Display for MerdeError<'_> {
             }
             MerdeError::Io(e) => {
                 write!(f, "I/O error: {}", e)
+            }
+            MerdeError::UnexpectedEvent { got, expected } => {
+                write!(
+                    f,
+                    "Unexpected event: got {:?}, expected one of {:?}",
+                    got, expected
+                )
             }
         }
     }
