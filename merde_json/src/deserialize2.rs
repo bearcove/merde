@@ -179,7 +179,7 @@ mod tests {
     use super::JsonDeserializer;
     use merde_core::{
         deserialize2::{Deserializable, Deserializer, Event},
-        MerdeError, ValueType,
+        Array, Map, MerdeError, ValueType,
     };
 
     #[derive(Debug, PartialEq)]
@@ -188,10 +188,10 @@ mod tests {
         pub kind: bool,
     }
 
-    impl Deserializable for Sample {
-        async fn deserialize<'s, D>(de: &mut D) -> Result<Self, D::Error<'s>>
+    impl<'s> Deserializable<'s> for Sample {
+        async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
         where
-            D: Deserializer<'s>,
+            D: Deserializer<'s> + ?Sized,
         {
             let mut height: Option<i64> = None;
             let mut kind: Option<bool> = None;
@@ -324,6 +324,40 @@ mod tests {
                             kind: true
                         }
                     ]
+                );
+            }
+            _ => panic!("returned poll pending for some reason?"),
+        }
+
+        let mut deser = JsonDeserializer::new(input);
+        let fut = deser.t::<merde_core::Value>();
+        let fut = std::pin::pin!(fut);
+        let vtable = RawWakerVTable::new(|_| todo!(), |_| {}, |_| {}, |_| {});
+        let vtable = Box::leak(Box::new(vtable));
+        let w = unsafe { Waker::from_raw(RawWaker::new(std::ptr::null(), vtable)) };
+        let mut cx = Context::from_waker(&w);
+        match fut.poll(&mut cx) {
+            Poll::Ready(res) => {
+                let value = res.unwrap();
+                assert_eq!(
+                    value,
+                    Array::new()
+                        .with(
+                            Map::new()
+                                .with("height", merde_core::Value::Int(100))
+                                .with("kind", merde_core::Value::Bool(true))
+                        )
+                        .with(
+                            Map::new()
+                                .with("height", merde_core::Value::Int(200))
+                                .with("kind", merde_core::Value::Bool(false))
+                        )
+                        .with(
+                            Map::new()
+                                .with("height", merde_core::Value::Int(150))
+                                .with("kind", merde_core::Value::Bool(true))
+                        )
+                        .into()
                 );
             }
             _ => panic!("returned poll pending for some reason?"),
