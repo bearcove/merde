@@ -5,7 +5,7 @@ use std::{
     task::{Context, Poll, RawWaker, RawWakerVTable, Waker},
 };
 
-use crate::{Array, CowStr, Map, MerdeError, Value};
+use crate::{Array, CowStr, IntoStatic, Map, MerdeError, Value, WithLifetime};
 
 #[derive(Debug)]
 pub enum Event<'s> {
@@ -193,6 +193,18 @@ pub trait Deserializer<'s>: std::fmt::Debug {
             Poll::Ready(res) => res,
             _ => unreachable!("nothing can return poll pending yet"),
         }
+    }
+
+    /// Deserialize a value of type `T` and return its static variant
+    /// e.g. (CowStr<'static>, etc.)
+    fn deserialize_owned<T>(&mut self) -> Result<T, Self::Error<'s>>
+    where
+        T: 'static,
+        T: WithLifetime<'s>,
+        <T as WithLifetime<'s>>::Lifetimed: Deserialize<'s> + IntoStatic<Output = T>,
+    {
+        self.deserialize()
+            .map(|t: <T as WithLifetime<'s>>::Lifetimed| t.into_static())
     }
 }
 

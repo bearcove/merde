@@ -1,12 +1,12 @@
 #![deny(missing_docs)]
 #![doc = include_str!("../README.md")]
 
-pub mod deserialize2;
+mod deserialize2;
+pub use deserialize2::JsonDeserializer;
 
 mod jiter_lite;
 mod parser;
 
-use deserialize2::JsonDeserializer;
 use jiter_lite::errors::JiterError;
 use merde_core::{
     Array, CowStr, Deserialize, Deserializer, IntoStatic, Map, MerdeError, OwnedValueDeserialize,
