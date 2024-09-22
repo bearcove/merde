@@ -18,6 +18,203 @@ pub use merde_core::*;
 #[doc(hidden)]
 #[cfg(feature = "deserialize")]
 #[macro_export]
+macro_rules! impl_deserialize {
+    // owned tuple struct (transparent)
+    (struct $struct_name:ident transparent) => {
+        #[automatically_derived]
+        impl<'s> $crate::Deserialize<'s> for $struct_name {
+            #[inline(always)]
+            async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
+            where
+                D: Deserializer<'s> + ?Sized {
+                Ok(Self(de.t().await?))
+            }
+        }
+    };
+
+    // lifetimed tuple struct (transparent)
+    (struct $struct_name:ident <$s:lifetime> transparent) => {
+        #[automatically_derived]
+        impl<$s> $crate::Deserialize<$s> for $struct_name<$s> {
+            #[inline(always)]
+            async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<$s>>
+            where
+                D: Deserializer<'s> + ?Sized {
+                Ok(Self(de.t().await?))
+            }
+        }
+    };
+
+    // owned struct
+    (struct $struct_name:ident { $($field:ident),* }) => {
+        #[automatically_derived]
+        impl<'s> $crate::Deserialize<'s> for $struct_name {
+            #[inline(always)]
+            async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
+            where
+                D: $crate::Deserializer<'s> + ?Sized {
+
+                #![allow(unreachable_code)]
+
+                de.next()?.into_map_start()?;
+
+                $(
+                    let mut $field = $crate::none_of(|| (todo!() as $struct_name).$field);
+                )+
+
+                loop {
+                    match de.next()? {
+                        $crate::Event::MapEnd => break,
+                        $crate::Event::Str(key) => match key.as_ref() {
+                            $(stringify!($field) => {
+                                $field = Some(de.t().await?);
+                            })*
+                            _ => {
+                                return Err($crate::MerdeError::UnknownProperty(key).into());
+                            }
+                        }
+                        ev => {
+                            return Err($crate::MerdeError::UnexpectedEvent {
+                                got: $crate::EventType::from(&ev),
+                                expected: &[$crate::EventType::Str, $crate::EventType::MapEnd],
+                            }
+                            .into())
+                        }
+                    }
+                }
+
+                Ok($struct_name {
+                    $($field: $field.ok_or($crate::MerdeError::MissingProperty(stringify!($field).into()))?,)+
+                })
+            }
+        }
+    };
+
+    // lifetimed struct
+    (struct $struct_name:ident <$s:lifetime> { $($field:ident),* }) => {
+        #[automatically_derived]
+        impl<$s> $crate::Deserialize<$s> for $struct_name<$s> {
+            #[inline(always)]
+            async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<$s>>
+            where
+                D: $crate::Deserializer<$s> + ?Sized {
+
+                #![allow(unreachable_code)]
+
+                de.next()?.into_map_start()?;
+
+                $(
+                    let mut $field = $crate::none_of(|| (todo!() as $struct_name).$field);
+                )+
+
+                loop {
+                    match de.next()? {
+                        $crate::Event::MapEnd => break,
+                        $crate::Event::Str(key) => match key.as_ref() {
+                            $(stringify!($field) => {
+                                $field = Some(de.t().await?);
+                            })*
+                            _ => {
+                                return Err($crate::MerdeError::UnknownProperty(key).into());
+                            }
+                        }
+                        ev => {
+                            return Err($crate::MerdeError::UnexpectedEvent {
+                                got: $crate::EventType::from(&ev),
+                                expected: &[$crate::EventType::Str, $crate::EventType::MapEnd],
+                            }
+                            .into())
+                        }
+                    }
+                }
+
+                Ok($struct_name {
+                    $($field: $field.ok_or($crate::MerdeError::MissingProperty(stringify!($field).into()))?,)+
+                })
+            }
+        }
+    };
+
+    // owned enum (externally tagged)
+    (enum $enum_name:ident externally_tagged {
+        $($variant_str:literal => $variant:ident),+ $(,)?
+    }) => {
+        #[automatically_derived]
+        impl<'s> $crate::Deserialize<'s> for $enum_name {
+            async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
+            where
+                D: $crate::Deserializer<'s> + ?Sized,
+            {
+                #[allow(unused_imports)]
+                use $crate::MerdeError;
+
+                de.next()?.into_map_start()?;
+                let key = de.next()?.into_str()?;
+                match key.as_ref() {
+                    $($variant_str => {
+                        let value = de.t().await?;
+                        de.next()?.into_map_end()?;
+                        Ok($enum_name::$variant(value))
+                    },)*
+                    _ => Err(MerdeError::UnknownProperty(key).into()),
+                }
+            }
+        }
+    };
+
+    // lifetimed enum (externally tagged)
+    (enum $enum_name:ident <$lifetime:lifetime> externally_tagged {
+        $($variant_str:literal => $variant:ident),+ $(,)?
+    }) => {
+        #[automatically_derived]
+        impl<$lifetime> $crate::Deserialize<$lifetime> for $enum_name<$lifetime> {
+            async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<$lifetime>>
+            where
+                D: $crate::Deserializer<$lifetime> + ?Sized,
+            {
+                #[allow(unused_imports)]
+                use $crate::MerdeError;
+
+                de.next()?.into_map_start()?;
+                let key = de.next()?.into_str()?;
+                match key.as_ref() {
+                    $($variant_str => {
+                        let value = de.t().await?;
+                        de.next()?.into_map_end()?;
+                        Ok($enum_name::$variant(value))
+                    },)*
+                    _ => Err(MerdeError::UnknownProperty(key).into()),
+                }
+            }
+        }
+    };
+
+    // owned enum (externally tagged, string-like)
+    (enum $enum_name:ident string_like {
+        $($variant_str:literal => $variant:ident),+ $(,)?
+    }) => {
+        #[automatically_derived]
+        impl<'s> $crate::Deserialize<'s> for $enum_name {
+            async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
+            where
+                D: $crate::Deserializer<'s> + ?Sized,
+            {
+                #[allow(unused_imports)]
+                use $crate::MerdeError;
+
+                let s = de.next()?.into_str()?;
+                match s.as_ref() {
+                    $($variant_str => Ok($enum_name::$variant),)*
+                    _ => Err(MerdeError::UnknownProperty(s).into()),
+                }
+            }
+        }
+    };
+}
+
+#[doc(hidden)]
+#[cfg(feature = "deserialize")]
+#[macro_export]
 macro_rules! impl_value_deserialize {
     // owned tuple struct (transparent)
     (struct $struct_name:ident transparent) => {
@@ -673,6 +870,49 @@ macro_rules! impl_trait {
         $crate::impl_into_static!(struct $struct_name <$lifetime> transparent);
         $crate::impl_with_lifetime!(struct $struct_name <$lifetime> transparent);
     };
+
+    //------------------------------------------------------------------------------------
+
+    // owned struct
+    (@impl Deserialize, struct $struct_name:ident { $($field:ident),+ }) => {
+        $crate::impl_deserialize!(struct $struct_name { $($field),+ });
+    };
+    // lifetimed struct
+    (@impl Deserialize, struct $struct_name:ident <$lifetime:lifetime> { $($field:ident),+ }) => {
+        $crate::impl_deserialize!(struct $struct_name <$lifetime> { $($field),+ });
+    };
+    // owned enum (externally tagged)
+    (@impl Deserialize, enum $enum_name:ident externally_tagged {
+        $($variant_str:literal => $variant:ident),+ $(,)?
+    }) => {
+        $crate::impl_deserialize!(enum $enum_name externally_tagged {
+            $($variant_str => $variant),+
+        });
+    };
+    // lifetimed enum (externally tagged)
+    (@impl Deserialize, enum $enum_name:ident <$lifetime:lifetime> externally_tagged {
+        $($variant_str:literal => $variant:ident),+ $(,)?
+    }) => {
+        $crate::impl_deserialize!(enum $enum_name <$lifetime> externally_tagged {
+            $($variant_str => $variant),+
+        });
+    };
+    // owned enum (string-like)
+    (@impl Deserialize, enum $enum_name:ident string_like {
+        $($variant_str:literal => $variant:ident),+ $(,)?
+    }) => {
+        $crate::impl_deserialize!(enum $enum_name string_like {
+            $($variant_str => $variant),+
+        });
+    };
+    // owned tuple struct (transparent)
+    (@impl Deserialize, struct $struct_name:ident transparent) => {
+        $crate::impl_deserialize!(struct $struct_name transparent);
+    };
+    // lifetimed tuple struct (transparent)
+    (@impl Deserialize, struct $struct_name:ident <$lifetime:lifetime> transparent) => {
+        $crate::impl_deserialize!(struct $struct_name <$lifetime> transparent);
+    };
 }
 
 /// Derives the specified traits for a struct.
@@ -872,6 +1112,14 @@ macro_rules! derive {
         $crate::impl_trait!(@impl $trait, enum $enum_name string_like $variants);
     };
     (@step1 { } enum $enum_name:ident string_like $variants:tt) => {};
+}
+
+/// Returns an `Option<T>` from a closure that returns a `T` (which
+/// is never called) — this is a type inference trick used when deserializing
+/// struct fields
+#[doc(hidden)]
+pub fn none_of<T>(_f: impl FnOnce() -> T) -> Option<T> {
+    None
 }
 
 #[cfg(test)]

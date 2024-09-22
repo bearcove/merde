@@ -1,8 +1,7 @@
 //! An experimental JSON deserializer implementation
 
 use merde_core::{
-    deserialize2::{ArrayStart, Deserialize, Deserializer, Event},
-    CowStr,
+    CowStr, {ArrayStart, Deserialize, Deserializer, Event},
 };
 
 use crate::{
@@ -203,8 +202,7 @@ mod tests {
 
     use super::JsonDeserializer;
     use merde_core::{
-        deserialize2::{Deserialize, Deserializer, Event, EventType},
-        Array, Map, MerdeError,
+        Array, Map, MerdeError, {Deserialize, Deserializer, Event, EventType},
     };
 
     #[derive(Debug, PartialEq)]

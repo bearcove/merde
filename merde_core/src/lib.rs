@@ -24,7 +24,12 @@ mod deserialize;
 pub use deserialize::OwnedValueDeserialize;
 pub use deserialize::ValueDeserialize;
 
-pub mod deserialize2;
+mod deserialize2;
+pub use deserialize2::ArrayStart;
+pub use deserialize2::Deserialize;
+pub use deserialize2::Deserializer;
+pub use deserialize2::Event;
+pub use deserialize2::EventType;
 
 /// Interpret a &[`Value`] as an instance of type `T`. This may involve
 /// more cloning than [`from_value`].

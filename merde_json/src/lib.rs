@@ -6,9 +6,11 @@ pub mod deserialize2;
 mod jiter_lite;
 mod parser;
 
+use deserialize2::JsonDeserializer;
 use jiter_lite::errors::JiterError;
 use merde_core::{
-    Array, CowStr, IntoStatic, Map, MerdeError, OwnedValueDeserialize, Value, ValueDeserialize,
+    Array, CowStr, Deserialize, Deserializer, IntoStatic, Map, MerdeError, OwnedValueDeserialize,
+    Value, ValueDeserialize,
 };
 use parser::json_str_to_value;
 
@@ -620,6 +622,15 @@ where
     Ok(merde_core::OwnedValueDeserialize::owned_from_value(Some(
         value,
     ))?)
+}
+
+/// Deserialize an instance of type `T` from a string of JSON text.
+pub fn from_str<'s, T>(s: &'s str) -> Result<T, MerdeJsonError<'s>>
+where
+    T: Deserialize<'s>,
+{
+    let mut deser = JsonDeserializer::new(s);
+    deser.deserialize::<T>()
 }
 
 /// Serialize the given data structure as a String of JSON.
