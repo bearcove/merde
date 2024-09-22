@@ -10,7 +10,7 @@ use jiter_lite::errors::JiterError;
 use merde_core::{
     Array, CowStr, IntoStatic, Map, MerdeError, OwnedValueDeserialize, Value, ValueDeserialize,
 };
-use parser::json_bytes_to_value;
+use parser::json_str_to_value;
 
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -606,10 +606,7 @@ pub fn from_str_via_value<'s, T>(s: &'s str) -> Result<T, MerdeJsonError<'s>>
 where
     T: ValueDeserialize<'s>,
 {
-    let value = json_bytes_to_value(s.as_bytes()).map_err(|e| MerdeJsonError::JiterError {
-        err: e,
-        source: Some(s.into()),
-    })?;
+    let value = json_str_to_value(s)?;
     Ok(merde_core::from_value(value)?)
 }
 
@@ -619,10 +616,7 @@ pub fn owned_from_str_via_value<T>(s: &str) -> Result<T, MerdeJsonError<'_>>
 where
     T: OwnedValueDeserialize,
 {
-    let value = json_bytes_to_value(s.as_bytes()).map_err(|e| MerdeJsonError::JiterError {
-        err: e,
-        source: Some(s.into()),
-    })?;
+    let value = json_str_to_value(s)?;
     Ok(merde_core::OwnedValueDeserialize::owned_from_value(Some(
         value,
     ))?)

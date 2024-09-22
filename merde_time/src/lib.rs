@@ -81,7 +81,7 @@ mod merde_impls {
 
         fn from_value(
             value: Option<merde_core::Value<'s>>,
-        ) -> Result<Self, merde_core::MerdeError> {
+        ) -> Result<Self, merde_core::MerdeError<'s>> {
             match value {
                 Some(v) => Self::from_value_ref(Some(&v)),
                 None => Self::from_value_ref(None),

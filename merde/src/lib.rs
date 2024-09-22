@@ -26,14 +26,14 @@ macro_rules! impl_value_deserialize {
             #[inline(always)]
             fn from_value_ref<'val>(
                 value: Option<&'val $crate::Value<'s>>,
-            ) -> Result<Self, $crate::MerdeError> {
+            ) -> Result<Self, $crate::MerdeError<'s>> {
                 Ok($struct_name($crate::ValueDeserialize::from_value_ref(value)?))
             }
 
             #[inline(always)]
             fn from_value(
                 value: Option<$crate::Value<'s>>,
-            ) -> Result<Self, $crate::MerdeError> {
+            ) -> Result<Self, $crate::MerdeError<'s>> {
                 Ok($struct_name($crate::ValueDeserialize::from_value(value)?))
             }
         }
@@ -137,7 +137,7 @@ macro_rules! impl_value_deserialize {
                 let (key, val) = map.iter().next().ok_or(MerdeError::MissingValue)?;
                 match key.as_ref() {
                     $($variant_str => Ok($enum_name::$variant($crate::ValueDeserialize::from_value_ref(Some(val))?)),)*
-                    _ => Err(MerdeError::UnknownProperty(key.to_string())),
+                    _ => Err(MerdeError::UnknownProperty(key.clone())),
                 }
             }
 
@@ -151,7 +151,7 @@ macro_rules! impl_value_deserialize {
                 let (key, val) = map.into_iter().next().ok_or(MerdeError::MissingValue)?;
                 match key.as_ref() {
                     $($variant_str => Ok($enum_name::$variant($crate::ValueDeserialize::from_value(Some(val))?)),)*
-                    _ => Err(MerdeError::UnknownProperty(key.to_string())),
+                    _ => Err(MerdeError::UnknownProperty(key)),
                 }
             }
         }
@@ -165,7 +165,7 @@ macro_rules! impl_value_deserialize {
         impl<$lifetime> $crate::ValueDeserialize<$lifetime> for $enum_name<$lifetime> {
             fn from_value_ref<'val>(
                 value: Option<&'val $crate::Value<$lifetime>>,
-            ) -> Result<Self, $crate::MerdeError<'s>> {
+            ) -> Result<Self, $crate::MerdeError<$lifetime>> {
                 #[allow(unused_imports)]
                 use $crate::MerdeError;
 
@@ -179,7 +179,7 @@ macro_rules! impl_value_deserialize {
 
             fn from_value(
                 value: Option<$crate::Value<$lifetime>>,
-            ) -> Result<Self, $crate::MerdeError<'s>> {
+            ) -> Result<Self, $crate::MerdeError<$lifetime>> {
                 #[allow(unused_imports)]
                 use $crate::MerdeError;
 

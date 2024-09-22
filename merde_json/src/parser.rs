@@ -1,87 +1,9 @@
-use crate::jiter_lite as jiter;
+use crate::{deserialize2::JsonDeserializer, MerdeJsonError};
 
-use jiter::errors::JiterError;
-use jiter::jiter::Jiter;
-use jiter::number_decoder::NumberInt;
-use jiter::parse::Peek;
+use merde_core::{deserialize2::Deserializer, CowStr, Value};
 
-use merde_core::{CowStr, Map, Value};
-
-pub(crate) fn json_bytes_to_value(src: &[u8]) -> Result<Value<'_>, JiterError> {
-    let mut iter = Jiter::new(src);
-    jiter_to_value(src, &mut iter)
-}
-
-pub(crate) fn jiter_to_value<'j>(
-    src: &'j [u8],
-    iter: &mut Jiter<'j>,
-) -> Result<Value<'j>, JiterError> {
-    let peek = iter.peek()?;
-    jiter_to_value_with_peek(src, peek, iter)
-}
-
-pub(crate) fn jiter_to_value_with_peek<'j>(
-    src: &'j [u8],
-    peek: Peek,
-    iter: &mut Jiter<'j>,
-) -> Result<Value<'j>, JiterError> {
-    Ok(match peek {
-        Peek::Null => {
-            iter.known_null()?;
-            Value::Null
-        }
-        Peek::True | Peek::False => iter.known_bool(peek)?.into(),
-        Peek::Infinity => Value::Float(f64::INFINITY),
-        Peek::NaN => Value::Float(f64::NAN),
-        Peek::String => {
-            let s = iter.known_str()?;
-            Value::Str(cowify(src, s))
-        }
-        Peek::Array => {
-            let mut arr = Vec::new();
-            let mut next = iter.known_array()?;
-            while let Some(peek) = next {
-                arr.push(jiter_to_value_with_peek(src, peek, iter)?);
-                next = iter.array_step()?;
-            }
-            Value::Array(arr.into())
-        }
-        Peek::Object => {
-            let mut obj = Map::new();
-            let mut next = iter.known_object()?;
-            while let Some(key) = next {
-                let key = cowify(src, key);
-                let value = jiter_to_value_with_peek(src, iter.peek()?, iter)?;
-                obj.insert(key, value);
-                next = iter.next_key()?;
-            }
-            Value::Map(obj)
-        }
-        p if p.is_num() || p == Peek::Minus => {
-            #[cfg(feature = "num-bigint")]
-            let index = iter.current_index();
-
-            if let Ok(i) = iter.next_int() {
-                match i {
-                    NumberInt::Int(i) => Value::Int(i),
-                    #[cfg(feature = "num-bigint")]
-                    NumberInt::BigInt(_) => {
-                        use crate::jiter_lite::errors::{JsonError, JsonErrorType};
-                        return Err(JsonError {
-                            error_type: JsonErrorType::NumberOutOfRange,
-                            index,
-                        }
-                        .into());
-                    }
-                }
-            } else if let Ok(f) = iter.next_float() {
-                Value::Float(f)
-            } else {
-                unreachable!("not an int, not a float!")
-            }
-        }
-        _ => unimplemented!("peek {:?}", peek),
-    })
+pub(crate) fn json_str_to_value(src: &str) -> Result<Value<'_>, MerdeJsonError<'_>> {
+    JsonDeserializer::new(src).deserialize()
 }
 
 pub(crate) fn cowify<'j>(src: &'j [u8], s: &str) -> CowStr<'j> {
@@ -98,7 +20,7 @@ pub(crate) fn cowify<'j>(src: &'j [u8], s: &str) -> CowStr<'j> {
 mod tests {
     use merde_core::{Array, CowStr, Map, Value};
 
-    use crate::parser::{cowify, json_bytes_to_value};
+    use crate::parser::{cowify, json_str_to_value};
 
     #[test]
     fn test_cowify() {
@@ -131,7 +53,7 @@ mod tests {
         }
         "#;
 
-        let value = json_bytes_to_value(src.as_bytes()).unwrap();
+        let value = json_str_to_value(src).unwrap();
         assert_eq!(
             value,
             Value::Map(
