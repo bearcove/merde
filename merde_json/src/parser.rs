@@ -84,7 +84,7 @@ pub(crate) fn jiter_to_value_with_peek<'j>(
     })
 }
 
-fn cowify<'j>(src: &'j [u8], s: &str) -> CowStr<'j> {
+pub(crate) fn cowify<'j>(src: &'j [u8], s: &str) -> CowStr<'j> {
     if src.as_ptr_range().contains(&s.as_ptr()) {
         CowStr::Borrowed(unsafe {
             std::str::from_utf8_unchecked(std::slice::from_raw_parts(s.as_ptr(), s.len()))

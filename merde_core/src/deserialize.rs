@@ -87,7 +87,7 @@ impl<'s> ValueDeserialize<'s> for CowStr<'s> {
 }
 
 impl<'s> ValueDeserialize<'s> for Cow<'s, str> {
-    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError<'s>> {
         match value {
             Some(Value::Str(s)) => match s {
                 CowStr::Borrowed(b) => Ok(Cow::Borrowed(b)),
@@ -109,7 +109,7 @@ impl<'s> ValueDeserialize<'s> for Cow<'s, str> {
 }
 
 impl<'s> ValueDeserialize<'s> for String {
-    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError<'s>> {
         match value {
             Some(Value::Str(s)) => Ok(s.into()),
             Some(v) => Err(MerdeError::MismatchedType {
@@ -279,7 +279,7 @@ impl<'s, T> ValueDeserialize<'s> for Option<T>
 where
     T: ValueDeserialize<'s>,
 {
-    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError<'s>> {
         match value {
             Some(Value::Null) => Ok(None),
             Some(v) => T::from_value(Some(v)).map(Some),
@@ -342,7 +342,7 @@ where
 }
 
 impl<'s> ValueDeserialize<'s> for Value<'s> {
-    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError<'s>> {
         match value {
             Some(value) => Ok(value),
             None => Err(MerdeError::MissingValue),
@@ -356,7 +356,7 @@ impl<'s> ValueDeserialize<'s> for Value<'s> {
 }
 
 impl<'s> ValueDeserialize<'s> for Array<'s> {
-    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError<'s>> {
         match value {
             Some(Value::Array(arr)) => Ok(arr),
             Some(v) => Err(MerdeError::MismatchedType {
@@ -374,7 +374,7 @@ impl<'s> ValueDeserialize<'s> for Array<'s> {
 }
 
 impl<'s> ValueDeserialize<'s> for Map<'s> {
-    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError<'s>> {
         match value {
             Some(Value::Map(obj)) => Ok(obj),
             Some(v) => Err(MerdeError::MismatchedType {
@@ -399,7 +399,7 @@ where
         T::from_value_ref(value).map(Box::new)
     }
 
-    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError<'s>> {
         T::from_value(value).map(Box::new)
     }
 }
@@ -412,7 +412,7 @@ where
         T::from_value_ref(value).map(std::rc::Rc::new)
     }
 
-    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError<'s>> {
         T::from_value(value).map(std::rc::Rc::new)
     }
 }
@@ -425,10 +425,12 @@ where
         T::from_value_ref(value).map(std::sync::Arc::new)
     }
 
-    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError<'s>> {
         T::from_value(value).map(std::sync::Arc::new)
     }
 }
+
+// FIXME: never unwrap in these
 
 impl<'s, T1> ValueDeserialize<'s> for (T1,)
 where
@@ -448,7 +450,7 @@ where
         }
     }
 
-    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError<'s>> {
         match value {
             Some(Value::Array(arr)) if arr.len() == 1 => {
                 let t1 = T1::from_value(Some(arr.into_iter().next().unwrap()))?;
@@ -483,7 +485,7 @@ where
         }
     }
 
-    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError<'s>> {
         match value {
             Some(Value::Array(arr)) if arr.len() == 2 => {
                 let mut iter = arr.into_iter();
@@ -522,7 +524,7 @@ where
         }
     }
 
-    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError<'s>> {
         match value {
             Some(Value::Array(arr)) if arr.len() == 3 => {
                 let mut iter = arr.into_iter();
@@ -564,7 +566,7 @@ where
         }
     }
 
-    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError<'s>> {
         match value {
             Some(Value::Array(arr)) if arr.len() == 4 => {
                 let mut iter = arr.into_iter();
@@ -609,7 +611,7 @@ where
         }
     }
 
-    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError<'s>> {
         match value {
             Some(Value::Array(arr)) if arr.len() == 5 => {
                 let mut iter = arr.into_iter();
@@ -657,7 +659,7 @@ where
         }
     }
 
-    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError<'s>> {
         match value {
             Some(Value::Array(arr)) if arr.len() == 6 => {
                 let mut iter = arr.into_iter();
@@ -708,7 +710,7 @@ where
         }
     }
 
-    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError<'s>> {
         match value {
             Some(Value::Array(arr)) if arr.len() == 7 => {
                 let mut iter = arr.into_iter();
@@ -762,7 +764,7 @@ where
         }
     }
 
-    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError<'s>> {
         match value {
             Some(Value::Array(arr)) if arr.len() == 8 => {
                 let mut iter = arr.into_iter();

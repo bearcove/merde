@@ -124,25 +124,25 @@ impl From<&Event<'_>> for ValueType {
 }
 
 pub trait Deserializer<'s> {
-    type Error: From<MerdeError<'s>>;
+    type Error<'es>: From<MerdeError<'es>>;
 
     /// Get the next event from the deserializer.
-    fn pop(&mut self) -> Result<Event, Self::Error>;
+    fn pop(&mut self) -> Result<Event<'s>, Self::Error<'s>>;
 
     /// Deserialize a value of type `T`.
     #[allow(async_fn_in_trait)]
-    async fn t<T: Deserializable>(&mut self) -> Result<T, Self::Error>;
+    async fn t<T: Deserializable>(&mut self) -> Result<T, Self::Error<'s>>;
 }
 
 pub trait Deserializable: Sized {
     #[allow(async_fn_in_trait)]
-    async fn deserialize<'s, D>(de: &mut D) -> Result<Self, D::Error>
+    async fn deserialize<'s, D>(de: &mut D) -> Result<Self, D::Error<'s>>
     where
         D: Deserializer<'s>;
 }
 
 impl Deserializable for i64 {
-    async fn deserialize<'s, D>(de: &mut D) -> Result<Self, D::Error>
+    async fn deserialize<'s, D>(de: &mut D) -> Result<Self, D::Error<'s>>
     where
         D: Deserializer<'s>,
     {
@@ -162,7 +162,7 @@ impl Deserializable for i64 {
 }
 
 impl Deserializable for bool {
-    async fn deserialize<'s, D>(de: &mut D) -> Result<Self, D::Error>
+    async fn deserialize<'s, D>(de: &mut D) -> Result<Self, D::Error<'s>>
     where
         D: Deserializer<'s>,
     {
