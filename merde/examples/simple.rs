@@ -52,6 +52,7 @@ struct Address<'s> {
     city: CowStr<'s>,
     state: CowStr<'s>,
     zip: u16,
+    extra: Option<CowStr<'s>>,
 }
 
 merde::derive! {
@@ -59,7 +60,8 @@ merde::derive! {
         street,
         city,
         state,
-        zip
+        zip,
+        extra
     }
 }
 

@@ -84,7 +84,7 @@ macro_rules! impl_deserialize {
                 }
 
                 Ok($struct_name {
-                    $($field: $field.ok_or($crate::MerdeError::MissingProperty(stringify!($field).into()))?,)+
+                    $($field: $crate::Deserialize::from_option($field, stringify!($field).into())?,)+
                 })
             }
         }
@@ -129,7 +129,7 @@ macro_rules! impl_deserialize {
                 }
 
                 Ok($struct_name {
-                    $($field: $field.ok_or($crate::MerdeError::MissingProperty(stringify!($field).into()))?,)+
+                    $($field: $crate::Deserialize::from_option($field, stringify!($field).into())?,)+
                 })
             }
         }
@@ -950,7 +950,7 @@ macro_rules! impl_trait {
 
 /// Derives the specified traits for a struct.
 ///
-/// This macro can be used to generate implementations of [`JsonSerialize`] and [`ValueDeserialize`],
+/// This macro can be used to generate implementations of [`JsonSerialize`] and [`Deserialize`],
 /// traits for a given struct.
 ///
 /// # Usage
@@ -963,7 +963,7 @@ macro_rules! impl_trait {
 /// }
 ///
 /// merde::derive! {
-///     impl (JsonSerialize, ValueDeserialize) for struct MyStruct<'s> { a, b, c }
+///     impl (JsonSerialize, Deserialize) for struct MyStruct<'s> { a, b, c }
 /// }
 /// ```
 ///
@@ -980,8 +980,8 @@ macro_rules! impl_trait {
 /// }
 ///
 /// merde::derive! {
-///     //                                no lifetime param here 👇
-///     impl (JsonSerialize, ValueDeserialize) for struct MyStruct { a, b, c }
+///     //                          no lifetime param here 👇
+///     impl (JsonSerialize, Deserialize) for struct MyStruct { a, b, c }
 /// }
 /// ```
 ///
@@ -993,7 +993,7 @@ macro_rules! impl_trait {
 /// struct MyStruct(String);
 ///
 /// merde::derive! {
-///     impl (JsonSerialize, ValueDeserialize) for struct MyStruct transparent
+///     impl (JsonSerialize, Deserialize) for struct MyStruct transparent
 /// }
 ///
 /// use merde::json::JsonSerialize;
@@ -1012,7 +1012,7 @@ macro_rules! impl_trait {
 /// }
 ///
 /// merde::derive! {
-///     impl (JsonSerialize, ValueDeserialize) for enum MyEnum
+///     impl (JsonSerialize, Deserialize) for enum MyEnum
 ///     externally_tagged {
 ///         "variant1" => Variant1,
 ///         "variant2" => Variant2,
@@ -1025,7 +1025,7 @@ macro_rules! impl_trait {
 /// }
 ///
 /// merde::derive! {
-///     impl (JsonSerialize, ValueDeserialize) for enum MyLifetimedEnum<'wot>
+///     impl (JsonSerialize, Deserialize) for enum MyLifetimedEnum<'wot>
 ///     externally_tagged {
 ///         "variant1" => Variant1,
 ///         "variant2" => Variant2,
@@ -1159,7 +1159,7 @@ pub fn none_of<I, T>(_f: impl FnOnce(I) -> T) -> Option<T> {
 #[cfg(feature = "json")]
 mod json_tests {
     use super::*;
-    use crate::json::{from_str_via_value, JsonSerialize};
+    use crate::json::{from_str, JsonSerialize};
 
     #[test]
     fn test_complex_structs() {
@@ -1173,7 +1173,7 @@ mod json_tests {
         }
 
         derive! {
-            impl (JsonSerialize, ValueDeserialize) for struct SecondStruct<'s> {
+            impl (JsonSerialize, Deserialize) for struct SecondStruct<'s> {
                 string_field,
                 int_field
             }
@@ -1199,7 +1199,7 @@ mod json_tests {
         }
 
         derive! {
-            impl (JsonSerialize, ValueDeserialize) for struct ComplexStruct<'s> {
+            impl (JsonSerialize, Deserialize) for struct ComplexStruct<'s> {
                 string_field,
                 u8_field,
                 u16_field,
@@ -1243,7 +1243,7 @@ mod json_tests {
         };
 
         let serialized = original.to_json_string();
-        let deserialized: ComplexStruct = from_str_via_value(&serialized).unwrap();
+        let deserialized: ComplexStruct = from_str(&serialized).unwrap();
 
         assert_eq!(original, deserialized);
     }
