@@ -238,7 +238,7 @@ impl<'j> Jiter<'j> {
         }
     }
 
-    /// Assuming the next value is an array, peat at the first value.
+    /// Assuming the next value is an array, peek at the first value.
     pub fn known_array(&mut self) -> JiterResult<Option<Peek>> {
         self.parser.array_first().map_err(Into::into)
     }

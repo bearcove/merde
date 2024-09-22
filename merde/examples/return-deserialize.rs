@@ -1,5 +1,5 @@
 use merde::json::JsonSerialize;
-use merde::{CowStr, OwnedValueDeserialize, Value};
+use merde::{CowStr, IntoStatic, OwnedValueDeserialize, Value};
 
 fn deser_and_return<T>(s: String) -> Result<T, merde_json::MerdeJsonError<'static>>
 where
@@ -9,7 +9,7 @@ where
     // a network request instead — the point is is that we
     // need to borrow from a local from the function body.
     let value: Value = merde_json::from_str_via_value(&s).map_err(|e| e.to_static())?;
-    Ok(T::owned_from_value(Some(value))?)
+    Ok(T::owned_from_value(Some(value)).map_err(|e| e.into_static())?)
 }
 
 fn main() {

@@ -106,7 +106,7 @@ impl<'s> From<HashMap<CowStr<'s>, Value<'s>>> for Value<'s> {
 
 impl<'s> Value<'s> {
     #[inline(always)]
-    pub fn as_map(&self) -> Result<&Map<'s>, MerdeError> {
+    pub fn as_map(&self) -> Result<&Map<'s>, MerdeError<'static>> {
         match self {
             Value::Map(obj) => Ok(obj),
             _ => Err(MerdeError::MismatchedType {
@@ -117,7 +117,7 @@ impl<'s> Value<'s> {
     }
 
     #[inline(always)]
-    pub fn into_map(self) -> Result<Map<'s>, MerdeError> {
+    pub fn into_map(self) -> Result<Map<'s>, MerdeError<'static>> {
         match self {
             Value::Map(obj) => Ok(obj),
             _ => Err(MerdeError::MismatchedType {
@@ -128,7 +128,7 @@ impl<'s> Value<'s> {
     }
 
     #[inline(always)]
-    pub fn as_array(&self) -> Result<&Array<'s>, MerdeError> {
+    pub fn as_array(&self) -> Result<&Array<'s>, MerdeError<'static>> {
         match self {
             Value::Array(arr) => Ok(arr),
             _ => Err(MerdeError::MismatchedType {
@@ -139,7 +139,7 @@ impl<'s> Value<'s> {
     }
 
     #[inline(always)]
-    pub fn into_array(self) -> Result<Array<'s>, MerdeError> {
+    pub fn into_array(self) -> Result<Array<'s>, MerdeError<'static>> {
         match self {
             Value::Array(arr) => Ok(arr),
             _ => Err(MerdeError::MismatchedType {
@@ -150,7 +150,7 @@ impl<'s> Value<'s> {
     }
 
     #[inline(always)]
-    pub fn as_str(&self) -> Result<&CowStr<'s>, MerdeError> {
+    pub fn as_str(&self) -> Result<&CowStr<'s>, MerdeError<'static>> {
         match self {
             Value::Str(s) => Ok(s),
             _ => Err(MerdeError::MismatchedType {
@@ -161,7 +161,7 @@ impl<'s> Value<'s> {
     }
 
     #[inline(always)]
-    pub fn into_str(self) -> Result<CowStr<'s>, MerdeError> {
+    pub fn into_str(self) -> Result<CowStr<'s>, MerdeError<'static>> {
         match self {
             Value::Str(s) => Ok(s),
             _ => Err(MerdeError::MismatchedType {
@@ -172,7 +172,7 @@ impl<'s> Value<'s> {
     }
 
     #[inline(always)]
-    pub fn as_i64(&self) -> Result<i64, MerdeError> {
+    pub fn as_i64(&self) -> Result<i64, MerdeError<'static>> {
         match self {
             Value::Int(n) => Ok(*n),
             _ => Err(MerdeError::MismatchedType {

@@ -1,3 +1,6 @@
+// it's good to have them be explicit in here
+#![allow(clippy::needless_lifetimes)]
+
 use std::{borrow::Cow, hash::Hash, str::FromStr};
 
 use crate::{Array, CowStr, IntoStatic, Map, MerdeError, Value, ValueType, WithLifetime};
@@ -12,8 +15,8 @@ pub trait OwnedValueDeserialize
 where
     Self: Sized + 'static,
 {
-    fn owned_from_value_ref(value: Option<&Value<'_>>) -> Result<Self, MerdeError>;
-    fn owned_from_value(value: Option<Value<'_>>) -> Result<Self, MerdeError>;
+    fn owned_from_value_ref<'s>(value: Option<&Value<'s>>) -> Result<Self, MerdeError<'s>>;
+    fn owned_from_value<'s>(value: Option<Value<'s>>) -> Result<Self, MerdeError<'s>>;
 }
 
 impl<T> OwnedValueDeserialize for T
@@ -22,12 +25,14 @@ where
     for<'s> T: WithLifetime<'s>,
     for<'s> <T as WithLifetime<'s>>::Lifetimed: ValueDeserialize<'s> + IntoStatic<Output = T>,
 {
-    fn owned_from_value_ref<'val, 's>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+    fn owned_from_value_ref<'val, 's>(
+        value: Option<&'val Value<'s>>,
+    ) -> Result<Self, MerdeError<'s>> {
         let t = <T as WithLifetime<'s>>::Lifetimed::from_value_ref(value)?;
         Ok(t.into_static())
     }
 
-    fn owned_from_value<'s>(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
+    fn owned_from_value<'s>(value: Option<Value<'s>>) -> Result<Self, MerdeError<'s>> {
         let t = <T as WithLifetime<'s>>::Lifetimed::from_value(value)?;
         Ok(t.into_static())
     }
@@ -49,13 +54,13 @@ where
     Self: Sized,
 {
     /// Destructures a [Value] into a more structured type
-    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError>;
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError<'s>>;
 
     /// Destructures a JSON value into a Rust value, while taking ownership of the [Value].
     /// A default implementation is provided, but some types may want to implement it themselves
     /// to avoid unnecessary allocations/cloning.
     #[inline(always)]
-    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError<'s>> {
         match value {
             Some(v) => Self::from_value_ref(Some(&v)),
             None => Self::from_value_ref(None),
@@ -64,7 +69,7 @@ where
 }
 
 impl<'s> ValueDeserialize<'s> for CowStr<'s> {
-    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value(value: Option<Value<'s>>) -> Result<Self, MerdeError<'s>> {
         match value {
             Some(Value::Str(s)) => Ok(s),
             Some(v) => Err(MerdeError::MismatchedType {
@@ -76,7 +81,7 @@ impl<'s> ValueDeserialize<'s> for CowStr<'s> {
     }
 
     #[inline(always)]
-    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError<'s>> {
         Self::from_value(value.cloned())
     }
 }
@@ -98,7 +103,7 @@ impl<'s> ValueDeserialize<'s> for Cow<'s, str> {
     }
 
     #[inline(always)]
-    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError<'s>> {
         Self::from_value(value.cloned())
     }
 }
@@ -116,13 +121,13 @@ impl<'s> ValueDeserialize<'s> for String {
     }
 
     #[inline(always)]
-    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError<'s>> {
         Self::from_value(value.cloned())
     }
 }
 
 impl<'s> ValueDeserialize<'s> for u8 {
-    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError<'s>> {
         u64::from_value_ref(value)?
             .try_into()
             .map_err(|_| MerdeError::OutOfRange)
@@ -130,7 +135,7 @@ impl<'s> ValueDeserialize<'s> for u8 {
 }
 
 impl<'s> ValueDeserialize<'s> for u16 {
-    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError<'s>> {
         u64::from_value_ref(value)?
             .try_into()
             .map_err(|_| MerdeError::OutOfRange)
@@ -138,7 +143,7 @@ impl<'s> ValueDeserialize<'s> for u16 {
 }
 
 impl<'s> ValueDeserialize<'s> for u32 {
-    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError<'s>> {
         u64::from_value_ref(value)?
             .try_into()
             .map_err(|_| MerdeError::OutOfRange)
@@ -146,7 +151,7 @@ impl<'s> ValueDeserialize<'s> for u32 {
 }
 
 impl<'s> ValueDeserialize<'s> for u64 {
-    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError<'s>> {
         match value {
             Some(Value::Int(n)) => (*n).try_into().map_err(|_| MerdeError::OutOfRange),
             Some(Value::Float(f)) => Ok((*f).round() as u64),
@@ -160,7 +165,7 @@ impl<'s> ValueDeserialize<'s> for u64 {
 }
 
 impl<'s> ValueDeserialize<'s> for i8 {
-    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError<'s>> {
         i64::from_value_ref(value)?
             .try_into()
             .map_err(|_| MerdeError::OutOfRange)
@@ -168,7 +173,7 @@ impl<'s> ValueDeserialize<'s> for i8 {
 }
 
 impl<'s> ValueDeserialize<'s> for i16 {
-    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError<'s>> {
         i64::from_value_ref(value)?
             .try_into()
             .map_err(|_| MerdeError::OutOfRange)
@@ -176,7 +181,7 @@ impl<'s> ValueDeserialize<'s> for i16 {
 }
 
 impl<'s> ValueDeserialize<'s> for i32 {
-    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError<'s>> {
         i64::from_value_ref(value)?
             .try_into()
             .map_err(|_| MerdeError::OutOfRange)
@@ -184,7 +189,7 @@ impl<'s> ValueDeserialize<'s> for i32 {
 }
 
 impl<'s> ValueDeserialize<'s> for i64 {
-    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError<'s>> {
         match value {
             Some(Value::Int(n)) => Ok(*n),
             Some(Value::Float(f)) => Ok((*f).round() as i64),
@@ -198,7 +203,7 @@ impl<'s> ValueDeserialize<'s> for i64 {
 }
 
 impl<'s> ValueDeserialize<'s> for usize {
-    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError<'s>> {
         match value {
             Some(Value::Int(n)) => (*n).try_into().map_err(|_| MerdeError::OutOfRange),
             Some(Value::Float(f)) => ((*f).round() as i64)
@@ -214,7 +219,7 @@ impl<'s> ValueDeserialize<'s> for usize {
 }
 
 impl<'s> ValueDeserialize<'s> for isize {
-    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError<'s>> {
         match value {
             Some(Value::Int(n)) => (*n).try_into().map_err(|_| MerdeError::OutOfRange),
             Some(Value::Float(f)) => ((*f).round() as i64)
@@ -230,7 +235,7 @@ impl<'s> ValueDeserialize<'s> for isize {
 }
 
 impl<'s> ValueDeserialize<'s> for f32 {
-    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError<'s>> {
         match value {
             Some(Value::Float(f)) => Ok(*f as f32),
             Some(Value::Int(i)) => Ok(*i as f32),
@@ -244,7 +249,7 @@ impl<'s> ValueDeserialize<'s> for f32 {
 }
 
 impl<'s> ValueDeserialize<'s> for f64 {
-    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError<'s>> {
         match value {
             Some(Value::Float(f)) => Ok(*f),
             Some(Value::Int(i)) => Ok(*i as f64),
@@ -258,7 +263,7 @@ impl<'s> ValueDeserialize<'s> for f64 {
 }
 
 impl<'s> ValueDeserialize<'s> for bool {
-    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError<'s>> {
         match value {
             Some(Value::Bool(b)) => Ok(*b),
             Some(v) => Err(MerdeError::MismatchedType {
@@ -283,7 +288,7 @@ where
     }
 
     #[inline(always)]
-    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError<'s>> {
         Self::from_value(value.cloned())
     }
 }
@@ -292,7 +297,7 @@ impl<'s, T> ValueDeserialize<'s> for Vec<T>
 where
     T: ValueDeserialize<'s>,
 {
-    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError<'s>> {
         match value {
             Some(Value::Array(arr)) => arr
                 .iter()
@@ -313,7 +318,7 @@ where
     V: ValueDeserialize<'s>,
     K::Err: std::fmt::Debug,
 {
-    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError<'s>> {
         match value {
             Some(Value::Map(obj)) => {
                 let mut map = std::collections::HashMap::new();
@@ -345,7 +350,7 @@ impl<'s> ValueDeserialize<'s> for Value<'s> {
     }
 
     #[inline(always)]
-    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError<'s>> {
         Self::from_value(value.cloned())
     }
 }
@@ -363,7 +368,7 @@ impl<'s> ValueDeserialize<'s> for Array<'s> {
     }
 
     #[inline(always)]
-    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError<'s>> {
         Self::from_value(value.cloned())
     }
 }
@@ -381,7 +386,7 @@ impl<'s> ValueDeserialize<'s> for Map<'s> {
     }
 
     #[inline(always)]
-    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError<'s>> {
         Self::from_value(value.cloned())
     }
 }
@@ -390,7 +395,7 @@ impl<'s, T> ValueDeserialize<'s> for Box<T>
 where
     T: ValueDeserialize<'s>,
 {
-    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError<'s>> {
         T::from_value_ref(value).map(Box::new)
     }
 
@@ -403,7 +408,7 @@ impl<'s, T> ValueDeserialize<'s> for std::rc::Rc<T>
 where
     T: ValueDeserialize<'s>,
 {
-    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError<'s>> {
         T::from_value_ref(value).map(std::rc::Rc::new)
     }
 
@@ -416,7 +421,7 @@ impl<'s, T> ValueDeserialize<'s> for std::sync::Arc<T>
 where
     T: ValueDeserialize<'s>,
 {
-    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError<'s>> {
         T::from_value_ref(value).map(std::sync::Arc::new)
     }
 
@@ -429,7 +434,7 @@ impl<'s, T1> ValueDeserialize<'s> for (T1,)
 where
     T1: ValueDeserialize<'s>,
 {
-    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError<'s>> {
         match value {
             Some(Value::Array(arr)) if arr.len() == 1 => {
                 let t1 = T1::from_value_ref(Some(&arr[0]))?;
@@ -463,7 +468,7 @@ where
     T1: ValueDeserialize<'s>,
     T2: ValueDeserialize<'s>,
 {
-    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError<'s>> {
         match value {
             Some(Value::Array(arr)) if arr.len() == 2 => {
                 let t1 = T1::from_value_ref(Some(&arr[0]))?;
@@ -501,7 +506,7 @@ where
     T2: ValueDeserialize<'s>,
     T3: ValueDeserialize<'s>,
 {
-    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError<'s>> {
         match value {
             Some(Value::Array(arr)) if arr.len() == 3 => {
                 let t1 = T1::from_value_ref(Some(&arr[0]))?;
@@ -542,7 +547,7 @@ where
     T3: ValueDeserialize<'s>,
     T4: ValueDeserialize<'s>,
 {
-    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError<'s>> {
         match value {
             Some(Value::Array(arr)) if arr.len() == 4 => {
                 let t1 = T1::from_value_ref(Some(&arr[0]))?;
@@ -586,7 +591,7 @@ where
     T4: ValueDeserialize<'s>,
     T5: ValueDeserialize<'s>,
 {
-    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError<'s>> {
         match value {
             Some(Value::Array(arr)) if arr.len() == 5 => {
                 let t1 = T1::from_value_ref(Some(&arr[0]))?;
@@ -633,7 +638,7 @@ where
     T5: ValueDeserialize<'s>,
     T6: ValueDeserialize<'s>,
 {
-    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError<'s>> {
         match value {
             Some(Value::Array(arr)) if arr.len() == 6 => {
                 let t1 = T1::from_value_ref(Some(&arr[0]))?;
@@ -683,7 +688,7 @@ where
     T6: ValueDeserialize<'s>,
     T7: ValueDeserialize<'s>,
 {
-    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError<'s>> {
         match value {
             Some(Value::Array(arr)) if arr.len() == 7 => {
                 let t1 = T1::from_value_ref(Some(&arr[0]))?;
@@ -736,7 +741,7 @@ where
     T7: ValueDeserialize<'s>,
     T8: ValueDeserialize<'s>,
 {
-    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError> {
+    fn from_value_ref<'val>(value: Option<&'val Value<'s>>) -> Result<Self, MerdeError<'s>> {
         match value {
             Some(Value::Array(arr)) if arr.len() == 8 => {
                 let t1 = T1::from_value_ref(Some(&arr[0]))?;

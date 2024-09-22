@@ -2,7 +2,7 @@
 // Error Handling and Field Type
 // -------------------------------------------------------------------------
 
-use crate::{CowStr, Value};
+use crate::{CowStr, IntoStatic, Value};
 
 /// A content-less variant of the [`Value`] enum, used for reporting errors, see [`MerdeError::MismatchedType`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -37,7 +37,7 @@ pub enum ValueType {
 /// This isn't super clean, not my proudest moment.
 #[derive(Debug)]
 #[non_exhaustive]
-pub enum MerdeError {
+pub enum MerdeError<'s> {
     /// We expected a certain type but got a different one.
     ///
     /// Note that the default implementations of [crate::ValueDeserialize] have tolerances:
@@ -51,7 +51,7 @@ pub enum MerdeError {
     },
 
     /// We expected an object to have a certain property, but it was missing.
-    MissingProperty(CowStr<'static>),
+    MissingProperty(CowStr<'s>),
 
     /// We tried to access an array index that was out of bounds.
     IndexOutOfBounds {
@@ -62,7 +62,7 @@ pub enum MerdeError {
     },
 
     /// We encountered a property that we didn't expect.
-    UnknownProperty(String),
+    UnknownProperty(CowStr<'s>),
 
     /// For example, we had a `u8` field but the JSON value was bigger than `u8::MAX`.
     OutOfRange,
@@ -72,7 +72,7 @@ pub enum MerdeError {
 
     /// While calling out to [`FromStr::from_str`](std::str::FromStr::from_str) to build a [`HashMap`](std::collections::HashMap), we got an error.
     InvalidKey {
-        key: CowStr<'static>,
+        key: CowStr<'s>,
         type_name: &'static str,
     },
 
@@ -83,13 +83,38 @@ pub enum MerdeError {
     Io(std::io::Error),
 }
 
-impl From<std::io::Error> for MerdeError {
+impl IntoStatic for MerdeError<'_> {
+    type Output = MerdeError<'static>;
+
+    fn into_static(self) -> MerdeError<'static> {
+        match self {
+            MerdeError::MismatchedType { expected, found } => {
+                MerdeError::MismatchedType { expected, found }
+            }
+            MerdeError::MissingProperty(prop) => MerdeError::MissingProperty(prop.into_static()),
+            MerdeError::IndexOutOfBounds { index, len } => {
+                MerdeError::IndexOutOfBounds { index, len }
+            }
+            MerdeError::UnknownProperty(prop) => MerdeError::UnknownProperty(prop.into_static()),
+            MerdeError::OutOfRange => MerdeError::OutOfRange,
+            MerdeError::MissingValue => MerdeError::MissingValue,
+            MerdeError::InvalidKey { key, type_name } => MerdeError::InvalidKey {
+                key: key.into_static(),
+                type_name,
+            },
+            MerdeError::InvalidDateTimeValue => MerdeError::InvalidDateTimeValue,
+            MerdeError::Io(e) => MerdeError::Io(e),
+        }
+    }
+}
+
+impl From<std::io::Error> for MerdeError<'_> {
     fn from(e: std::io::Error) -> Self {
         MerdeError::Io(e)
     }
 }
 
-impl std::fmt::Display for MerdeError {
+impl std::fmt::Display for MerdeError<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             MerdeError::MismatchedType { expected, found } => {
@@ -131,7 +156,7 @@ impl std::fmt::Display for MerdeError {
     }
 }
 
-impl std::error::Error for MerdeError {}
+impl<'s> std::error::Error for MerdeError<'s> {}
 
 impl Value<'_> {
     /// Returns the [ValueType] for a given [Value].
