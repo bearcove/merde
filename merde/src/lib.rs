@@ -59,7 +59,7 @@ macro_rules! impl_deserialize {
                 de.next()?.into_map_start()?;
 
                 $(
-                    let mut $field = $crate::none_of(|| (todo!() as $struct_name).$field);
+                    let mut $field = $crate::none_of(|i: $struct_name| i.$field);
                 )+
 
                 loop {
@@ -104,7 +104,7 @@ macro_rules! impl_deserialize {
                 de.next()?.into_map_start()?;
 
                 $(
-                    let mut $field = $crate::none_of(|| (todo!() as $struct_name).$field);
+                    let mut $field = $crate::none_of(|i: $struct_name<$s>| i.$field);
                 )+
 
                 loop {
@@ -1151,7 +1151,7 @@ macro_rules! derive {
 /// is never called) — this is a type inference trick used when deserializing
 /// struct fields
 #[doc(hidden)]
-pub fn none_of<T>(_f: impl FnOnce() -> T) -> Option<T> {
+pub fn none_of<I, T>(_f: impl FnOnce(I) -> T) -> Option<T> {
     None
 }
 
