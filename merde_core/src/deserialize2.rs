@@ -170,14 +170,14 @@ pub trait Deserializer<'s>: std::fmt::Debug {
     /// Deserialize a value of type `T`.
     #[doc(hidden)]
     #[allow(async_fn_in_trait)]
-    async fn t<T: Deserializable<'s>>(&mut self) -> Result<T, Self::Error<'s>> {
+    async fn t<T: Deserialize<'s>>(&mut self) -> Result<T, Self::Error<'s>> {
         self.t_starting_with(None).await
     }
 
     /// Deserialize a value of type `T`, using the given event as the first event.
     #[doc(hidden)]
     #[allow(async_fn_in_trait)]
-    async fn t_starting_with<T: Deserializable<'s>>(
+    async fn t_starting_with<T: Deserialize<'s>>(
         &mut self,
         starter: Option<Event<'s>>,
     ) -> Result<T, Self::Error<'s>>;
@@ -186,7 +186,7 @@ pub trait Deserializer<'s>: std::fmt::Debug {
     /// future sizes becoming infinite, for example when deserializing Value,
     /// etc.
     #[doc(hidden)]
-    fn t_starting_with_boxed<'d, T: Deserializable<'s> + 'd>(
+    fn t_starting_with_boxed<'d, T: Deserialize<'s> + 'd>(
         &'d mut self,
         starter: Option<Event<'s>>,
     ) -> Pin<Box<dyn Future<Output = Result<T, Self::Error<'s>>> + 'd>>
@@ -196,7 +196,7 @@ pub trait Deserializer<'s>: std::fmt::Debug {
         Box::pin(self.t_starting_with(starter))
     }
 
-    fn deserialize<T: Deserializable<'s>>(&mut self) -> Result<T, Self::Error<'s>> {
+    fn deserialize<T: Deserialize<'s>>(&mut self) -> Result<T, Self::Error<'s>> {
         let vtable = RawWakerVTable::new(|_| todo!(), |_| {}, |_| {}, |_| {});
         let vtable = Box::leak(Box::new(vtable));
         let w = unsafe { Waker::from_raw(RawWaker::new(std::ptr::null(), vtable)) };
@@ -210,14 +210,14 @@ pub trait Deserializer<'s>: std::fmt::Debug {
     }
 }
 
-pub trait Deserializable<'s>: Sized {
+pub trait Deserialize<'s>: Sized {
     #[allow(async_fn_in_trait)]
     async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
     where
         D: Deserializer<'s> + ?Sized;
 }
 
-impl<'s> Deserializable<'s> for i64 {
+impl<'s> Deserialize<'s> for i64 {
     async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
     where
         D: Deserializer<'s> + ?Sized,
@@ -237,7 +237,7 @@ impl<'s> Deserializable<'s> for i64 {
     }
 }
 
-impl<'s> Deserializable<'s> for u64 {
+impl<'s> Deserialize<'s> for u64 {
     async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
     where
         D: Deserializer<'s> + ?Sized,
@@ -247,7 +247,7 @@ impl<'s> Deserializable<'s> for u64 {
     }
 }
 
-impl<'s> Deserializable<'s> for i32 {
+impl<'s> Deserialize<'s> for i32 {
     async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
     where
         D: Deserializer<'s> + ?Sized,
@@ -257,7 +257,7 @@ impl<'s> Deserializable<'s> for i32 {
     }
 }
 
-impl<'s> Deserializable<'s> for u32 {
+impl<'s> Deserialize<'s> for u32 {
     async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
     where
         D: Deserializer<'s> + ?Sized,
@@ -267,7 +267,7 @@ impl<'s> Deserializable<'s> for u32 {
     }
 }
 
-impl<'s> Deserializable<'s> for i16 {
+impl<'s> Deserialize<'s> for i16 {
     async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
     where
         D: Deserializer<'s> + ?Sized,
@@ -277,7 +277,7 @@ impl<'s> Deserializable<'s> for i16 {
     }
 }
 
-impl<'s> Deserializable<'s> for u16 {
+impl<'s> Deserialize<'s> for u16 {
     async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
     where
         D: Deserializer<'s> + ?Sized,
@@ -287,7 +287,7 @@ impl<'s> Deserializable<'s> for u16 {
     }
 }
 
-impl<'s> Deserializable<'s> for i8 {
+impl<'s> Deserialize<'s> for i8 {
     async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
     where
         D: Deserializer<'s> + ?Sized,
@@ -297,7 +297,7 @@ impl<'s> Deserializable<'s> for i8 {
     }
 }
 
-impl<'s> Deserializable<'s> for u8 {
+impl<'s> Deserialize<'s> for u8 {
     async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
     where
         D: Deserializer<'s> + ?Sized,
@@ -307,7 +307,7 @@ impl<'s> Deserializable<'s> for u8 {
     }
 }
 
-impl<'s> Deserializable<'s> for isize {
+impl<'s> Deserialize<'s> for isize {
     async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
     where
         D: Deserializer<'s> + ?Sized,
@@ -317,7 +317,7 @@ impl<'s> Deserializable<'s> for isize {
     }
 }
 
-impl<'s> Deserializable<'s> for usize {
+impl<'s> Deserialize<'s> for usize {
     async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
     where
         D: Deserializer<'s> + ?Sized,
@@ -327,7 +327,7 @@ impl<'s> Deserializable<'s> for usize {
     }
 }
 
-impl<'s> Deserializable<'s> for bool {
+impl<'s> Deserialize<'s> for bool {
     async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
     where
         D: Deserializer<'s> + ?Sized,
@@ -336,7 +336,7 @@ impl<'s> Deserializable<'s> for bool {
     }
 }
 
-impl<'s> Deserializable<'s> for f64 {
+impl<'s> Deserialize<'s> for f64 {
     async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
     where
         D: Deserializer<'s> + ?Sized,
@@ -356,7 +356,7 @@ impl<'s> Deserializable<'s> for f64 {
     }
 }
 
-impl<'s> Deserializable<'s> for f32 {
+impl<'s> Deserialize<'s> for f32 {
     async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
     where
         D: Deserializer<'s> + ?Sized,
@@ -366,7 +366,7 @@ impl<'s> Deserializable<'s> for f32 {
     }
 }
 
-impl<'s, T: Deserializable<'s>> Deserializable<'s> for Vec<T> {
+impl<'s, T: Deserialize<'s>> Deserialize<'s> for Vec<T> {
     async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
     where
         D: Deserializer<'s> + ?Sized,
@@ -392,7 +392,7 @@ impl<'s, T: Deserializable<'s>> Deserializable<'s> for Vec<T> {
     }
 }
 
-impl<'s> Deserializable<'s> for Value<'s> {
+impl<'s> Deserialize<'s> for Value<'s> {
     async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
     where
         D: Deserializer<'s> + ?Sized,
