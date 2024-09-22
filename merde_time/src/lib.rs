@@ -55,6 +55,8 @@ where
 
 #[cfg(feature = "merde")]
 mod merde_impls {
+    use merde_core::CowStr;
+
     use super::*;
 
     impl merde_core::IntoStatic for Rfc3339<OffsetDateTime> {
@@ -66,26 +68,19 @@ mod merde_impls {
     }
 
     #[cfg(feature = "deserialize")]
-    impl<'s> merde_core::ValueDeserialize<'s> for Rfc3339<time::OffsetDateTime> {
-        fn from_value_ref<'val>(
-            value: Option<&'val merde_core::Value<'s>>,
-        ) -> Result<Self, merde_core::MerdeError<'s>> {
-            let s = value
-                .and_then(|v| v.as_str().ok())
-                .ok_or(merde_core::MerdeError::MissingValue)?;
+    impl<'s> merde_core::Deserialize<'s> for Rfc3339<time::OffsetDateTime> {
+        async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
+        where
+            D: merde_core::Deserializer<'s> + ?Sized,
+        {
+            let s = CowStr::deserialize(de).await?;
             Ok(Rfc3339(
-                time::OffsetDateTime::parse(s, &time::format_description::well_known::Rfc3339)
-                    .map_err(|_| merde_core::MerdeError::InvalidDateTimeValue)?,
+                time::OffsetDateTime::parse(
+                    s.as_ref(),
+                    &time::format_description::well_known::Rfc3339,
+                )
+                .map_err(|_| merde_core::MerdeError::InvalidDateTimeValue)?,
             ))
-        }
-
-        fn from_value(
-            value: Option<merde_core::Value<'s>>,
-        ) -> Result<Self, merde_core::MerdeError<'s>> {
-            match value {
-                Some(v) => Self::from_value_ref(Some(&v)),
-                None => Self::from_value_ref(None),
-            }
         }
     }
 }
@@ -111,14 +106,14 @@ mod merde_json_impls {
 #[cfg(all(test, feature = "full",))]
 mod tests {
     use super::*;
-    use merde_json::{from_str_via_value, JsonSerialize};
+    use merde_json::{from_str, JsonSerialize};
     use time::macros::datetime;
 
     #[test]
     fn test_rfc3339_offset_date_time_roundtrip() {
         let original = Rfc3339(datetime!(2023-05-15 14:30:00 UTC));
         let serialized = original.to_json_string();
-        let deserialized: Rfc3339<time::OffsetDateTime> = from_str_via_value(&serialized).unwrap();
+        let deserialized: Rfc3339<time::OffsetDateTime> = from_str(&serialized).unwrap();
         assert_eq!(original, deserialized);
     }
 
@@ -132,7 +127,7 @@ mod tests {
     #[test]
     fn test_rfc3339_offset_date_time_deserialization() {
         let json = r#""2023-05-15T14:30:00Z""#;
-        let deserialized: Rfc3339<time::OffsetDateTime> = from_str_via_value(json).unwrap();
+        let deserialized: Rfc3339<time::OffsetDateTime> = from_str(json).unwrap();
         assert_eq!(deserialized, Rfc3339(datetime!(2023-05-15 14:30:00 UTC)));
     }
 }
