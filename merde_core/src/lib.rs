@@ -24,6 +24,8 @@ mod deserialize;
 pub use deserialize::OwnedValueDeserialize;
 pub use deserialize::ValueDeserialize;
 
+mod deserialize2;
+
 /// Interpret a &[`Value`] as an instance of type `T`. This may involve
 /// more cloning than [`from_value`].
 pub fn from_value_ref<'s, T>(value: &Value<'s>) -> Result<T, MerdeError>
