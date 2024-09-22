@@ -10,5 +10,5 @@ _Logo by [MisiasArt](https://misiasart.com)_
 
 Provides an `Rfc3339` wrapper type that implements:
 
-  * `ValueDeserialize` from the [merde_core](https://crates.io/crates/merde_core) crate
+  * `Deserialize` from the [merde_core](https://crates.io/crates/merde_core) crate
   * `JsonSerialize` from the [merde_json](https://crates.io/crates/merde_json) crate

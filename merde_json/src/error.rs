@@ -41,9 +41,6 @@ pub enum JsonFieldType {
 #[non_exhaustive]
 pub enum MerdeJsonError {
     /// We expected a certain type but got a different one.
-    ///
-    /// Note that the default implementations of [crate::ValueDeserialize] have tolerances:
-    /// if we expect a `u32` but get a floating-point number, we'll round it.
     MismatchedType {
         /// The expected type.
         expected: JsonFieldType,
