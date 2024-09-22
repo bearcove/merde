@@ -69,7 +69,7 @@ mod merde_impls {
     impl<'s> merde_core::ValueDeserialize<'s> for Rfc3339<time::OffsetDateTime> {
         fn from_value_ref<'val>(
             value: Option<&'val merde_core::Value<'s>>,
-        ) -> Result<Self, merde_core::MerdeError> {
+        ) -> Result<Self, merde_core::MerdeError<'s>> {
             let s = value
                 .and_then(|v| v.as_str().ok())
                 .ok_or(merde_core::MerdeError::MissingValue)?;

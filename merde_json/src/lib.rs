@@ -1,6 +1,8 @@
 #![deny(missing_docs)]
 #![doc = include_str!("../README.md")]
 
+pub mod deserialize2;
+
 mod jiter_lite;
 mod parser;
 
@@ -502,7 +504,7 @@ impl<
 /// Unifies [MerdeError] and [JiterError] into a single type
 pub enum MerdeJsonError<'s> {
     /// A [MerdeError]
-    MerdeError(MerdeError),
+    MerdeError(MerdeError<'s>),
 
     /// An Utf8 error
     Utf8Error(std::str::Utf8Error),
@@ -520,7 +522,7 @@ impl<'s> MerdeJsonError<'s> {
     /// Strip the 'source' field from the error, making it `'static`
     pub fn without_source(self) -> MerdeJsonError<'static> {
         match self {
-            MerdeJsonError::MerdeError(e) => MerdeJsonError::MerdeError(e),
+            MerdeJsonError::MerdeError(e) => MerdeJsonError::MerdeError(e.into_static()),
             MerdeJsonError::Utf8Error(e) => MerdeJsonError::Utf8Error(e),
             MerdeJsonError::JiterError { err, source: _ } => {
                 MerdeJsonError::JiterError { err, source: None }
@@ -531,7 +533,7 @@ impl<'s> MerdeJsonError<'s> {
     /// Converts the attached 'source' field to an owned string, making the whole error `'static`
     pub fn to_static(self) -> MerdeJsonError<'static> {
         match self {
-            MerdeJsonError::MerdeError(e) => MerdeJsonError::MerdeError(e),
+            MerdeJsonError::MerdeError(e) => MerdeJsonError::MerdeError(e.into_static()),
             MerdeJsonError::Utf8Error(e) => MerdeJsonError::Utf8Error(e),
             MerdeJsonError::JiterError { err, source } => MerdeJsonError::JiterError {
                 err,
@@ -585,8 +587,8 @@ impl<'s> std::fmt::Debug for MerdeJsonError<'s> {
     }
 }
 
-impl From<MerdeError> for MerdeJsonError<'_> {
-    fn from(e: MerdeError) -> Self {
+impl<'s> From<MerdeError<'s>> for MerdeJsonError<'s> {
+    fn from(e: MerdeError<'s>) -> Self {
         MerdeJsonError::MerdeError(e)
     }
 }

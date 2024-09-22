@@ -83,7 +83,7 @@ impl<'s> Map<'s> {
     ///
     /// It does not by itself throw an error if `self.get()` returns `None`, to allow
     /// for optional fields (via the [ValueDeserialize] implementation on the [Option] type).
-    pub fn must_get<T>(&self, key: impl Into<CowStr<'static>>) -> Result<T, MerdeError>
+    pub fn must_get<T>(&self, key: impl Into<CowStr<'static>>) -> Result<T, MerdeError<'s>>
     where
         T: ValueDeserialize<'s>,
     {
@@ -100,7 +100,7 @@ impl<'s> Map<'s> {
     ///
     /// It does not by itself throw an error if `self.remove()` returns `None`, to allow
     /// for optional fields (via the [ValueDeserialize] implementation on the [Option] type).
-    pub fn must_remove<T>(&mut self, key: impl Into<CowStr<'static>>) -> Result<T, MerdeError>
+    pub fn must_remove<T>(&mut self, key: impl Into<CowStr<'static>>) -> Result<T, MerdeError<'s>>
     where
         T: ValueDeserialize<'s>,
     {
