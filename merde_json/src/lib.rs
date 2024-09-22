@@ -5,14 +5,9 @@ mod deserialize2;
 pub use deserialize2::JsonDeserializer;
 
 mod jiter_lite;
-mod parser;
 
 use jiter_lite::errors::JiterError;
-use merde_core::{
-    Array, CowStr, Deserialize, Deserializer, IntoStatic, Map, MerdeError, OwnedValueDeserialize,
-    Value, ValueDeserialize,
-};
-use parser::json_str_to_value;
+use merde_core::{Array, CowStr, Deserialize, Deserializer, IntoStatic, Map, MerdeError, Value};
 
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -593,35 +588,6 @@ impl<'s> From<MerdeError<'s>> for MerdeJsonError<'s> {
     fn from(e: MerdeError<'s>) -> Self {
         MerdeJsonError::MerdeError(e)
     }
-}
-
-/// Deserialize an instance of type `T` from bytes of JSON text.
-pub fn from_slice_via_value<'s, T>(data: &'s [u8]) -> Result<T, MerdeJsonError<'s>>
-where
-    T: ValueDeserialize<'s>,
-{
-    from_str_via_value(std::str::from_utf8(data)?)
-}
-
-/// Deserialize an instance of type `T` from a string of JSON text.
-pub fn from_str_via_value<'s, T>(s: &'s str) -> Result<T, MerdeJsonError<'s>>
-where
-    T: ValueDeserialize<'s>,
-{
-    let value = json_str_to_value(s)?;
-    Ok(merde_core::from_value(value)?)
-}
-
-/// Deserialize an instance of type `T` from a string of JSON text, making
-/// sure the result is owned.
-pub fn owned_from_str_via_value<T>(s: &str) -> Result<T, MerdeJsonError<'_>>
-where
-    T: OwnedValueDeserialize,
-{
-    let value = json_str_to_value(s)?;
-    Ok(merde_core::OwnedValueDeserialize::owned_from_value(Some(
-        value,
-    ))?)
 }
 
 /// Deserialize an instance of type `T` from a string of JSON text.

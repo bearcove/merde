@@ -3,7 +3,7 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-use crate::{value::Value, CowStr, IntoStatic, MerdeError, ValueDeserialize};
+use crate::{value::Value, CowStr, IntoStatic};
 
 /// A map, dictionary, object, whatever — with string keys.
 #[derive(PartialEq, Clone)]
@@ -79,41 +79,5 @@ impl<'s> Deref for Map<'s> {
 impl DerefMut for Map<'_> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
-    }
-}
-
-impl<'s> Map<'s> {
-    /// Gets a value from the object, returning an error if the key is missing.
-    ///
-    /// Because this method knows the key name, it transforms [MerdeError::MissingValue] into [MerdeError::MissingProperty].
-    ///
-    /// It does not by itself throw an error if `self.get()` returns `None`, to allow
-    /// for optional fields (via the [ValueDeserialize] implementation on the [Option] type).
-    pub fn must_get<T>(&self, key: impl Into<CowStr<'static>>) -> Result<T, MerdeError<'s>>
-    where
-        T: ValueDeserialize<'s>,
-    {
-        let key = key.into();
-        T::from_value_ref(self.get(&key)).map_err(|e| match e {
-            MerdeError::MissingValue => MerdeError::MissingProperty(key),
-            _ => e,
-        })
-    }
-
-    /// Removes a value from the object, returning an error if the key is missing.
-    ///
-    /// Because this method knows the key name, it transforms [MerdeError::MissingValue] into [MerdeError::MissingProperty].
-    ///
-    /// It does not by itself throw an error if `self.remove()` returns `None`, to allow
-    /// for optional fields (via the [ValueDeserialize] implementation on the [Option] type).
-    pub fn must_remove<T>(&mut self, key: impl Into<CowStr<'static>>) -> Result<T, MerdeError<'s>>
-    where
-        T: ValueDeserialize<'s>,
-    {
-        let key = key.into();
-        T::from_value(self.remove(&key)).map_err(|e| match e {
-            MerdeError::MissingValue => MerdeError::MissingProperty(key),
-            _ => e,
-        })
     }
 }
