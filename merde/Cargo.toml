@@ -35,9 +35,15 @@ name = "enums"
 path = "examples/enums.rs"
 required-features = ["json"]
 
+[[example]]
+name = "yaml"
+path = "examples/yaml.rs"
+required-features = ["yaml"]
+
 [dependencies]
 merde_core = { version = "5.1.0", path = "../merde_core", optional = true }
 merde_json = { version = "5.1.0", path = "../merde_json", optional = true }
+merde_yaml = { version = "5.1.0", path = "../merde_yaml", optional = true }
 merde_time = { version = "4.0.10", path = "../merde_time", optional = true, features = [
     "merde",
     "deserialize",
@@ -45,7 +51,15 @@ merde_time = { version = "4.0.10", path = "../merde_time", optional = true, feat
 
 [features]
 default = ["core", "deserialize"]
-full = ["core", "deserialize", "json", "time", "rusqlite", "compact_str"]
+full = [
+    "core",
+    "deserialize",
+    "json",
+    "yaml",
+    "time",
+    "rusqlite",
+    "compact_str",
+]
 core = ["dep:merde_core"]
 deserialize = ["core"]
 # merde_core re-exports
@@ -55,4 +69,5 @@ rusqlite = ["merde_core/rusqlite"]
 
 # non-core crates
 json = ["dep:merde_json", "merde_time/json"]
+yaml = ["dep:merde_yaml"]
 time = ["dep:merde_time"]
