@@ -2,7 +2,7 @@
 
 use std::collections::VecDeque;
 
-use merde_core::deserialize2::{ArrayStart, Deserializable, Deserializer, Event};
+use merde_core::deserialize2::{ArrayStart, Deserializer, Event};
 
 use crate::{
     jiter_lite::{errors::JiterError, jiter::Jiter, parse::Peek},
@@ -58,7 +58,7 @@ fn jiter_error(source: &str, err: JiterError) -> MerdeJsonError<'_> {
 impl<'s> Deserializer<'s> for JsonDeserializer<'s> {
     type Error<'es> = MerdeJsonError<'es>;
 
-    fn pop(&mut self) -> Result<Event<'s>, Self::Error<'s>> {
+    fn next(&mut self) -> Result<Event<'s>, Self::Error<'s>> {
         if let Some(ev) = self.queue.pop_back() {
             return Ok(ev);
         }
@@ -162,22 +162,6 @@ impl<'s> Deserializer<'s> for JsonDeserializer<'s> {
         };
         Ok(ev)
     }
-
-    async fn t_starting_with<T: Deserializable>(
-        &mut self,
-        starting_with: Option<Event<'s>>,
-    ) -> Result<T, Self::Error<'s>> {
-        if let Some(starting_with) = starting_with {
-            self.queue.push_back(starting_with);
-        }
-
-        // TODO: when too much stack space is used, stash this,
-        // return Poll::Pending, to continue deserializing with
-        // a shallower stack.
-
-        // that's the whole trick — for now, we just recurse as usual
-        T::deserialize(self).await
-    }
 }
 
 #[cfg(test)]
@@ -208,11 +192,10 @@ mod tests {
             let mut height: Option<i64> = None;
             let mut kind: Option<bool> = None;
 
-            eprintln!("expecting map start");
-            de.pop()?.into_map_start()?;
+            de.next()?.into_map_start()?;
 
             loop {
-                match de.pop()? {
+                match de.next()? {
                     // many different policies are possible here
                     Event::Str(k) => match k.as_ref() {
                         "height" => {
@@ -271,7 +254,7 @@ mod tests {
             I: Deserializer<'s>,
         {
             inner: I,
-            queue: VecDeque<Event<'s>>,
+            _phantom: std::marker::PhantomData<&'s ()>,
         }
 
         impl<'s, I> std::fmt::Debug for LoggingDeserializer<'s, I>
@@ -292,7 +275,7 @@ mod tests {
             fn new(inner: I) -> Self {
                 Self {
                     inner,
-                    queue: Default::default(),
+                    _phantom: std::marker::PhantomData,
                 }
             }
         }
@@ -303,29 +286,10 @@ mod tests {
         {
             type Error<'es> = I::Error<'es>;
 
-            fn pop(&mut self) -> Result<Event<'s>, Self::Error<'s>> {
-                if let Some(ev) = self.queue.pop_back() {
-                    eprintln!("popped from queue {:?}", ev);
-                    return Ok(ev);
-                }
-
-                let ev = self.inner.pop()?;
-                eprintln!("popped {:?}", ev);
+            fn next(&mut self) -> Result<Event<'s>, Self::Error<'s>> {
+                let ev = self.inner.next()?;
+                eprintln!("> {:?}", ev);
                 Ok(ev)
-            }
-
-            async fn t_starting_with<T: Deserializable>(
-                &mut self,
-                starting_with: Option<Event<'s>>,
-            ) -> Result<T, Self::Error<'s>> {
-                if let Some(starting_with) = starting_with {
-                    eprintln!("pushing back {:?}", starting_with);
-                    self.queue.push_back(starting_with);
-                }
-
-                let t = T::deserialize(self).await?;
-                eprintln!("deserialized t");
-                Ok(t)
             }
         }
 

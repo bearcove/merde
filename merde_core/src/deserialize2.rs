@@ -125,11 +125,11 @@ impl From<&Event<'_>> for ValueType {
     }
 }
 
-pub trait Deserializer<'s>: std::fmt::Debug {
+pub trait Deserializer<'s>: std::fmt::Debug + Sized {
     type Error<'es>: From<MerdeError<'es>>;
 
     /// Get the next event from the deserializer.
-    fn pop(&mut self) -> Result<Event<'s>, Self::Error<'s>>;
+    fn next(&mut self) -> Result<Event<'s>, Self::Error<'s>>;
 
     /// Deserialize a value of type `T`.
     #[allow(async_fn_in_trait)]
@@ -141,8 +141,39 @@ pub trait Deserializer<'s>: std::fmt::Debug {
     #[allow(async_fn_in_trait)]
     async fn t_starting_with<T: Deserializable>(
         &mut self,
-        starting_with: Option<Event<'s>>,
-    ) -> Result<T, Self::Error<'s>>;
+        starter: Option<Event<'s>>,
+    ) -> Result<T, Self::Error<'s>> {
+        // TODO: when too much stack space is used, stash this,
+        // return Poll::Pending, to continue deserializing with
+        // a shallower stack.
+
+        // that's the whole trick — for now, we just recurse as usual
+
+        if let Some(starter) = starter {
+            T::deserialize(&mut WithStarter(self, Some(starter))).await
+        } else {
+            T::deserialize(self).await
+        }
+    }
+}
+
+#[derive(Debug)]
+struct WithStarter<'d, 's, D>(&'d mut D, Option<Event<'s>>);
+
+impl<'d, 's, D> Deserializer<'s> for WithStarter<'d, 's, D>
+where
+    D: Deserializer<'s>,
+{
+    type Error<'es> = D::Error<'es>;
+
+    fn next(&mut self) -> Result<Event<'s>, Self::Error<'s>> {
+        if let Some(ev) = self.1.take() {
+            self.1 = None;
+            Ok(ev)
+        } else {
+            self.0.next()
+        }
+    }
 }
 
 pub trait Deserializable: Sized {
@@ -157,7 +188,7 @@ impl Deserializable for i64 {
     where
         D: Deserializer<'s>,
     {
-        let v: i64 = match de.pop()? {
+        let v: i64 = match de.next()? {
             Event::Int(i) => i,
             Event::Float(f) => f as _,
             ev => {
@@ -267,7 +298,7 @@ impl Deserializable for bool {
     where
         D: Deserializer<'s>,
     {
-        Ok(de.pop()?.into_bool()?)
+        Ok(de.next()?.into_bool()?)
     }
 }
 
@@ -276,7 +307,7 @@ impl Deserializable for f64 {
     where
         D: Deserializer<'s>,
     {
-        let v: f64 = match de.pop()? {
+        let v: f64 = match de.next()? {
             Event::Float(f) => f,
             Event::Int(i) => i as f64,
             ev => {
@@ -306,7 +337,7 @@ impl<T: Deserializable> Deserializable for Vec<T> {
     where
         D: Deserializer<'s>,
     {
-        let array_start = de.pop()?.into_array_start()?;
+        let array_start = de.next()?.into_array_start()?;
         let mut vec = if let Some(size) = array_start.size_hint {
             Vec::with_capacity(size)
         } else {
@@ -314,7 +345,7 @@ impl<T: Deserializable> Deserializable for Vec<T> {
         };
 
         loop {
-            match de.pop()? {
+            match de.next()? {
                 Event::ArrayEnd => break,
                 ev => {
                     let item: T = de.t_starting_with(Some(ev)).await?;
