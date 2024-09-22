@@ -11,7 +11,7 @@ that might run slower, but compiles faster.
 
 This is the "hub" crate, which re-exports all types from [merde_core](https://crates.io/crates/merde_core),
 including [`Value`], [`Array`], and [`Map`], and provides a declarative [`derive`] macro that helps implement
-traits like [`ValueDeserialize`], [`IntoStatic`] and [`JsonSerialize`].
+traits like [`Deserialize`], [`IntoStatic`] and [`JsonSerialize`].
 
 ## From `serde` to `merde`
 
@@ -41,7 +41,7 @@ fn main() {
 ```
 
 By contrast, `merde` provides declarative macros — impls for traits
-like `ValueDeserialize`, `JsonSerialize` can be generated with `merde::derive!`:
+like `Deserialize`, `JsonSerialize` can be generated with `merde::derive!`:
 
 ```rust
 #[derive(Debug)]
@@ -51,7 +51,7 @@ struct Point {
 }
 
 merde::derive! {
-    impl (ValueDeserialize, JsonSerialize) for struct Point { x, y }
+    impl (Deserialize, JsonSerialize) for struct Point { x, y }
 }
 
 fn main() {
@@ -61,16 +61,13 @@ fn main() {
     let serialized = merde::json::to_string(&point);
     println!("serialized = {}", serialized);
 
-    let deserialized: Point = merde::json::from_str_via_value(&serialized).unwrap();
+    let deserialized: Point = merde::json::from_str(&serialized).unwrap();
     println!("deserialized = {:?}", deserialized);
 }
 ```
 
 This approach is less flexible, but because there's no proc-macro involved, or
 re-parsing of the struct definitions by the proc macro, it builds faster.
-
-[`json::from_str_via_value`] round-trips through [`Value`] but that's not inherent
-to the merde approach, we just need to figure out the right approach.
 
 ### Copy-on-write types
 
@@ -124,7 +121,7 @@ struct Name {
 }
 
 merde::derive! {
-    impl (ValueDeserialize, JsonSerialize) for struct Name { first, middle, last }
+    impl (Deserialize, JsonSerialize) for struct Name { first, middle, last }
 }
 ```
 
@@ -143,7 +140,7 @@ struct Name<'s> {
 
 merde::derive! {
     //                                                     👇
-    impl (ValueDeserialize, JsonSerialize) for struct Name<'s> { first, middle, last }
+    impl (Deserialize, JsonSerialize) for struct Name<'s> { first, middle, last }
 }
 ```
 
@@ -166,13 +163,13 @@ use merde::CowStr;
 struct Wrapper<'s>(CowStr<'s>);
 
 merde::derive! {
-    impl (ValueDeserialize, JsonSerialize)
+    impl (Deserialize, JsonSerialize)
     for struct Wrapper<'s> transparent
 }
 
 fn main() {
     let input = r#"["Hello, World!"]"#;
-    let wrapper: Vec<Wrapper> = merde::json::from_str_via_value(input).unwrap();
+    let wrapper: Vec<Wrapper> = merde::json::from_str(input).unwrap();
     println!("Wrapped value: {:?}", wrapper);
 }
 ```
@@ -188,7 +185,7 @@ enum Event {
 }
 
 merde::derive! {
-    impl (JsonSerialize, ValueDeserialize) for enum Event
+    impl (JsonSerialize, Deserialize) for enum Event
     externally_tagged {
         "mouseup" => MouseUp,
         "mousedown" => MouseDown,
@@ -202,7 +199,7 @@ struct MouseUp {
 }
 
 merde::derive! {
-    impl (JsonSerialize, ValueDeserialize) for struct MouseUp {
+    impl (JsonSerialize, Deserialize) for struct MouseUp {
         x,
         y
     }
@@ -215,7 +212,7 @@ struct MouseDown {
 }
 
 merde::derive! {
-    impl (JsonSerialize, ValueDeserialize) for struct MouseDown {
+    impl (JsonSerialize, Deserialize) for struct MouseDown {
         x,
         y
     }
@@ -223,7 +220,7 @@ merde::derive! {
 
 fn main() {
     let input = r#"{"mouseup": {"x": 100, "y": 200}}"#;
-    let event: Event = merde::json::from_str_via_value(input).unwrap();
+    let event: Event = merde::json::from_str(input).unwrap();
     println!("Event: {:?}", event);
 }
 ```
@@ -240,7 +237,7 @@ enum Emergency {
 }
 
 merde::derive! {
-    impl (JsonSerialize, ValueDeserialize) for enum Emergency
+    impl (JsonSerialize, Deserialize) for enum Emergency
     string_like {
         "cuddle" => Cuddle,
         "smoothie" => Smoothie,
@@ -251,14 +248,14 @@ merde::derive! {
 
 fn main() {
     let input = r#"["cuddle", "smoothie", "playtime"]"#;
-    let emergencies: Vec<Emergency> = merde::json::from_str_via_value(input).unwrap();
+    let emergencies: Vec<Emergency> = merde::json::from_str(input).unwrap();
     println!("Emergencies: {:?}", emergencies);
 }
 ```
 
 ### Interlude: why not `&'s str`?
 
-You'll notice that `ValueDeserialize` is not implemented for `&'s str`, ie.
+You'll notice that `Deserialize` is not implemented for `&'s str`, ie.
 this code does not compile:
 
 ```rust,compile_fail
@@ -270,18 +267,18 @@ struct Name<'s> {
 }
 
 merde::derive! {
-    impl (ValueDeserialize, JsonSerialize) for struct Nam<'s> { first, middle, last }
+    impl (Deserialize, JsonSerialize) for struct Nam<'s> { first, middle, last }
 }
 ```
 
 ```text
-error[E0277]: the trait bound `&str: ValueDeserialize<'_>` is not satisfied
+error[E0277]: the trait bound `&str: Deserialize<'_>` is not satisfied
   --> merde/src/lib.rs:183:1
    |
 12 | / merde::derive! {
-13 | |     impl (ValueDeserialize, JsonSerialize) for struct Name<'s> { first, middle, last }
+13 | |     impl (Deserialize, JsonSerialize) for struct Name<'s> { first, middle, last }
 14 | | }
-   | |_^ the trait `ValueDeserialize<'_>` is not implemented for `&str`
+   | |_^ the trait `Deserialize<'_>` is not implemented for `&str`
 ```
 
 That's because it's not always possible to borrow from the input.
@@ -312,14 +309,14 @@ but the next character from the input is the backslash (`\`) used to escape the 
 Such a string will end up being owned in a `CowStr`:
 
 ```rust
-use merde::{CowStr, ValueDeserialize};
+use merde::{CowStr, Deserialize};
 
 fn main() {
     let input = r#"
         ["\"The Rock\""]
     "#;
 
-    let v: Vec<CowStr<'_>> = merde::json::from_str_via_value(input).unwrap();
+    let v: Vec<CowStr<'_>> = merde::json::from_str(input).unwrap();
     assert!(matches!(v.first().unwrap(), CowStr::Owned(_)));
 }
 ```
@@ -327,14 +324,14 @@ fn main() {
 Whereas something without escape sequences will end up being borrowed:
 
 ```rust
-use merde::{CowStr, ValueDeserialize};
+use merde::{CowStr, Deserialize};
 
 fn main() {
     let input = r#"
         ["Joever"]
     "#;
 
-    let v: Vec<CowStr<'_>> = merde::json::from_str_via_value(input).unwrap();
+    let v: Vec<CowStr<'_>> = merde::json::from_str(input).unwrap();
     assert!(matches!(v.first().unwrap(), CowStr::Borrowed(_)));
 }
 ```
@@ -356,7 +353,7 @@ struct Message<'s> {
 }
 
 merde::derive! {
-    impl (ValueDeserialize, JsonSerialize)
+    impl (Deserialize, JsonSerialize)
     for struct Message<'s> { kind, payload }
 }
 
@@ -369,7 +366,7 @@ fn recv_and_deserialize<'s>() -> Message<'s> {
             "payload": "hello"
         }"#.to_owned()
     };
-    let message: Message = merde::json::from_str_via_value(&s).unwrap();
+    let message: Message = merde::json::from_str(&s).unwrap();
     message
 }
 
@@ -384,13 +381,13 @@ This fails to build with:
 error[E0515]: cannot return value referencing local variable `s`
     --> merde/src/lib.rs:366:9
     |
-365 |         let message: Message = merde::json::from_str_via_value(&s).unwrap();
-    |                                                                -- `s` is borrowed here
+365 |         let message: Message = merde::json::from_str(&s).unwrap();
+    |                                                      -- `s` is borrowed here
 366 |         message
     |         ^^^^^^^ returns a value referencing data owned by the current function
 ```
 
-That's where the `IntoStatic` trait comes in! Which you get for free when "deriving" `ValueDeserialize`!
+That's where the `IntoStatic` trait comes in! Which you get for free when "deriving" `Deserialize`!
 
 ```rust
 use merde::IntoStatic;
@@ -402,7 +399,7 @@ struct Message<'s> {
 }
 
 merde::derive! {
-    impl (ValueDeserialize, JsonSerialize)
+    impl (Deserialize, JsonSerialize)
     for struct Message<'s> { kind, payload }
 }
 
@@ -414,7 +411,7 @@ fn recv_and_deserialize() -> Message<'static> {
             "payload": "hello"
         }"#.to_owned()
     };
-    let message: Message = merde::json::from_str_via_value(&s).unwrap();
+    let message: Message = merde::json::from_str(&s).unwrap();
     message.into_static()
 }
 
@@ -469,7 +466,7 @@ struct Person<'s> {
 }
 
 merde::derive! {
-    impl (ValueDeserialize, JsonSerialize) for struct Person<'s> { name, birth }
+    impl (Deserialize, JsonSerialize) for struct Person<'s> { name, birth }
 }
 
 fn main() {
@@ -480,7 +477,7 @@ fn main() {
         }
     "#;
 
-    let person: Person = merde::json::from_str_via_value(input).unwrap();
+    let person: Person = merde::json::from_str(input).unwrap();
     println!("person = {:?}", person);
 }
 ```
@@ -518,11 +515,11 @@ struct Person<'s> {
 }
 
 merde::derive! {
-    impl (ValueDeserialize, JsonSerialize) for struct Person<'s> { name, age }
+    impl (Deserialize, JsonSerialize) for struct Person<'s> { name, age }
 }
 ```
 
-And the `impl` blocks for `ValueDeserialize`, and `JsonSerialize` wouldn't actually
+And the `impl` blocks for `Deserialize`, and `JsonSerialize` wouldn't actually
 be generated unless crates downstream of yours enable `merde/deserialize` or `merde/json`.
 
 ### Approach 2: zero-deps
@@ -558,7 +555,7 @@ pub struct Person<'s> {
 }
 
 merde::derive! {
-    impl (ValueDeserialize, JsonSerialize) for struct Person<'s> { name, age }
+    impl (Deserialize, JsonSerialize) for struct Person<'s> { name, age }
 }
 ```
 
