@@ -1,4 +1,8 @@
-use std::{future::Future, pin::Pin};
+use std::{
+    future::Future,
+    pin::Pin,
+    task::{Context, Poll, RawWaker, RawWakerVTable, Waker},
+};
 
 use crate::{Array, CowStr, Map, MerdeError, Value, ValueType};
 
@@ -160,21 +164,28 @@ pub trait Deserializer<'s>: std::fmt::Debug {
     type Error<'es>: From<MerdeError<'es>>;
 
     /// Get the next event from the deserializer.
+    #[doc(hidden)]
     fn next(&mut self) -> Result<Event<'s>, Self::Error<'s>>;
 
     /// Deserialize a value of type `T`.
+    #[doc(hidden)]
     #[allow(async_fn_in_trait)]
     async fn t<T: Deserializable<'s>>(&mut self) -> Result<T, Self::Error<'s>> {
         self.t_starting_with(None).await
     }
 
     /// Deserialize a value of type `T`, using the given event as the first event.
+    #[doc(hidden)]
     #[allow(async_fn_in_trait)]
     async fn t_starting_with<T: Deserializable<'s>>(
         &mut self,
         starter: Option<Event<'s>>,
     ) -> Result<T, Self::Error<'s>>;
 
+    /// Return a boxed version of `Self::t_starting_with`, useful to avoid
+    /// future sizes becoming infinite, for example when deserializing Value,
+    /// etc.
+    #[doc(hidden)]
     fn t_starting_with_boxed<'d, T: Deserializable<'s> + 'd>(
         &'d mut self,
         starter: Option<Event<'s>>,
@@ -183,6 +194,19 @@ pub trait Deserializer<'s>: std::fmt::Debug {
         's: 'd,
     {
         Box::pin(self.t_starting_with(starter))
+    }
+
+    fn deserialize<T: Deserializable<'s>>(&mut self) -> Result<T, Self::Error<'s>> {
+        let vtable = RawWakerVTable::new(|_| todo!(), |_| {}, |_| {}, |_| {});
+        let vtable = Box::leak(Box::new(vtable));
+        let w = unsafe { Waker::from_raw(RawWaker::new(std::ptr::null(), vtable)) };
+        let mut cx = Context::from_waker(&w);
+        let fut = self.t_starting_with(None);
+        let fut = std::pin::pin!(fut);
+        match fut.poll(&mut cx) {
+            Poll::Ready(res) => res,
+            _ => unreachable!("nothing can return poll pending yet"),
+        }
     }
 }
 
