@@ -1,8 +1,9 @@
 //! An experimental JSON deserializer implementation
 
-use std::collections::VecDeque;
-
-use merde_core::deserialize2::{ArrayStart, Deserializer, Event};
+use merde_core::{
+    deserialize2::{ArrayStart, Deserializer, Event},
+    CowStr,
+};
 
 use crate::{
     jiter_lite::{errors::JiterError, jiter::Jiter, parse::Peek},
@@ -10,19 +11,20 @@ use crate::{
     MerdeJsonError,
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum StackItem {
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum StackItem<'s> {
+    ObjectFirstKey(CowStr<'s>),
     ObjectKey,
     ObjectValue,
-    Array(Option<Peek>),
+    ArrayFirstValue(Peek),
+    Array,
 }
 
 /// A JSON deserializer
 pub struct JsonDeserializer<'s> {
     source: &'s str,
     jiter: Jiter<'s>,
-    stack: Vec<StackItem>,
-    queue: VecDeque<Event<'s>>,
+    stack: Vec<StackItem<'s>>,
 }
 
 impl std::fmt::Debug for JsonDeserializer<'_> {
@@ -30,7 +32,6 @@ impl std::fmt::Debug for JsonDeserializer<'_> {
         f.debug_struct("JsonDeserializer")
             .field("source_len", &self.source)
             .field("stack_size", &self.stack.len())
-            .field("queue_len", &self.queue.len())
             .finish()
     }
 }
@@ -43,7 +44,6 @@ impl<'s> JsonDeserializer<'s> {
             source,
             jiter,
             stack: Default::default(),
-            queue: Default::default(),
         }
     }
 }
@@ -59,47 +59,46 @@ impl<'s> Deserializer<'s> for JsonDeserializer<'s> {
     type Error<'es> = MerdeJsonError<'es>;
 
     fn next(&mut self) -> Result<Event<'s>, Self::Error<'s>> {
-        if let Some(ev) = self.queue.pop_back() {
-            return Ok(ev);
-        }
-
-        let peek: Option<Peek> = match self.stack.last_mut().copied() {
+        let peek: Option<Peek> = match self.stack.pop() {
+            Some(StackItem::ObjectFirstKey(key)) => {
+                self.stack.push(StackItem::ObjectValue);
+                return Ok(Event::Str(key));
+            }
             Some(StackItem::ObjectKey) => match self
                 .jiter
                 .next_key()
                 .map_err(|e| jiter_error(self.source, e))?
             {
                 Some(key) => {
-                    *self.stack.last_mut().unwrap() = StackItem::ObjectValue;
+                    self.stack.push(StackItem::ObjectValue);
                     let key = cowify(self.source.as_bytes(), key);
                     return Ok(Event::Str(key));
                 }
                 None => {
-                    // end of the object/map!
-                    self.stack.pop();
                     return Ok(Event::MapEnd);
                 }
             },
             Some(StackItem::ObjectValue) => {
-                *self.stack.last_mut().unwrap() = StackItem::ObjectKey;
+                self.stack.push(StackItem::ObjectKey);
                 None
             }
-            Some(StackItem::Array(peek)) => {
-                if let Some(peek) = peek {
-                    *self.stack.last_mut().unwrap() = StackItem::Array(None);
-                    Some(peek)
-                } else {
-                    match self
-                        .jiter
-                        .array_step()
-                        .map_err(|e| jiter_error(self.source, e))?
-                    {
-                        Some(peek) => Some(peek),
-                        None => {
-                            // end of the array!
-                            self.stack.pop();
-                            return Ok(Event::ArrayEnd);
-                        }
+            Some(StackItem::ArrayFirstValue(peek)) => {
+                self.stack.push(StackItem::Array);
+                Some(peek)
+            }
+            Some(StackItem::Array) => {
+                match self
+                    .jiter
+                    .array_step()
+                    .map_err(|e| jiter_error(self.source, e))?
+                {
+                    Some(peek) => {
+                        self.stack.push(StackItem::Array);
+                        Some(peek)
+                    }
+                    None => {
+                        // end of the array!
+                        return Ok(Event::ArrayEnd);
                     }
                 }
             }
@@ -144,17 +143,23 @@ impl<'s> Deserializer<'s> for JsonDeserializer<'s> {
                 .jiter
                 .known_array()
                 .map_err(|err| jiter_error(self.source, err))?;
-            self.stack.push(StackItem::Array(peek));
+            if let Some(peek) = peek {
+                self.stack.push(StackItem::ArrayFirstValue(peek));
+            } else {
+                self.stack.push(StackItem::Array);
+            }
             Event::ArrayStart(ArrayStart { size_hint: None })
         } else if peek == Peek::Object {
             let key = self
                 .jiter
                 .known_object()
                 .map_err(|err| jiter_error(self.source, err))?;
-            self.stack.push(StackItem::ObjectValue);
             if let Some(key) = key {
                 let key = cowify(self.source.as_bytes(), key);
-                self.queue.push_back(Event::Str(key))
+                self.stack.push(StackItem::ObjectFirstKey(key));
+            } else {
+                // well it's empty, but we'll find that soon enough
+                self.stack.push(StackItem::ObjectKey);
             }
             Event::MapStart
         } else {
@@ -167,7 +172,6 @@ impl<'s> Deserializer<'s> for JsonDeserializer<'s> {
 #[cfg(test)]
 mod tests {
     use std::{
-        collections::VecDeque,
         future::Future,
         task::{Context, Poll, RawWaker, RawWakerVTable, Waker},
     };
