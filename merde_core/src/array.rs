@@ -3,7 +3,7 @@ use std::ops::{Deref, DerefMut};
 use crate::{value::Value, IntoStatic, MerdeError, ValueDeserialize};
 
 /// An array of [`Value`] items
-#[derive(Debug, PartialEq, Clone)]
+#[derive(PartialEq, Clone)]
 #[repr(transparent)]
 pub struct Array<'s>(pub Vec<Value<'s>>);
 
@@ -14,6 +14,12 @@ impl<'s> Array<'s> {
 
     pub fn into_inner(self) -> Vec<Value<'s>> {
         self.0
+    }
+}
+
+impl std::fmt::Debug for Array<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
     }
 }
 

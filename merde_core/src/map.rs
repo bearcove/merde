@@ -6,9 +6,15 @@ use std::{
 use crate::{value::Value, CowStr, IntoStatic, MerdeError, ValueDeserialize};
 
 /// A map, dictionary, object, whatever — with string keys.
-#[derive(Debug, PartialEq, Clone)]
+#[derive(PartialEq, Clone)]
 #[repr(transparent)]
 pub struct Map<'s>(pub HashMap<CowStr<'s>, Value<'s>>);
+
+impl std::fmt::Debug for Map<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
 
 impl<'s> Map<'s> {
     pub fn new() -> Self {

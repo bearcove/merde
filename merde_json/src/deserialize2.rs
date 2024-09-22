@@ -1,7 +1,7 @@
 //! An experimental JSON deserializer implementation
 
 use merde_core::{
-    deserialize2::{ArrayStart, Deserializer, Event},
+    deserialize2::{ArrayStart, Deserializable, Deserializer, Event},
     CowStr,
 };
 
@@ -25,6 +25,7 @@ pub struct JsonDeserializer<'s> {
     source: &'s str,
     jiter: Jiter<'s>,
     stack: Vec<StackItem<'s>>,
+    starter: Option<Event<'s>>,
 }
 
 impl std::fmt::Debug for JsonDeserializer<'_> {
@@ -44,6 +45,7 @@ impl<'s> JsonDeserializer<'s> {
             source,
             jiter,
             stack: Default::default(),
+            starter: None,
         }
     }
 }
@@ -59,6 +61,10 @@ impl<'s> Deserializer<'s> for JsonDeserializer<'s> {
     type Error<'es> = MerdeJsonError<'es>;
 
     fn next(&mut self) -> Result<Event<'s>, Self::Error<'s>> {
+        if let Some(ev) = self.starter.take() {
+            return Ok(ev);
+        }
+
         let peek: Option<Peek> = match self.stack.pop() {
             Some(StackItem::ObjectFirstKey(key)) => {
                 self.stack.push(StackItem::ObjectValue);
@@ -167,6 +173,25 @@ impl<'s> Deserializer<'s> for JsonDeserializer<'s> {
         };
         Ok(ev)
     }
+
+    async fn t_starting_with<T: Deserializable<'s>>(
+        &mut self,
+        starter: Option<Event<'s>>,
+    ) -> Result<T, Self::Error<'s>> {
+        if let Some(starter) = starter {
+            if self.starter.is_some() {
+                unreachable!("setting starter when it's already set? shouldn't happen")
+            }
+            self.starter = Some(starter);
+        }
+
+        // TODO: when too much stack space is used, stash this,
+        // return Poll::Pending, to continue deserializing with
+        // a shallower stack.
+
+        // that's the whole trick — for now, we just recurse as usual
+        T::deserialize(self).await
+    }
 }
 
 #[cfg(test)]
@@ -258,7 +283,7 @@ mod tests {
             I: Deserializer<'s>,
         {
             inner: I,
-            _phantom: std::marker::PhantomData<&'s ()>,
+            starter: Option<Event<'s>>,
         }
 
         impl<'s, I> std::fmt::Debug for LoggingDeserializer<'s, I>
@@ -279,7 +304,7 @@ mod tests {
             fn new(inner: I) -> Self {
                 Self {
                     inner,
-                    _phantom: std::marker::PhantomData,
+                    starter: None,
                 }
             }
         }
@@ -291,9 +316,28 @@ mod tests {
             type Error<'es> = I::Error<'es>;
 
             fn next(&mut self) -> Result<Event<'s>, Self::Error<'s>> {
+                if let Some(ev) = self.starter.take() {
+                    eprintln!("> (from starter) {:?}", ev);
+                    return Ok(ev);
+                }
+
                 let ev = self.inner.next()?;
                 eprintln!("> {:?}", ev);
                 Ok(ev)
+            }
+
+            async fn t_starting_with<T: Deserializable<'s>>(
+                &mut self,
+                starter: Option<Event<'s>>,
+            ) -> Result<T, Self::Error<'s>> {
+                if let Some(starter) = starter {
+                    if self.starter.is_some() {
+                        unreachable!("setting starter when it's already set? shouldn't happen")
+                    }
+                    self.starter = Some(starter);
+                }
+
+                T::deserialize(self).await
             }
         }
 
@@ -339,6 +383,8 @@ mod tests {
         match fut.poll(&mut cx) {
             Poll::Ready(res) => {
                 let value = res.unwrap();
+                eprintln!("value = {:#?}", value);
+
                 assert_eq!(
                     value,
                     Array::new()
