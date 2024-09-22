@@ -6,6 +6,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.0](https://github.com/bearcove/merde/compare/merde_json-v5.1.0...merde_json-v6.0.0) - 2024-09-22
+
+### Other
+
+- Add bytes type ([#76](https://github.com/bearcove/merde/pull/76))
+- Remove ValueDeserialize macros
+- Remove definition of ValueDeserialize
+- Convert example
+- Move away from ValueDeserialize
+- Use UnexpectedEvent
+- Deserializable => Deserialize, a-la serde
+- Fix all tests
+- Well that works
+- okay hang on
+- get rid of queue in JsonSerializer
+- Play around with API
+- mhmh
+- Well the new deserializer seems to be working
+- poll failed you say
+- add lifetimes to errors aw yiss
+
 ## [5.1.0](https://github.com/bearcove/merde/compare/merde_json-v5.0.5...merde_json-v5.1.0) - 2024-09-20
 
 ### Added

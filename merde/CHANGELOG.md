@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.0](https://github.com/bearcove/merde/compare/merde-v5.1.1...merde-v6.0.0) - 2024-09-22
+
+### Added
+
+- [**breaking**] Include key name in error ([#73](https://github.com/bearcove/merde/pull/73))
+
+### Other
+
+- Initial merde_yaml addition ([#77](https://github.com/bearcove/merde/pull/77))
+- Remove ValueDeserialize macros
+- Make option optional
+- Port more things to deserialize
+- Steal @compiler-errors's suggestion (thanks Michael!)
+- port one more example
+- impl_deserialize is a noop unless the feature is enabled
+- Convert example
+- Move mixed example to deserialize
+- Move more examples over to Deserialize
+- Move away from ValueDeserialize
+- Fix all tests
+- add lifetimes to errors aw yiss
+
 ## [5.1.1](https://github.com/bearcove/merde/compare/merde-v5.1.0...merde-v5.1.1) - 2024-09-20
 
 ### Other
