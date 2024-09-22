@@ -1,15 +1,16 @@
 use merde::json::JsonSerialize;
-use merde::{CowStr, IntoStatic, OwnedValueDeserialize, Value};
+use merde::{CowStr, Deserialize, Deserializer, IntoStatic, WithLifetime};
 
 fn deser_and_return<T>(s: String) -> Result<T, merde_json::MerdeJsonError<'static>>
 where
-    T: OwnedValueDeserialize,
+    T: for<'s> WithLifetime<'s> + 'static,
+    for<'s> <T as WithLifetime<'s>>::Lifetimed: Deserialize<'s> + IntoStatic<Output = T>,
 {
     // here `s` is a `String`, but pretend we're making
     // a network request instead — the point is is that we
     // need to borrow from a local from the function body.
-    let value: Value = merde_json::from_str_via_value(&s).map_err(|e| e.to_static())?;
-    Ok(T::owned_from_value(Some(value)).map_err(|e| e.into_static())?)
+    let mut deser = merde_json::JsonDeserializer::new(&s);
+    deser.deserialize_owned().map_err(|e| e.to_static())
 }
 
 fn main() {
@@ -26,11 +27,11 @@ fn main() {
         }
     "#;
 
-    let person: Person = merde_json::from_str_via_value(input).unwrap();
+    let person: Person = merde_json::from_str(input).unwrap();
     println!("{:?}", person);
 
     let serialized = person.to_json_string();
-    let person2: Person = merde_json::from_str_via_value(&serialized).unwrap();
+    let person2: Person = merde_json::from_str(&serialized).unwrap();
     println!("{:?}", person2);
 
     assert_eq!(person, person2);
@@ -50,7 +51,7 @@ struct Address<'s> {
 }
 
 merde::derive! {
-    impl (JsonSerialize, ValueDeserialize, Deserialize) for struct Address<'s> {
+    impl (JsonSerialize, Deserialize) for struct Address<'s> {
         street,
         city,
         state,
@@ -66,5 +67,5 @@ struct Person<'s> {
 }
 
 merde::derive! {
-    impl (JsonSerialize, ValueDeserialize, Deserialize) for struct Person<'s> { name, age, address }
+    impl (JsonSerialize, Deserialize) for struct Person<'s> { name, age, address }
 }
