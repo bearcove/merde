@@ -14,7 +14,7 @@ build-time-friendly alternative to `serde`.
 This "core" crate provides core types like `Value`, `Array`, `Map`,
 and `CowStr<'s>` (a copy-on-write string type that also leverages
 [compact_str](https://crates.io/crates/compact_str)'s small string
-optimization), and traits like `ValueDeserialize` and `IntoStatic`.
+optimization), and traits like `Deserialize` and `IntoStatic`.
 
 Crates that provide support for formats (like [merde_json](https://crates.io/crates/merde_json)),
 and crates that provide wrappers around other crates' types, to allow serializing/deserializing

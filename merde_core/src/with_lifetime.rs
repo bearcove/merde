@@ -6,7 +6,7 @@ use std::{
 use crate::CowStr;
 
 /// Allow instantiating a type with a lifetime parameter, which in
-/// turn lets us require `ValueDeserialize<'s>` for `CowStr<'s>` for
+/// turn lets us require `Deserialize<'s>` for `CowStr<'s>` for
 /// example, even when `CowStr<'s>` is erased behind a `T`.
 ///
 /// See <https://github.com/bearcove/merde/pull/60> for details
