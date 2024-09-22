@@ -213,6 +213,13 @@ macro_rules! impl_deserialize {
 }
 
 #[doc(hidden)]
+#[cfg(not(feature = "deserialize"))]
+#[macro_export]
+macro_rules! impl_deserialize {
+    ($($tt:tt)*) => {};
+}
+
+#[doc(hidden)]
 #[cfg(feature = "deserialize")]
 #[macro_export]
 macro_rules! impl_value_deserialize {
