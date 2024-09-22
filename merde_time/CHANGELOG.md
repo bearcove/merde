@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.11](https://github.com/bearcove/merde/compare/merde_time-v4.0.10...merde_time-v4.0.11) - 2024-09-22
+
+### Other
+
+- Remove ValueDeserialize macros
+- Port more things to deserialize
+- Fix all tests
+- add lifetimes to errors aw yiss
+
 ## [4.0.10](https://github.com/bearcove/merde/compare/merde_time-v4.0.9...merde_time-v4.0.10) - 2024-09-20
 
 ### Other

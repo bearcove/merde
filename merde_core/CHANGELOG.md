@@ -6,6 +6,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.0](https://github.com/bearcove/merde/compare/merde_core-v5.1.0...merde_core-v6.0.0) - 2024-09-22
+
+### Added
+
+- [**breaking**] Include key name in error ([#73](https://github.com/bearcove/merde/pull/73))
+
+### Other
+
+- Add bytes type ([#76](https://github.com/bearcove/merde/pull/76))
+- Remove ValueDeserialize macros
+- Remove definition of ValueDeserialize
+- Make option optional
+- Convert example
+- Move mixed example to deserialize
+- Move away from ValueDeserialize
+- Use UnexpectedEvent
+- Deserializable => Deserialize, a-la serde
+- Fix all tests
+- Well that works
+- okay hang on
+- Play around with API
+- mhmh
+- poll failed you say
+- add lifetimes to errors aw yiss
+- des2 ideas
+
 ## [5.1.0](https://github.com/bearcove/merde/compare/merde_core-v5.0.5...merde_core-v5.1.0) - 2024-09-20
 
 ### Added

@@ -1,6 +1,6 @@
 [![license: MIT/Apache-2.0](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](LICENSE-MIT)
-[![crates.io](https://img.shields.io/crates/v/merde_json.svg)](https://crates.io/crates/merde_json)
-[![docs.rs](https://docs.rs/merde_json/badge.svg)](https://docs.rs/merde_json)
+[![crates.io](https://img.shields.io/crates/v/merde.svg)](https://crates.io/crates/merde)
+[![docs.rs](https://docs.rs/merde/badge.svg)](https://docs.rs/merde)
 
 # merde
 
@@ -20,6 +20,7 @@ Then head over to the crate documentations:
 
   * [merde](./merde/README.md)
   * [merde_json](./merde_json/README.md)
+  * [merde_yaml](./merde_yaml/README.md)
 
 ## FAQ
 
