@@ -1,5 +1,6 @@
 use crate::{CowStr, MerdeError, ValueType};
 
+#[derive(Debug)]
 pub enum Event<'s> {
     Int(i64),
     Float(f64),
@@ -12,6 +13,7 @@ pub enum Event<'s> {
     ArrayEnd,
 }
 
+#[derive(Debug)]
 pub struct ArrayStart {
     pub size_hint: Option<usize>,
 }
@@ -123,7 +125,7 @@ impl From<&Event<'_>> for ValueType {
     }
 }
 
-pub trait Deserializer<'s> {
+pub trait Deserializer<'s>: std::fmt::Debug {
     type Error<'es>: From<MerdeError<'es>>;
 
     /// Get the next event from the deserializer.
@@ -131,7 +133,16 @@ pub trait Deserializer<'s> {
 
     /// Deserialize a value of type `T`.
     #[allow(async_fn_in_trait)]
-    async fn t<T: Deserializable>(&mut self) -> Result<T, Self::Error<'s>>;
+    async fn t<T: Deserializable>(&mut self) -> Result<T, Self::Error<'s>> {
+        self.t_starting_with(None).await
+    }
+
+    /// Deserialize a value of type `T`, using the given event as the first event.
+    #[allow(async_fn_in_trait)]
+    async fn t_starting_with<T: Deserializable>(
+        &mut self,
+        starting_with: Option<Event<'s>>,
+    ) -> Result<T, Self::Error<'s>>;
 }
 
 pub trait Deserializable: Sized {
@@ -161,18 +172,157 @@ impl Deserializable for i64 {
     }
 }
 
+impl Deserializable for u64 {
+    async fn deserialize<'s, D>(de: &mut D) -> Result<Self, D::Error<'s>>
+    where
+        D: Deserializer<'s>,
+    {
+        let v: i64 = de.t().await?;
+        v.try_into().map_err(|_| MerdeError::OutOfRange.into())
+    }
+}
+
+impl Deserializable for i32 {
+    async fn deserialize<'s, D>(de: &mut D) -> Result<Self, D::Error<'s>>
+    where
+        D: Deserializer<'s>,
+    {
+        let v: i64 = de.t().await?;
+        v.try_into().map_err(|_| MerdeError::OutOfRange.into())
+    }
+}
+
+impl Deserializable for u32 {
+    async fn deserialize<'s, D>(de: &mut D) -> Result<Self, D::Error<'s>>
+    where
+        D: Deserializer<'s>,
+    {
+        let v: i64 = de.t().await?;
+        v.try_into().map_err(|_| MerdeError::OutOfRange.into())
+    }
+}
+
+impl Deserializable for i16 {
+    async fn deserialize<'s, D>(de: &mut D) -> Result<Self, D::Error<'s>>
+    where
+        D: Deserializer<'s>,
+    {
+        let v: i64 = de.t().await?;
+        v.try_into().map_err(|_| MerdeError::OutOfRange.into())
+    }
+}
+
+impl Deserializable for u16 {
+    async fn deserialize<'s, D>(de: &mut D) -> Result<Self, D::Error<'s>>
+    where
+        D: Deserializer<'s>,
+    {
+        let v: i64 = de.t().await?;
+        v.try_into().map_err(|_| MerdeError::OutOfRange.into())
+    }
+}
+
+impl Deserializable for i8 {
+    async fn deserialize<'s, D>(de: &mut D) -> Result<Self, D::Error<'s>>
+    where
+        D: Deserializer<'s>,
+    {
+        let v: i64 = de.t().await?;
+        v.try_into().map_err(|_| MerdeError::OutOfRange.into())
+    }
+}
+
+impl Deserializable for u8 {
+    async fn deserialize<'s, D>(de: &mut D) -> Result<Self, D::Error<'s>>
+    where
+        D: Deserializer<'s>,
+    {
+        let v: i64 = de.t().await?;
+        v.try_into().map_err(|_| MerdeError::OutOfRange.into())
+    }
+}
+
+impl Deserializable for isize {
+    async fn deserialize<'s, D>(de: &mut D) -> Result<Self, D::Error<'s>>
+    where
+        D: Deserializer<'s>,
+    {
+        let v: i64 = de.t().await?;
+        v.try_into().map_err(|_| MerdeError::OutOfRange.into())
+    }
+}
+
+impl Deserializable for usize {
+    async fn deserialize<'s, D>(de: &mut D) -> Result<Self, D::Error<'s>>
+    where
+        D: Deserializer<'s>,
+    {
+        let v: i64 = de.t().await?;
+        v.try_into().map_err(|_| MerdeError::OutOfRange.into())
+    }
+}
+
 impl Deserializable for bool {
     async fn deserialize<'s, D>(de: &mut D) -> Result<Self, D::Error<'s>>
     where
         D: Deserializer<'s>,
     {
-        match de.pop()? {
-            Event::Bool(b) => Ok(b),
-            ev => Err(MerdeError::MismatchedType {
-                expected: ValueType::Bool,
-                found: ValueType::from(&ev),
+        Ok(de.pop()?.into_bool()?)
+    }
+}
+
+impl Deserializable for f64 {
+    async fn deserialize<'s, D>(de: &mut D) -> Result<Self, D::Error<'s>>
+    where
+        D: Deserializer<'s>,
+    {
+        let v: f64 = match de.pop()? {
+            Event::Float(f) => f,
+            Event::Int(i) => i as f64,
+            ev => {
+                return Err(MerdeError::MismatchedType {
+                    expected: ValueType::Float,
+                    found: ValueType::from(&ev),
+                }
+                .into())
             }
-            .into()),
+        };
+        Ok(v)
+    }
+}
+
+impl Deserializable for f32 {
+    async fn deserialize<'s, D>(de: &mut D) -> Result<Self, D::Error<'s>>
+    where
+        D: Deserializer<'s>,
+    {
+        let v: f64 = de.t().await?;
+        Ok(v as f32)
+    }
+}
+
+impl<T: Deserializable> Deserializable for Vec<T> {
+    async fn deserialize<'s, D>(de: &mut D) -> Result<Self, D::Error<'s>>
+    where
+        D: Deserializer<'s>,
+    {
+        let array_start = de.pop()?.into_array_start()?;
+        let mut vec = if let Some(size) = array_start.size_hint {
+            Vec::with_capacity(size)
+        } else {
+            Vec::new()
+        };
+
+        loop {
+            match de.pop()? {
+                Event::ArrayEnd => break,
+                ev => {
+                    let item: T = de.t_starting_with(Some(ev)).await?;
+                    vec.push(item);
+                }
+            }
         }
+
+        Ok(vec)
     }
 }

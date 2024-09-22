@@ -1,5 +1,7 @@
 //! An experimental JSON deserializer implementation
 
+use std::collections::VecDeque;
+
 use merde_core::deserialize2::{ArrayStart, Deserializable, Deserializer, Event};
 
 use crate::{
@@ -8,11 +10,11 @@ use crate::{
     MerdeJsonError,
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum StackItem {
     ObjectKey,
     ObjectValue,
-    Array,
+    Array(Option<Peek>),
 }
 
 /// A JSON deserializer
@@ -20,7 +22,17 @@ pub struct JsonDeserializer<'s> {
     source: &'s str,
     jiter: Jiter<'s>,
     stack: Vec<StackItem>,
-    queue: Option<Event<'s>>,
+    queue: VecDeque<Event<'s>>,
+}
+
+impl std::fmt::Debug for JsonDeserializer<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("JsonDeserializer")
+            .field("source_len", &self.source)
+            .field("stack_size", &self.stack.len())
+            .field("queue_len", &self.queue.len())
+            .finish()
+    }
 }
 
 impl<'s> JsonDeserializer<'s> {
@@ -31,7 +43,7 @@ impl<'s> JsonDeserializer<'s> {
             source,
             jiter,
             stack: Default::default(),
-            queue: None,
+            queue: Default::default(),
         }
     }
 }
@@ -47,7 +59,7 @@ impl<'s> Deserializer<'s> for JsonDeserializer<'s> {
     type Error<'es> = MerdeJsonError<'es>;
 
     fn pop(&mut self) -> Result<Event<'s>, Self::Error<'s>> {
-        if let Some(ev) = self.queue.take() {
+        if let Some(ev) = self.queue.pop_back() {
             return Ok(ev);
         }
 
@@ -72,18 +84,25 @@ impl<'s> Deserializer<'s> for JsonDeserializer<'s> {
                 *self.stack.last_mut().unwrap() = StackItem::ObjectKey;
                 None
             }
-            Some(StackItem::Array) => match self
-                .jiter
-                .array_step()
-                .map_err(|e| jiter_error(self.source, e))?
-            {
-                Some(peek) => Some(peek),
-                None => {
-                    // end of the array!
-                    self.stack.pop();
-                    return Ok(Event::ArrayEnd);
+            Some(StackItem::Array(peek)) => {
+                if let Some(peek) = peek {
+                    *self.stack.last_mut().unwrap() = StackItem::Array(None);
+                    Some(peek)
+                } else {
+                    match self
+                        .jiter
+                        .array_step()
+                        .map_err(|e| jiter_error(self.source, e))?
+                    {
+                        Some(peek) => Some(peek),
+                        None => {
+                            // end of the array!
+                            self.stack.pop();
+                            return Ok(Event::ArrayEnd);
+                        }
+                    }
                 }
-            },
+            }
             None => None,
         };
 
@@ -121,10 +140,11 @@ impl<'s> Deserializer<'s> for JsonDeserializer<'s> {
             let s = cowify(self.source.as_bytes(), s);
             Event::Str(s)
         } else if peek == Peek::Array {
-            self.jiter
+            let peek = self
+                .jiter
                 .known_array()
                 .map_err(|err| jiter_error(self.source, err))?;
-            self.stack.push(StackItem::Array);
+            self.stack.push(StackItem::Array(peek));
             Event::ArrayStart(ArrayStart { size_hint: None })
         } else if peek == Peek::Object {
             let key = self
@@ -134,7 +154,7 @@ impl<'s> Deserializer<'s> for JsonDeserializer<'s> {
             self.stack.push(StackItem::ObjectValue);
             if let Some(key) = key {
                 let key = cowify(self.source.as_bytes(), key);
-                self.queue = Some(Event::Str(key))
+                self.queue.push_back(Event::Str(key))
             }
             Event::MapStart
         } else {
@@ -143,14 +163,27 @@ impl<'s> Deserializer<'s> for JsonDeserializer<'s> {
         Ok(ev)
     }
 
-    async fn t<T: Deserializable>(&mut self) -> Result<T, Self::Error<'s>> {
-        todo!()
+    async fn t_starting_with<T: Deserializable>(
+        &mut self,
+        starting_with: Option<Event<'s>>,
+    ) -> Result<T, Self::Error<'s>> {
+        if let Some(starting_with) = starting_with {
+            self.queue.push_back(starting_with);
+        }
+
+        // TODO: when too much stack space is used, stash this,
+        // return Poll::Pending, to continue deserializing with
+        // a shallower stack.
+
+        // that's the whole trick — for now, we just recurse as usual
+        T::deserialize(self).await
     }
 }
 
 #[cfg(test)]
 mod tests {
     use std::{
+        collections::VecDeque,
         future::Future,
         task::{Context, Poll, RawWaker, RawWakerVTable, Waker},
     };
@@ -175,6 +208,7 @@ mod tests {
             let mut height: Option<i64> = None;
             let mut kind: Option<bool> = None;
 
+            eprintln!("expecting map start");
             de.pop()?.into_map_start()?;
 
             loop {
@@ -214,14 +248,90 @@ mod tests {
     #[test]
     fn test_deserialize() {
         let input = r#"
-            {
-                "height": 100,
-                "kind": true
-            }
+            [
+                {
+                    "height": 100,
+                    "kind": true
+                },
+                {
+                    "height": 200,
+                    "kind": false
+                },
+                {
+                    "height": 150,
+                    "kind": true
+                }
+            ]
         "#;
 
-        let mut deser = JsonDeserializer::new(input);
-        let fut = Sample::deserialize(&mut deser);
+        let deser = JsonDeserializer::new(input);
+
+        struct LoggingDeserializer<'s, I>
+        where
+            I: Deserializer<'s>,
+        {
+            inner: I,
+            queue: VecDeque<Event<'s>>,
+        }
+
+        impl<'s, I> std::fmt::Debug for LoggingDeserializer<'s, I>
+        where
+            I: Deserializer<'s>,
+        {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                f.debug_struct("LoggingDeserializer")
+                    .field("inner", &self.inner)
+                    .finish()
+            }
+        }
+
+        impl<'s, I> LoggingDeserializer<'s, I>
+        where
+            I: Deserializer<'s>,
+        {
+            fn new(inner: I) -> Self {
+                Self {
+                    inner,
+                    queue: Default::default(),
+                }
+            }
+        }
+
+        impl<'s, I> Deserializer<'s> for LoggingDeserializer<'s, I>
+        where
+            I: Deserializer<'s>,
+        {
+            type Error<'es> = I::Error<'es>;
+
+            fn pop(&mut self) -> Result<Event<'s>, Self::Error<'s>> {
+                if let Some(ev) = self.queue.pop_back() {
+                    eprintln!("popped from queue {:?}", ev);
+                    return Ok(ev);
+                }
+
+                let ev = self.inner.pop()?;
+                eprintln!("popped {:?}", ev);
+                Ok(ev)
+            }
+
+            async fn t_starting_with<T: Deserializable>(
+                &mut self,
+                starting_with: Option<Event<'s>>,
+            ) -> Result<T, Self::Error<'s>> {
+                if let Some(starting_with) = starting_with {
+                    eprintln!("pushing back {:?}", starting_with);
+                    self.queue.push_back(starting_with);
+                }
+
+                let t = T::deserialize(self).await?;
+                eprintln!("deserialized t");
+                Ok(t)
+            }
+        }
+
+        let mut deser = LoggingDeserializer::new(deser);
+
+        let fut = deser.t::<Vec<Sample>>();
         let fut = std::pin::pin!(fut);
         let vtable = RawWakerVTable::new(|_| todo!(), |_| {}, |_| {}, |_| {});
         let vtable = Box::leak(Box::new(vtable));
@@ -229,14 +339,24 @@ mod tests {
         let mut cx = Context::from_waker(&w);
         match fut.poll(&mut cx) {
             Poll::Ready(res) => {
-                let sample = res.unwrap();
+                let samples = res.unwrap();
                 assert_eq!(
-                    sample,
-                    Sample {
-                        height: 100,
-                        kind: true
-                    }
-                )
+                    samples,
+                    vec![
+                        Sample {
+                            height: 100,
+                            kind: true
+                        },
+                        Sample {
+                            height: 200,
+                            kind: false
+                        },
+                        Sample {
+                            height: 150,
+                            kind: true
+                        }
+                    ]
+                );
             }
             _ => panic!("returned poll pending for some reason?"),
         }
