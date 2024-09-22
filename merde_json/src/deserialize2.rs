@@ -68,7 +68,10 @@ impl<'s> Deserializer<'s> for JsonDeserializer<'s> {
                     return Ok(Event::MapEnd);
                 }
             },
-            Some(StackItem::ObjectValue) => None,
+            Some(StackItem::ObjectValue) => {
+                *self.stack.last_mut().unwrap() = StackItem::ObjectKey;
+                None
+            }
             Some(StackItem::Array) => match self
                 .jiter
                 .array_step()
@@ -128,7 +131,7 @@ impl<'s> Deserializer<'s> for JsonDeserializer<'s> {
                 .jiter
                 .known_object()
                 .map_err(|err| jiter_error(self.source, err))?;
-            self.stack.push(StackItem::ObjectKey);
+            self.stack.push(StackItem::ObjectValue);
             if let Some(key) = key {
                 let key = cowify(self.source.as_bytes(), key);
                 self.queue = Some(Event::Str(key))
@@ -178,7 +181,7 @@ mod tests {
                 match de.pop()? {
                     // many different policies are possible here
                     Event::Str(k) => match k.as_ref() {
-                        "age" => {
+                        "height" => {
                             height = Some(i64::deserialize(de).await?);
                         }
                         "kind" => {
@@ -212,7 +215,7 @@ mod tests {
     fn test_deserialize() {
         let input = r#"
             {
-                "height": 100",
+                "height": 100,
                 "kind": true
             }
         "#;
@@ -225,14 +228,17 @@ mod tests {
         let w = unsafe { Waker::from_raw(RawWaker::new(std::ptr::null(), vtable)) };
         let mut cx = Context::from_waker(&w);
         match fut.poll(&mut cx) {
-            Poll::Ready(Ok(sample)) => assert_eq!(
-                sample,
-                Sample {
-                    height: 100,
-                    kind: true
-                }
-            ),
-            _ => panic!("poll failed"),
+            Poll::Ready(res) => {
+                let sample = res.unwrap();
+                assert_eq!(
+                    sample,
+                    Sample {
+                        height: 100,
+                        kind: true
+                    }
+                )
+            }
+            _ => panic!("returned poll pending for some reason?"),
         }
     }
 }
