@@ -1,6 +1,6 @@
 use crate::{deserialize2::JsonDeserializer, MerdeJsonError};
 
-use merde_core::{deserialize2::Deserializer, CowStr, Value};
+use merde_core::{CowStr, Deserializer, Value};
 
 pub(crate) fn json_str_to_value(src: &str) -> Result<Value<'_>, MerdeJsonError<'_>> {
     JsonDeserializer::new(src).deserialize()

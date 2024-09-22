@@ -1,4 +1,5 @@
 use std::{
+    borrow::Cow,
     future::Future,
     pin::Pin,
     task::{Context, Poll, RawWaker, RawWakerVTable, Waker},
@@ -348,6 +349,38 @@ impl<'s> Deserialize<'s> for f32 {
     {
         let v: f64 = de.t().await?;
         Ok(v as f32)
+    }
+}
+
+impl<'s> Deserialize<'s> for String {
+    async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
+    where
+        D: Deserializer<'s> + ?Sized,
+    {
+        let cow: CowStr<'s> = de.t().await?;
+        Ok(cow.to_string())
+    }
+}
+
+impl<'s> Deserialize<'s> for CowStr<'s> {
+    async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
+    where
+        D: Deserializer<'s> + ?Sized,
+    {
+        Ok(de.next()?.into_str()?)
+    }
+}
+
+impl<'s> Deserialize<'s> for Cow<'s, str> {
+    async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
+    where
+        D: Deserializer<'s> + ?Sized,
+    {
+        let cow: CowStr<'s> = de.t().await?;
+        Ok(match cow {
+            CowStr::Borrowed(s) => Cow::Borrowed(s),
+            CowStr::Owned(s) => Cow::Owned(s.to_string()),
+        })
     }
 }
 
