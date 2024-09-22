@@ -6,7 +6,7 @@ where
     T: OwnedValueDeserialize,
 {
     // here `s` is a `String`, but pretend we're making
-    // a network request intead — the point is is that we
+    // a network request instead — the point is is that we
     // need to borrow from a local from the function body.
     let value: Value = merde_json::from_str_via_value(&s).map_err(|e| e.to_static())?;
     Ok(T::owned_from_value(Some(value))?)

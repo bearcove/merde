@@ -71,7 +71,10 @@ pub enum MerdeError {
     MissingValue,
 
     /// While calling out to [`FromStr::from_str`](std::str::FromStr::from_str) to build a [`HashMap`](std::collections::HashMap), we got an error.
-    InvalidKey,
+    InvalidKey {
+        key: CowStr<'static>,
+        type_name: &'static str,
+    },
 
     /// While parsing a datetime, we got an error
     InvalidDateTimeValue,
@@ -111,8 +114,12 @@ impl std::fmt::Display for MerdeError {
             MerdeError::MissingValue => {
                 write!(f, "Missing value")
             }
-            MerdeError::InvalidKey => {
-                write!(f, "Invalid key")
+            MerdeError::InvalidKey { key, type_name } => {
+                write!(
+                    f,
+                    "Invalid key: couldn't convert {:?} to type {}",
+                    key, type_name
+                )
             }
             MerdeError::InvalidDateTimeValue => {
                 write!(f, "Invalid date/time value")
