@@ -8,28 +8,31 @@ use crate::{deserialize2::EventType, CowStr, IntoStatic, Value};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum ValueType {
-    /// The JSON value is `null`.
+    /// The value is `null`.
     Null,
 
-    /// The JSON value is `true` or `false`.
+    /// The value is `true` or `false`.
     Bool,
 
-    /// The JSON value fits in an `i64`.
+    /// The value fits in an `i64`.
     Int,
 
-    /// The JSON value no longer fits in an `i64`.
+    /// The value no longer fits in an `i64`.
     BigInt,
 
-    /// The JSON value has decimal places.
+    /// The value has decimal places.
     Float,
 
-    /// The JSON value is a string.
+    /// The value is a string.
     String,
 
-    /// The JSON value is an array.
+    /// The value is a byte array.
+    Bytes,
+
+    /// The value is an array.
     Array,
 
-    /// The JSON value is an object. Keys must be strings.
+    /// The value is a map (associating keys and values)
     Map,
 }
 
@@ -179,6 +182,7 @@ impl Value<'_> {
             Value::Int(_) => ValueType::Int,
             Value::Float(_) => ValueType::Float,
             Value::Str(_) => ValueType::String,
+            Value::Bytes(_) => ValueType::Bytes,
             Value::Array(_) => ValueType::Array,
             Value::Map(_) => ValueType::Map,
         }

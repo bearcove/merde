@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{borrow::Cow, collections::HashMap};
 
 use crate::{array::Array, map::Map, CowStr, IntoStatic, MerdeError, ValueType};
 
@@ -9,6 +9,7 @@ pub enum Value<'s> {
     Int(i64),
     Float(f64),
     Str(CowStr<'s>),
+    Bytes(Cow<'s, [u8]>),
     Null,
     Bool(bool),
     Array(Array<'s>),
@@ -24,6 +25,7 @@ impl IntoStatic for Value<'_> {
             Value::Int(i) => Value::Int(i),
             Value::Float(f) => Value::Float(f),
             Value::Str(s) => Value::Str(s.into_static()),
+            Value::Bytes(b) => Value::Bytes(b.into_static()),
             Value::Null => Value::Null,
             Value::Bool(b) => Value::Bool(b),
             Value::Array(arr) => Value::Array(arr.into_static()),

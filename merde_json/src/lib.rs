@@ -206,6 +206,11 @@ impl JsonSerialize for Value<'_> {
             Value::Int(i) => serializer.write_i64(*i),
             Value::Float(f) => serializer.write_f64(*f),
             Value::Str(s) => serializer.write_str(s),
+            Value::Bytes(_b) => {
+                // TODO: we're going to need to make json_serialize return
+                // an error at some point, aren't we.
+                panic!("cannot serialize bytes as JSON")
+            }
             Value::Array(arr) => arr.json_serialize(serializer),
             Value::Map(map) => map.json_serialize(serializer),
         }
