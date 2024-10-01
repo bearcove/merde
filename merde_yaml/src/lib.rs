@@ -1,8 +1,12 @@
+#![deny(missing_docs)]
+#![doc = include_str!("../README.md")]
+
 use std::str::Chars;
 
 use merde_core::{ArrayStart, Deserializer, Event};
 use yaml_rust2::{parser::Parser, scanner::TScalarStyle, ScanError};
 
+/// A YAML deserializer, that implements [`merde_core::Deserializer`].
 pub struct YamlDeserializer<'s> {
     source: &'s str,
     parser: Parser<Chars<'s>>,
@@ -17,11 +21,23 @@ impl std::fmt::Debug for YamlDeserializer<'_> {
     }
 }
 
+/// Unifies [`merde_core::MerdeError`], [`yaml_rust2::ScanError`], and our own parsing errors.
 #[derive(Debug)]
 pub enum MerdeYamlError<'s> {
+    /// Most likely an error encountered when "destructuring" the JSON data.
     MerdeError(merde_core::MerdeError<'s>),
+
+    /// Most likely a YAML syntax error
     ScanError(ScanError),
-    ParseError { expected_type: &'static str },
+
+    /// For now, a type mismatch
+    ParseError {
+        /// the type we expected
+        expected_type: &'static str,
+    },
+
+    /// EOF encountered while expecting a value
+    Eof,
 }
 
 impl<'s> From<merde_core::MerdeError<'s>> for MerdeYamlError<'s> {
@@ -37,6 +53,7 @@ impl<'s> From<ScanError> for MerdeYamlError<'s> {
 }
 
 impl<'s> YamlDeserializer<'s> {
+    /// Construct a new YAML deserializer
     pub fn new(source: &'s str) -> Self {
         Self {
             source,
@@ -50,87 +67,93 @@ impl<'s> Deserializer<'s> for YamlDeserializer<'s> {
     type Error<'es> = MerdeYamlError<'es>;
 
     fn next(&mut self) -> Result<Event<'s>, Self::Error<'s>> {
-        if let Some(starter) = self.starter.take() {
-            return Ok(starter);
-        }
-
-        let (ev, _marker) = match self.parser.next_token() {
-            Ok(ev) => ev,
-            Err(e) => {
-                // TODO: add location info, etc.
-                return Err(e.into());
+        loop {
+            if let Some(starter) = self.starter.take() {
+                return Ok(starter);
             }
-        };
 
-        use yaml_rust2::Event as YEvent;
+            let (ev, _marker) = match self.parser.next_token() {
+                Ok(ev) => ev,
+                Err(e) => {
+                    // TODO: add location info, etc.
+                    return Err(e.into());
+                }
+            };
+            println!("ev = {ev:?}");
 
-        match ev {
-            YEvent::Nothing
-            | YEvent::StreamStart
-            | YEvent::StreamEnd
-            | YEvent::DocumentStart
-            | YEvent::DocumentEnd => {
-                // ignore those
-                return self.next();
-            }
-            YEvent::Alias(_) => {
-                todo!("aliases?")
-            }
-            YEvent::Scalar(s, style, _anchor_id, tag) => {
-                if style != TScalarStyle::Plain {
-                    Ok(Event::Str(s.into()))
-                } else if let Some(tag) = tag {
-                    if tag.handle == "tag:yaml.org,2002:" {
-                        // TODO: use faster int/float parsers
-                        match tag.suffix.as_ref() {
-                            "bool" => match s.parse::<bool>() {
-                                Ok(v) => Ok(Event::Bool(v)),
-                                Err(_) => Err(MerdeYamlError::ParseError {
-                                    expected_type: "bool",
-                                }),
-                            },
-                            "int" => match s.parse::<i64>() {
-                                Ok(v) => Ok(Event::Int(v)),
-                                Err(_) => Err(MerdeYamlError::ParseError {
-                                    expected_type: "int",
-                                }),
-                            },
-                            "float" => match s.parse::<f64>() {
-                                Ok(v) => Ok(Event::Float(v)),
-                                Err(_) => Err(MerdeYamlError::ParseError {
-                                    expected_type: "float",
-                                }),
-                            },
-                            "null" => match s.as_ref() {
-                                "~" | "null" => Ok(Event::Null),
-                                _ => Err(MerdeYamlError::ParseError {
-                                    expected_type: "null",
-                                }),
-                            },
-                            _ => Ok(Event::Str(s.into())),
+            use yaml_rust2::Event as YEvent;
+
+            let res = match ev {
+                YEvent::StreamEnd => Err(MerdeYamlError::Eof),
+                YEvent::Nothing
+                | YEvent::StreamStart
+                | YEvent::DocumentStart
+                | YEvent::DocumentEnd => {
+                    // ignore those
+                    continue;
+                }
+                YEvent::Alias(_) => {
+                    todo!("aliases?")
+                }
+                YEvent::Scalar(s, style, _anchor_id, tag) => {
+                    if style != TScalarStyle::Plain {
+                        Ok(Event::Str(s.into()))
+                    } else if let Some(tag) = tag {
+                        if tag.handle == "tag:yaml.org,2002:" {
+                            // TODO: use faster int/float parsers
+                            match tag.suffix.as_ref() {
+                                "bool" => match s.parse::<bool>() {
+                                    Ok(v) => Ok(Event::Bool(v)),
+                                    Err(_) => Err(MerdeYamlError::ParseError {
+                                        expected_type: "bool",
+                                    }),
+                                },
+                                "int" => match s.parse::<i64>() {
+                                    Ok(v) => Ok(Event::Int(v)),
+                                    Err(_) => Err(MerdeYamlError::ParseError {
+                                        expected_type: "int",
+                                    }),
+                                },
+                                "float" => match s.parse::<f64>() {
+                                    Ok(v) => Ok(Event::Float(v)),
+                                    Err(_) => Err(MerdeYamlError::ParseError {
+                                        expected_type: "float",
+                                    }),
+                                },
+                                "null" => match s.as_ref() {
+                                    "~" | "null" => Ok(Event::Null),
+                                    _ => Err(MerdeYamlError::ParseError {
+                                        expected_type: "null",
+                                    }),
+                                },
+                                _ => Ok(Event::Str(s.into())),
+                            }
+                        } else {
+                            Ok(Event::Str(s.into()))
                         }
                     } else {
-                        Ok(Event::Str(s.into()))
-                    }
-                } else {
-                    // Datatype is not specified, try to infer
-                    if let Ok(v) = s.parse::<bool>() {
-                        Ok(Event::Bool(v))
-                    } else if let Ok(v) = s.parse::<i64>() {
-                        Ok(Event::Int(v))
-                    } else if let Ok(v) = s.parse::<f64>() {
-                        Ok(Event::Float(v))
-                    } else if s == "~" || s == "null" {
-                        Ok(Event::Null)
-                    } else {
-                        Ok(Event::Str(s.into()))
+                        // Datatype is not specified, try to infer
+                        if let Ok(v) = s.parse::<bool>() {
+                            Ok(Event::Bool(v))
+                        } else if let Ok(v) = s.parse::<i64>() {
+                            Ok(Event::Int(v))
+                        } else if let Ok(v) = s.parse::<f64>() {
+                            Ok(Event::Float(v))
+                        } else if s == "~" || s == "null" {
+                            Ok(Event::Null)
+                        } else {
+                            Ok(Event::Str(s.into()))
+                        }
                     }
                 }
-            }
-            YEvent::SequenceStart(_, _tag) => Ok(Event::ArrayStart(ArrayStart { size_hint: None })),
-            YEvent::SequenceEnd => Ok(Event::ArrayEnd),
-            YEvent::MappingStart(_, _tag) => Ok(Event::MapStart),
-            YEvent::MappingEnd => Ok(Event::MapEnd),
+                YEvent::SequenceStart(_, _tag) => {
+                    Ok(Event::ArrayStart(ArrayStart { size_hint: None }))
+                }
+                YEvent::SequenceEnd => Ok(Event::ArrayEnd),
+                YEvent::MappingStart(_, _tag) => Ok(Event::MapStart),
+                YEvent::MappingEnd => Ok(Event::MapEnd),
+            };
+            return res;
         }
     }
 

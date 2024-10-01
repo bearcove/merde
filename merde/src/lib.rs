@@ -5,6 +5,9 @@
 #[cfg(feature = "json")]
 pub use merde_json as json;
 
+#[cfg(feature = "yaml")]
+pub use merde_yaml as yaml;
+
 #[cfg(feature = "json")]
 #[allow(unused_imports)]
 use json::JsonSerialize;
