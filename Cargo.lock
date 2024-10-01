@@ -165,7 +165,7 @@ dependencies = [
 
 [[package]]
 name = "merde"
-version = "6.0.0"
+version = "6.0.1"
 dependencies = [
  "merde_core",
  "merde_json",
@@ -204,7 +204,7 @@ dependencies = [
 
 [[package]]
 name = "merde_yaml"
-version = "6.0.0"
+version = "7.0.0"
 dependencies = [
  "merde_core",
  "yaml-rust2",

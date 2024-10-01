@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.1](https://github.com/bearcove/merde/compare/merde-v6.0.0...merde-v6.0.1) - 2024-10-01
+
+### Other
+
+- respect StreamEnd
+- merde_yaml is v6
+
 ## [6.0.0](https://github.com/bearcove/merde/compare/merde-v5.1.1...merde-v6.0.0) - 2024-09-22
 
 ### Added
