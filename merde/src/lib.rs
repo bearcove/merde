@@ -872,6 +872,8 @@ pub fn none_of<I, T>(_f: impl FnOnce(I) -> T) -> Option<T> {
 #[cfg(test)]
 #[cfg(feature = "json")]
 mod json_tests {
+    use std::collections::HashMap;
+
     use super::*;
     use crate::json::{from_str, JsonSerialize};
 
@@ -959,6 +961,136 @@ mod json_tests {
         let serialized = original.to_json_string();
         let deserialized: ComplexStruct = from_str(&serialized).unwrap();
 
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn test_u8_zero() {
+        let original: u8 = 0;
+        let serialized = original.to_json_string();
+        let deserialized: u8 = from_str(&serialized).unwrap();
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn test_u8_max() {
+        let original: u8 = u8::MAX;
+        let serialized = original.to_json_string();
+        let deserialized: u8 = from_str(&serialized).unwrap();
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn test_i8_min() {
+        let original: i8 = i8::MIN;
+        let serialized = original.to_json_string();
+        let deserialized: i8 = from_str(&serialized).unwrap();
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn test_i8_max() {
+        let original: i8 = i8::MAX;
+        let serialized = original.to_json_string();
+        let deserialized: i8 = from_str(&serialized).unwrap();
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn test_i64_min() {
+        let original: i64 = i64::MIN;
+        let serialized = original.to_json_string();
+        let deserialized: i64 = from_str(&serialized).unwrap();
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn test_i64_max() {
+        let original: i64 = i64::MAX;
+        let serialized = original.to_json_string();
+        let deserialized: i64 = from_str(&serialized).unwrap();
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn test_string_owned() {
+        let original = String::from("Hello, World!");
+        let serialized = original.to_json_string();
+        let deserialized: String = from_str(&serialized).unwrap();
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn test_string_borrowed() {
+        let original: &str = "Hello, World!";
+        let serialized = original.to_json_string();
+        let deserialized: String = from_str(&serialized).unwrap();
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn test_vec_empty() {
+        let original: Vec<i32> = Vec::new();
+        let serialized = original.to_json_string();
+        let deserialized: Vec<i32> = from_str(&serialized).unwrap();
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn test_vec_non_empty() {
+        let original = vec![1, 2, 3, 4, 5];
+        let serialized = original.to_json_string();
+        let deserialized: Vec<i32> = from_str(&serialized).unwrap();
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn test_hashmap_empty() {
+        let original: HashMap<String, i32> = HashMap::new();
+        let serialized = original.to_json_string();
+        let deserialized: HashMap<String, i32> = from_str(&serialized).unwrap();
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn test_hashmap_non_empty() {
+        let mut original = HashMap::new();
+        original.insert("key1".to_string(), 42);
+        original.insert("key2".to_string(), -10);
+        let serialized = original.to_json_string();
+        let deserialized: HashMap<String, i32> = from_str(&serialized).unwrap();
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn test_option_some() {
+        let original: Option<i32> = Some(42);
+        let serialized = original.to_json_string();
+        let deserialized: Option<i32> = from_str(&serialized).unwrap();
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn test_option_none() {
+        let original: Option<i32> = None;
+        let serialized = original.to_json_string();
+        let deserialized: Option<i32> = from_str(&serialized).unwrap();
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn test_bool_true() {
+        let original = true;
+        let serialized = original.to_json_string();
+        let deserialized: bool = from_str(&serialized).unwrap();
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn test_bool_false() {
+        let original = false;
+        let serialized = original.to_json_string();
+        let deserialized: bool = from_str(&serialized).unwrap();
         assert_eq!(original, deserialized);
     }
 }

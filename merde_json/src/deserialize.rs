@@ -11,11 +11,11 @@ use crate::{
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum StackItem<'s> {
-    ObjectFirstKey(CowStr<'s>),
-    ObjectKey,
+    ObjectKey(Option<CowStr<'s>>),
     ObjectValue,
-    ArrayFirstValue(Peek),
-    Array,
+    ObjectEnd,
+    Array(Option<Peek>),
+    ArrayEnd,
 }
 
 /// A JSON deserializer
@@ -64,47 +64,56 @@ impl<'s> Deserializer<'s> for JsonDeserializer<'s> {
         }
 
         let peek: Option<Peek> = match self.stack.pop() {
-            Some(StackItem::ObjectFirstKey(key)) => {
-                self.stack.push(StackItem::ObjectValue);
-                return Ok(Event::Str(key));
-            }
-            Some(StackItem::ObjectKey) => match self
-                .jiter
-                .next_key()
-                .map_err(|e| jiter_error(self.source, e))?
-            {
+            Some(StackItem::ObjectKey(maybe_key)) => match maybe_key {
                 Some(key) => {
                     self.stack.push(StackItem::ObjectValue);
-                    let key = cowify(self.source.as_bytes(), key);
                     return Ok(Event::Str(key));
                 }
-                None => {
-                    return Ok(Event::MapEnd);
-                }
-            },
-            Some(StackItem::ObjectValue) => {
-                self.stack.push(StackItem::ObjectKey);
-                None
-            }
-            Some(StackItem::ArrayFirstValue(peek)) => {
-                self.stack.push(StackItem::Array);
-                Some(peek)
-            }
-            Some(StackItem::Array) => {
-                match self
+                None => match self
                     .jiter
-                    .array_step()
+                    .next_key()
                     .map_err(|e| jiter_error(self.source, e))?
                 {
-                    Some(peek) => {
-                        self.stack.push(StackItem::Array);
-                        Some(peek)
+                    Some(key) => {
+                        self.stack.push(StackItem::ObjectValue);
+                        let key = cowify(self.source.as_bytes(), key);
+                        return Ok(Event::Str(key));
                     }
                     None => {
-                        // end of the array!
-                        return Ok(Event::ArrayEnd);
+                        return Ok(Event::MapEnd);
+                    }
+                },
+            },
+            Some(StackItem::ObjectValue) => {
+                self.stack.push(StackItem::ObjectKey(None));
+                None
+            }
+            Some(StackItem::ObjectEnd) => {
+                return Ok(Event::MapEnd);
+            }
+            Some(StackItem::Array(maybe_peek)) => match maybe_peek {
+                Some(peek) => {
+                    self.stack.push(StackItem::Array(None));
+                    Some(peek)
+                }
+                None => {
+                    match self
+                        .jiter
+                        .array_step()
+                        .map_err(|e| jiter_error(self.source, e))?
+                    {
+                        Some(peek) => {
+                            self.stack.push(StackItem::Array(None));
+                            Some(peek)
+                        }
+                        None => {
+                            return Ok(Event::ArrayEnd);
+                        }
                     }
                 }
+            },
+            Some(StackItem::ArrayEnd) => {
+                return Ok(Event::ArrayEnd);
             }
             None => None,
         };
@@ -148,9 +157,9 @@ impl<'s> Deserializer<'s> for JsonDeserializer<'s> {
                 .known_array()
                 .map_err(|err| jiter_error(self.source, err))?;
             if let Some(peek) = peek {
-                self.stack.push(StackItem::ArrayFirstValue(peek));
+                self.stack.push(StackItem::Array(Some(peek)));
             } else {
-                self.stack.push(StackItem::Array);
+                self.stack.push(StackItem::ArrayEnd);
             }
             Event::ArrayStart(ArrayStart { size_hint: None })
         } else if peek == Peek::Object {
@@ -160,10 +169,9 @@ impl<'s> Deserializer<'s> for JsonDeserializer<'s> {
                 .map_err(|err| jiter_error(self.source, err))?;
             if let Some(key) = key {
                 let key = cowify(self.source.as_bytes(), key);
-                self.stack.push(StackItem::ObjectFirstKey(key));
+                self.stack.push(StackItem::ObjectKey(Some(key)));
             } else {
-                // well it's empty, but we'll find that soon enough
-                self.stack.push(StackItem::ObjectKey);
+                self.stack.push(StackItem::ObjectEnd);
             }
             Event::MapStart
         } else {
