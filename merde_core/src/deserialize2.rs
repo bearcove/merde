@@ -222,6 +222,25 @@ pub trait Deserialize<'s>: Sized {
     }
 }
 
+pub trait DeserializeOwned: Sized {
+    fn deserialize_owned<'s, D>(de: &mut D) -> Result<Self, D::Error<'s>>
+    where
+        D: Deserializer<'s> + ?Sized;
+}
+
+impl<T> DeserializeOwned for T
+where
+    T: for<'s> WithLifetime<'s> + 'static,
+    for<'s> <T as WithLifetime<'s>>::Lifetimed: Deserialize<'s> + IntoStatic<Output = T>,
+{
+    fn deserialize_owned<'s, D>(de: &mut D) -> Result<Self, D::Error<'s>>
+    where
+        D: Deserializer<'s> + ?Sized,
+    {
+        de.deserialize_owned()
+    }
+}
+
 impl<'s> Deserialize<'s> for i64 {
     async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
     where

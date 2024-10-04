@@ -1,16 +1,15 @@
 use merde::json::JsonSerialize;
-use merde::{CowStr, Deserialize, Deserializer, IntoStatic, WithLifetime};
+use merde::{CowStr, DeserializeOwned};
 
 fn deser_and_return<T>(s: String) -> Result<T, merde_json::MerdeJsonError<'static>>
 where
-    T: for<'s> WithLifetime<'s> + 'static,
-    for<'s> <T as WithLifetime<'s>>::Lifetimed: Deserialize<'s> + IntoStatic<Output = T>,
+    T: DeserializeOwned,
 {
     // here `s` is a `String`, but pretend we're making
     // a network request instead — the point is is that we
     // need to borrow from a local from the function body.
     let mut deser = merde_json::JsonDeserializer::new(&s);
-    deser.deserialize_owned().map_err(|e| e.to_static())
+    T::deserialize_owned(&mut deser).map_err(|e| e.to_static())
 }
 
 fn main() {
