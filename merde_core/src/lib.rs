@@ -20,13 +20,13 @@ pub use with_lifetime::WithLifetime;
 mod value;
 pub use value::Value;
 
-mod deserialize2;
-pub use deserialize2::ArrayStart;
-pub use deserialize2::Deserialize;
-pub use deserialize2::DeserializeOwned;
-pub use deserialize2::Deserializer;
-pub use deserialize2::Event;
-pub use deserialize2::EventType;
+mod deserialize;
+pub use deserialize::ArrayStart;
+pub use deserialize::Deserialize;
+pub use deserialize::DeserializeOwned;
+pub use deserialize::Deserializer;
+pub use deserialize::Event;
+pub use deserialize::EventType;
 
 rubicon::compatibility_check! {
     ("merde_core_pkg_version", env!("CARGO_PKG_VERSION")),
