@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.1](https://github.com/bearcove/merde/compare/merde_json-v6.0.0...merde_json-v6.0.1) - 2024-10-04
+
+### Other
+
+- Introduce from_str_owned in the json module
+
 ## [6.0.0](https://github.com/bearcove/merde/compare/merde_json-v5.1.0...merde_json-v6.0.0) - 2024-09-22
 
 ### Other

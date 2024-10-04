@@ -1,6 +1,6 @@
 [package]
 name = "merde"
-version = "6.0.1"
+version = "6.0.2"
 edition = "2021"
 authors = ["Amos Wenger <amos@bearcove.net>"]
 description = "Serialize and deserialize with declarative macros"
@@ -41,10 +41,10 @@ path = "examples/yaml.rs"
 required-features = ["yaml"]
 
 [dependencies]
-merde_core = { version = "6.0.0", path = "../merde_core", optional = true }
-merde_json = { version = "6.0.0", path = "../merde_json", optional = true }
-merde_yaml = { version = "7.0.0", path = "../merde_yaml", optional = true }
-merde_time = { version = "4.0.11", path = "../merde_time", optional = true, features = [
+merde_core = { version = "6.0.1", path = "../merde_core", optional = true }
+merde_json = { version = "6.0.1", path = "../merde_json", optional = true }
+merde_yaml = { version = "7.0.1", path = "../merde_yaml", optional = true }
+merde_time = { version = "4.0.12", path = "../merde_time", optional = true, features = [
     "merde",
     "deserialize",
 ] }
