@@ -23,6 +23,7 @@ pub use value::Value;
 mod deserialize2;
 pub use deserialize2::ArrayStart;
 pub use deserialize2::Deserialize;
+pub use deserialize2::DeserializeOwned;
 pub use deserialize2::Deserializer;
 pub use deserialize2::Event;
 pub use deserialize2::EventType;
