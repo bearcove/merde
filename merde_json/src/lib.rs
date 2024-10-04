@@ -547,6 +547,14 @@ impl<'s> MerdeJsonError<'s> {
     }
 }
 
+impl IntoStatic for MerdeJsonError<'_> {
+    type Output = MerdeJsonError<'static>;
+
+    fn into_static(self) -> Self::Output {
+        self.to_static()
+    }
+}
+
 impl From<std::str::Utf8Error> for MerdeJsonError<'_> {
     fn from(e: std::str::Utf8Error) -> Self {
         MerdeJsonError::Utf8Error(e)
