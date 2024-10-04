@@ -18,6 +18,21 @@ pub trait IntoStatic {
     fn into_static(self) -> Self::Output;
 }
 
+impl<T, E> IntoStatic for Result<T, E>
+where
+    T: IntoStatic,
+    E: IntoStatic,
+{
+    type Output = Result<T::Output, E::Output>;
+
+    fn into_static(self) -> Self::Output {
+        match self {
+            Ok(v) => Ok(v.into_static()),
+            Err(e) => Err(e.into_static()),
+        }
+    }
+}
+
 impl<'a, T> IntoStatic for Cow<'a, T>
 where
     T: ToOwned + ?Sized + 'static,
