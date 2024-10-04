@@ -1,13 +1,15 @@
 #![deny(missing_docs)]
 #![doc = include_str!("../README.md")]
 
-mod deserialize2;
-pub use deserialize2::JsonDeserializer;
+mod deserialize;
+pub use deserialize::JsonDeserializer;
 
 mod jiter_lite;
 
 use jiter_lite::errors::JiterError;
-use merde_core::{Array, CowStr, Deserialize, Deserializer, IntoStatic, Map, MerdeError, Value};
+use merde_core::{
+    Array, CowStr, Deserialize, DeserializeOwned, Deserializer, IntoStatic, Map, MerdeError, Value,
+};
 
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -602,6 +604,16 @@ where
 {
     let mut deser = JsonDeserializer::new(s);
     deser.deserialize::<T>()
+}
+
+/// Deserialize an instance of type `T` from a string of JSON text,
+/// and return its static variant e.g. (CowStr<'static>, etc.)
+pub fn from_str_owned<T>(s: &str) -> Result<T, MerdeJsonError<'_>>
+where
+    T: DeserializeOwned,
+{
+    let mut deser = JsonDeserializer::new(s);
+    T::deserialize_owned(&mut deser)
 }
 
 /// Serialize the given data structure as a String of JSON.

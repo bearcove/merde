@@ -204,7 +204,7 @@ pub(crate) fn cowify<'j>(src: &'j [u8], s: &str) -> CowStr<'j> {
 
 #[cfg(test)]
 mod tests {
-    use crate::deserialize2::cowify;
+    use crate::deserialize::cowify;
 
     use super::JsonDeserializer;
     use merde_core::{Array, CowStr, Deserialize, Deserializer, Event, EventType, Map, MerdeError};
