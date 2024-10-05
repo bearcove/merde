@@ -3,7 +3,7 @@
 
 use std::str::Chars;
 
-use merde_core::{ArrayStart, Deserializer, Event};
+use merde_core::{ArrayStart, Deserialize, DeserializeOwned, Deserializer, Event};
 use yaml_rust2::{parser::Parser, scanner::TScalarStyle, ScanError};
 
 /// A YAML deserializer, that implements [`merde_core::Deserializer`].
@@ -79,7 +79,6 @@ impl<'s> Deserializer<'s> for YamlDeserializer<'s> {
                     return Err(e.into());
                 }
             };
-            println!("ev = {ev:?}");
 
             use yaml_rust2::Event as YEvent;
 
@@ -175,4 +174,23 @@ impl<'s> Deserializer<'s> for YamlDeserializer<'s> {
         // that's the whole trick — for now, we just recurse as usual
         T::deserialize(self).await
     }
+}
+
+/// Deserialize an instance of type `T` from a string of YAML text.
+pub fn from_str<'s, T>(s: &'s str) -> Result<T, MerdeYamlError<'s>>
+where
+    T: Deserialize<'s>,
+{
+    let mut deser = YamlDeserializer::new(s);
+    deser.deserialize::<T>()
+}
+
+/// Deserialize an instance of type `T` from a string of YAML text,
+/// and return its static variant e.g. (CowStr<'static>, etc.)
+pub fn from_str_owned<T>(s: &str) -> Result<T, MerdeYamlError<'_>>
+where
+    T: DeserializeOwned,
+{
+    let mut deser = YamlDeserializer::new(s);
+    T::deserialize_owned(&mut deser)
 }

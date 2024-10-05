@@ -336,7 +336,6 @@ mod tests {
                 }
 
                 let ev = self.inner.next()?;
-                eprintln!("> {:?}", ev);
                 Ok(ev)
             }
 
