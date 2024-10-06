@@ -206,7 +206,7 @@ impl JsonSerialize for Value<'_> {
             Value::Null => serializer.write_null(),
             Value::Bool(b) => serializer.write_bool(*b),
             Value::Int(i) => serializer.write_i64(*i),
-            Value::Float(f) => serializer.write_f64(*f),
+            Value::Float(f) => serializer.write_f64(f.into_inner()),
             Value::Str(s) => serializer.write_str(s),
             Value::Bytes(_b) => {
                 // TODO: we're going to need to make json_serialize return

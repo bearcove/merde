@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+
+use merde::Value;
 use merde_core::Deserializer;
 use merde_yaml::YamlDeserializer;
 
@@ -73,4 +76,16 @@ fn main() {
     let result: ComplexStruct = de.deserialize().unwrap();
 
     println!("Deserialized ComplexStruct: {result:#?}");
+
+    let yaml_map = r#"
+        1: 100
+        "two": 200.5
+        true: "three hundred"
+        [1, 2, 3]: { "nested": "value" }
+    "#;
+
+    let mut de = YamlDeserializer::new(yaml_map);
+    let result: HashMap<Value, Value> = de.deserialize().unwrap();
+
+    println!("Deserialized HashMap: {result:#?}");
 }

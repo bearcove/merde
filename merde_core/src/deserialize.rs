@@ -562,7 +562,7 @@ impl<'s> Deserialize<'s> for Value<'s> {
     {
         match de.next()? {
             Event::Int(i) => Ok(Value::Int(i)),
-            Event::Float(f) => Ok(Value::Float(f)),
+            Event::Float(f) => Ok(Value::Float(f.into())),
             Event::Str(s) => Ok(Value::Str(s)),
             Event::Bool(b) => Ok(Value::Bool(b)),
             Event::Null => Ok(Value::Null),

@@ -197,6 +197,7 @@ name = "merde_core"
 version = "6.1.0"
 dependencies = [
  "compact_str",
+ "ordered-float",
  "rubicon",
  "rusqlite",
  "serde",
@@ -268,6 +269,15 @@ name = "once_cell"
 version = "1.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "33ea5043e58958ee56f3e15a90aee535795cd7dfd319846288d93c5b57d85cbe"
+
+[[package]]
+name = "ordered-float"
+version = "4.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "44d501f1a72f71d3c063a6bbc8f7271fa73aa09fe5d6283b6571e2ed176a2537"
+dependencies = [
+ "num-traits",
+]
 
 [[package]]
 name = "pkg-config"

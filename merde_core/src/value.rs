@@ -1,13 +1,15 @@
 use std::{borrow::Cow, collections::HashMap};
 
+use ordered_float::OrderedFloat;
+
 use crate::{array::Array, map::Map, CowStr, IntoStatic, MerdeError, ValueType};
 
 /// Think [`serde_json::Value`](https://docs.rs/serde_json/1.0.128/serde_json/enum.Value.html), but with a small string optimization,
 /// copy-on-write strings, etc. Might include other value types later.
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum Value<'s> {
     Int(i64),
-    Float(f64),
+    Float(OrderedFloat<f64>),
     Str(CowStr<'s>),
     Bytes(Cow<'s, [u8]>),
     Null,
@@ -42,7 +44,7 @@ impl<'s> From<i64> for Value<'s> {
 
 impl<'s> From<f64> for Value<'s> {
     fn from(v: f64) -> Self {
-        Value::Float(v)
+        Value::Float(v.into())
     }
 }
 
@@ -179,6 +181,17 @@ impl<'s> Value<'s> {
             Value::Int(n) => Ok(*n),
             _ => Err(MerdeError::MismatchedType {
                 expected: ValueType::Int,
+                found: self.value_type(),
+            }),
+        }
+    }
+
+    #[inline(always)]
+    pub fn as_f64(&self) -> Result<f64, MerdeError<'static>> {
+        match self {
+            Value::Float(n) => Ok(n.into_inner()),
+            _ => Err(MerdeError::MismatchedType {
+                expected: ValueType::Float,
                 found: self.value_type(),
             }),
         }

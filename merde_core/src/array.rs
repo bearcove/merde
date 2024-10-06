@@ -3,7 +3,7 @@ use std::ops::{Deref, DerefMut};
 use crate::{value::Value, IntoStatic};
 
 /// An array of [`Value`] items
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Eq, Hash, Clone)]
 #[repr(transparent)]
 pub struct Array<'s>(pub Vec<Value<'s>>);
 
