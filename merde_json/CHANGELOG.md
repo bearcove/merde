@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.1.0](https://github.com/bearcove/merde/compare/merde_json-v6.0.3...merde_json-v6.1.0) - 2024-10-06
+
+### Added
+
+- Add support for HashMap<K, V, S> (for other S)
+- Remove debug prints, provide yaml::from_str/owned
+
 ## [6.0.3](https://github.com/bearcove/merde/compare/merde_json-v6.0.2...merde_json-v6.0.3) - 2024-10-04
 
 ### Other
