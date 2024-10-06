@@ -67,11 +67,13 @@ full = [
     "time",
     "rusqlite",
     "compact_str",
+    "compact_bytes",
 ]
 core = ["dep:merde_core"]
 deserialize = ["core"]
 # merde_core re-exports
 compact_str = ["merde_core/compact_str"]
+compact_bytes = ["merde_core/compact_bytes"]
 serde = ["merde_core/serde"]
 rusqlite = ["merde_core/rusqlite"]
 

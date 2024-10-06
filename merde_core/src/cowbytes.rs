@@ -64,7 +64,7 @@ impl<'a> From<Vec<u8>> for CowBytes<'a> {
     fn from(v: Vec<u8>) -> Self {
         #[cfg(feature = "compact_bytes")]
         {
-            CowBytes::Owned(CompactBytes::new(v))
+            CowBytes::Owned(CompactBytes::from(v))
         }
         #[cfg(not(feature = "compact_bytes"))]
         {
