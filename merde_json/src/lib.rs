@@ -349,7 +349,7 @@ impl JsonSerialize for bool {
     }
 }
 
-impl<K: AsRef<str>, V: JsonSerialize> JsonSerialize for HashMap<K, V> {
+impl<K: AsRef<str>, V: JsonSerialize, S> JsonSerialize for HashMap<K, V, S> {
     fn json_serialize(&self, serializer: &mut JsonSerializer) {
         let mut guard = serializer.write_obj();
         for (key, value) in self {

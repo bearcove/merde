@@ -40,6 +40,11 @@ name = "yaml"
 path = "examples/yaml.rs"
 required-features = ["yaml"]
 
+[[example]]
+name = "ahash"
+path = "examples/ahash.rs"
+required-features = ["json", "ahash"]
+
 [dependencies]
 merde_core = { version = "6.0.2", path = "../merde_core", optional = true }
 merde_json = { version = "6.0.3", path = "../merde_json", optional = true }
@@ -48,6 +53,7 @@ merde_time = { version = "4.0.14", path = "../merde_time", optional = true, feat
     "merde",
     "deserialize",
 ] }
+ahash = { version = "0.8.11", optional = true }
 
 [features]
 default = ["core", "deserialize"]
@@ -71,3 +77,6 @@ rusqlite = ["merde_core/rusqlite"]
 json = ["dep:merde_json", "merde_time/json"]
 yaml = ["dep:merde_yaml"]
 time = ["dep:merde_time"]
+
+# others
+ahash = ["dep:ahash"]

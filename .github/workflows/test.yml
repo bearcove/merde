@@ -28,7 +28,7 @@ jobs:
           pushd merde
           EXAMPLES=($(cd examples && for i in *; do echo "${i%.rs}"; done))
           for example in "${EXAMPLES[@]}"; do
-            cargo run --features full --example "$example"
+            cargo run --features full,json --example "$example"
           done
           popd
       - name: Test zerodeps-example

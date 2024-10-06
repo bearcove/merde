@@ -90,12 +90,13 @@ where
     type Lifetimed = HashSet<T::Lifetimed>;
 }
 
-impl<'s, K, V> WithLifetime<'s> for HashMap<K, V>
+impl<'s, K, V, S> WithLifetime<'s> for HashMap<K, V, S>
 where
+    S: 's,
     K: WithLifetime<'s>,
     V: WithLifetime<'s>,
 {
-    type Lifetimed = HashMap<K::Lifetimed, V::Lifetimed>;
+    type Lifetimed = HashMap<K::Lifetimed, V::Lifetimed, S>;
 }
 
 impl<'s, T1: WithLifetime<'s>> WithLifetime<'s> for (T1,) {

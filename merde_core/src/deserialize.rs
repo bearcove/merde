@@ -1,6 +1,8 @@
 use std::{
     borrow::Cow,
+    collections::HashMap,
     future::Future,
+    hash::{BuildHasher, Hash},
     pin::Pin,
     task::{Context, Poll, RawWaker, RawWakerVTable, Waker},
 };
@@ -470,17 +472,18 @@ impl<'s, T: Deserialize<'s>> Deserialize<'s> for Vec<T> {
     }
 }
 
-impl<'s, K, V> Deserialize<'s> for std::collections::HashMap<K, V>
+impl<'s, K, V, S> Deserialize<'s> for HashMap<K, V, S>
 where
-    K: Deserialize<'s> + Eq + std::hash::Hash,
+    K: Deserialize<'s> + Eq + Hash,
     V: Deserialize<'s>,
+    S: Default + BuildHasher + 's,
 {
     async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
     where
         D: Deserializer<'s> + ?Sized,
     {
         de.next()?.into_map_start()?;
-        let mut map = std::collections::HashMap::new();
+        let mut map = HashMap::<K, V, S>::default();
 
         loop {
             match de.next()? {

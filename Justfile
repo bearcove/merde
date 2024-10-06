@@ -15,6 +15,6 @@ check:
     pushd merde
     EXAMPLES=($(cd examples && for i in *; do echo "${i%.rs}"; done))
     for example in "${EXAMPLES[@]}"; do
-      cargo run --features full --example "$example"
+      cargo run --features full,ahash --example "$example"
     done
     popd

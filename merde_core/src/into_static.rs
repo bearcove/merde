@@ -2,6 +2,7 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::VecDeque;
+use std::hash::BuildHasher;
 use std::hash::Hash;
 
 /// Allow turning a value into an "owned" variant, which can then be
@@ -83,13 +84,14 @@ impl<T: IntoStatic> IntoStatic for Vec<T> {
     }
 }
 
-impl<K, V> IntoStatic for HashMap<K, V>
+impl<K, V, S> IntoStatic for HashMap<K, V, S>
 where
+    S: BuildHasher + Default + 'static,
     K: IntoStatic + Eq + Hash,
     V: IntoStatic,
     K::Output: Eq + Hash,
 {
-    type Output = HashMap<K::Output, V::Output>;
+    type Output = HashMap<K::Output, V::Output, S>;
 
     fn into_static(self) -> Self::Output {
         self.into_iter()
