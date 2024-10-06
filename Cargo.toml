@@ -1,4 +1,12 @@
 [workspace]
 resolver = "2"
-members = ["merde", "merde_json", "merde_time", "merde_core", "merde_yaml"]
-exclude = ["zerodeps-example"]
+members = [
+    "merde",
+    "merde_json",
+    "merde_time",
+    "merde_core",
+    "merde_yaml",
+    "merde_msgpack",
+    "merde_loggingserializer",
+]
+exclude = ["zerodeps-example", "merde_msgpack/testdata-maker"]

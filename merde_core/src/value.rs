@@ -1,17 +1,18 @@
-use std::{borrow::Cow, collections::HashMap};
+use std::collections::HashMap;
 
 use ordered_float::OrderedFloat;
 
-use crate::{array::Array, map::Map, CowStr, IntoStatic, MerdeError, ValueType};
+use crate::{array::Array, map::Map, CowBytes, CowStr, IntoStatic, MerdeError, ValueType};
 
 /// Think [`serde_json::Value`](https://docs.rs/serde_json/1.0.128/serde_json/enum.Value.html), but with a small string optimization,
 /// copy-on-write strings, etc. Might include other value types later.
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum Value<'s> {
-    Int(i64),
+    I64(i64),
+    U64(u64),
     Float(OrderedFloat<f64>),
     Str(CowStr<'s>),
-    Bytes(Cow<'s, [u8]>),
+    Bytes(CowBytes<'s>),
     Null,
     Bool(bool),
     Array(Array<'s>),
@@ -24,7 +25,8 @@ impl IntoStatic for Value<'_> {
     #[inline(always)]
     fn into_static(self) -> <Self as IntoStatic>::Output {
         match self {
-            Value::Int(i) => Value::Int(i),
+            Value::I64(i) => Value::I64(i),
+            Value::U64(u) => Value::U64(u),
             Value::Float(f) => Value::Float(f),
             Value::Str(s) => Value::Str(s.into_static()),
             Value::Bytes(b) => Value::Bytes(b.into_static()),
@@ -38,7 +40,13 @@ impl IntoStatic for Value<'_> {
 
 impl<'s> From<i64> for Value<'s> {
     fn from(v: i64) -> Self {
-        Value::Int(v)
+        Value::I64(v)
+    }
+}
+
+impl<'s> From<u64> for Value<'s> {
+    fn from(v: u64) -> Self {
+        Value::U64(v)
     }
 }
 
@@ -176,11 +184,46 @@ impl<'s> Value<'s> {
     }
 
     #[inline(always)]
+    pub fn as_bytes(&self) -> Result<&CowBytes<'s>, MerdeError<'static>> {
+        match self {
+            Value::Bytes(b) => Ok(b),
+            _ => Err(MerdeError::MismatchedType {
+                expected: ValueType::Bytes,
+                found: self.value_type(),
+            }),
+        }
+    }
+
+    #[inline(always)]
+    pub fn into_bytes(self) -> Result<CowBytes<'s>, MerdeError<'static>> {
+        match self {
+            Value::Bytes(b) => Ok(b),
+            _ => Err(MerdeError::MismatchedType {
+                expected: ValueType::Bytes,
+                found: self.value_type(),
+            }),
+        }
+    }
+
+    #[inline(always)]
     pub fn as_i64(&self) -> Result<i64, MerdeError<'static>> {
         match self {
-            Value::Int(n) => Ok(*n),
+            Value::I64(n) => Ok(*n),
+            Value::U64(n) if *n <= i64::MAX as u64 => Ok(*n as i64),
             _ => Err(MerdeError::MismatchedType {
-                expected: ValueType::Int,
+                expected: ValueType::I64,
+                found: self.value_type(),
+            }),
+        }
+    }
+
+    #[inline(always)]
+    pub fn as_u64(&self) -> Result<u64, MerdeError<'static>> {
+        match self {
+            Value::U64(n) => Ok(*n),
+            Value::I64(n) => Ok((*n).try_into().map_err(|_| MerdeError::OutOfRange)?),
+            _ => Err(MerdeError::MismatchedType {
+                expected: ValueType::U64,
                 found: self.value_type(),
             }),
         }

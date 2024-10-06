@@ -1,0 +1,9 @@
+[package]
+name = "testdata-maker"
+version = "0.1.0"
+edition = "2021"
+
+[workspace]
+
+[dependencies]
+rmpv = "1.3.0"

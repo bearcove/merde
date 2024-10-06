@@ -205,7 +205,8 @@ impl JsonSerialize for Value<'_> {
         match self {
             Value::Null => serializer.write_null(),
             Value::Bool(b) => serializer.write_bool(*b),
-            Value::Int(i) => serializer.write_i64(*i),
+            Value::I64(i) => serializer.write_i64(*i),
+            Value::U64(u) => serializer.write_i64(*u as i64),
             Value::Float(f) => serializer.write_f64(f.into_inner()),
             Value::Str(s) => serializer.write_str(s),
             Value::Bytes(_b) => {

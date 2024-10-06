@@ -15,10 +15,10 @@ pub enum ValueType {
     Bool,
 
     /// The value fits in an `i64`.
-    Int,
+    I64,
 
-    /// The value no longer fits in an `i64`.
-    BigInt,
+    /// The value fits in a `u64`.
+    U64,
 
     /// The value has decimal places.
     Float,
@@ -179,7 +179,8 @@ impl Value<'_> {
         match self {
             Value::Null => ValueType::Null,
             Value::Bool(_) => ValueType::Bool,
-            Value::Int(_) => ValueType::Int,
+            Value::I64(_) => ValueType::I64,
+            Value::U64(_) => ValueType::U64,
             Value::Float(_) => ValueType::Float,
             Value::Str(_) => ValueType::String,
             Value::Bytes(_) => ValueType::Bytes,

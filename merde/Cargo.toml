@@ -49,6 +49,7 @@ required-features = ["json", "ahash"]
 merde_core = { version = "6.1.0", path = "../merde_core", optional = true }
 merde_json = { version = "6.1.0", path = "../merde_json", optional = true }
 merde_yaml = { version = "7.1.0", path = "../merde_yaml", optional = true }
+merde_msgpack = { version = "7.1.0", path = "../merde_msgpack", optional = true }
 merde_time = { version = "4.0.15", path = "../merde_time", optional = true, features = [
     "merde",
     "deserialize",
@@ -62,6 +63,7 @@ full = [
     "deserialize",
     "json",
     "yaml",
+    "msgpack",
     "time",
     "rusqlite",
     "compact_str",
@@ -76,6 +78,7 @@ rusqlite = ["merde_core/rusqlite"]
 # non-core crates
 json = ["dep:merde_json", "merde_time/json"]
 yaml = ["dep:merde_yaml"]
+msgpack = ["dep:merde_msgpack"]
 time = ["dep:merde_time"]
 
 # others

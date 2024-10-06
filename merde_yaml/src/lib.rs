@@ -108,7 +108,7 @@ impl<'s> Deserializer<'s> for YamlDeserializer<'s> {
                                     }),
                                 },
                                 "int" => match s.parse::<i64>() {
-                                    Ok(v) => Ok(Event::Int(v)),
+                                    Ok(v) => Ok(Event::I64(v)),
                                     Err(_) => Err(MerdeYamlError::ParseError {
                                         expected_type: "int",
                                     }),
@@ -135,7 +135,7 @@ impl<'s> Deserializer<'s> for YamlDeserializer<'s> {
                         if let Ok(v) = s.parse::<bool>() {
                             Ok(Event::Bool(v))
                         } else if let Ok(v) = s.parse::<i64>() {
-                            Ok(Event::Int(v))
+                            Ok(Event::I64(v))
                         } else if let Ok(v) = s.parse::<f64>() {
                             Ok(Event::Float(v))
                         } else if s == "~" || s == "null" {

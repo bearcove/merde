@@ -1,0 +1,18 @@
+[package]
+name = "merde_msgpack"
+version = "7.1.0"
+edition = "2021"
+authors = ["Amos Wenger <amos@bearcove.net>"]
+description = "msgpack serizliation/deserialization for merde"
+license = "Apache-2.0 OR MIT"
+readme = "README.md"
+repository = "https://github.com/bearcove/merde"
+keywords = ["msgpack", "messagepack", "serialization", "deserialization"]
+categories = ["encoding", "parser-implementations"]
+
+[dependencies]
+merde_core = { version = "6.1.0", path = "../merde_core" }
+rmp = "0.8.14"
+
+[dev-dependencies]
+merde_loggingserializer = { path = "../merde_loggingserializer" }

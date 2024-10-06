@@ -1,6 +1,9 @@
 mod cowstr;
 pub use cowstr::CowStr;
 
+mod cowbytes;
+pub use cowbytes::CowBytes;
+
 mod array;
 pub use array::Array;
 
@@ -33,4 +36,7 @@ rubicon::compatibility_check! {
 
     #[cfg(feature = "compact_str")]
     ("compact_str", "enabled")
+
+    #[cfg(feature = "compact_bytes")]
+    ("compact_bytes", "enabled")
 }

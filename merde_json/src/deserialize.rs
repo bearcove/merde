@@ -140,7 +140,7 @@ impl<'s> Deserializer<'s> for JsonDeserializer<'s> {
                 .known_float(peek)
                 .map_err(|err| jiter_error(self.source, err))?;
             if num.fract() == 0.0 && num >= i64::MIN as f64 && num <= i64::MAX as f64 {
-                Event::Int(num as i64)
+                Event::I64(num as i64)
             } else {
                 Event::Float(num)
             }
@@ -216,10 +216,7 @@ mod tests {
 
     use super::JsonDeserializer;
     use merde_core::{Array, CowStr, Deserialize, Deserializer, Event, EventType, Map, MerdeError};
-    use std::{
-        future::Future,
-        task::{Context, Poll, RawWaker, RawWakerVTable, Waker},
-    };
+    use merde_loggingserializer::LoggingDeserializer;
 
     #[derive(Debug, PartialEq)]
     pub struct Sample {
@@ -291,136 +288,50 @@ mod tests {
         "#;
 
         let deser = JsonDeserializer::new(input);
-
-        struct LoggingDeserializer<'s, I>
-        where
-            I: Deserializer<'s>,
-        {
-            inner: I,
-            starter: Option<Event<'s>>,
-        }
-
-        impl<'s, I> std::fmt::Debug for LoggingDeserializer<'s, I>
-        where
-            I: Deserializer<'s>,
-        {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                f.debug_struct("LoggingDeserializer")
-                    .field("inner", &self.inner)
-                    .finish()
-            }
-        }
-
-        impl<'s, I> LoggingDeserializer<'s, I>
-        where
-            I: Deserializer<'s>,
-        {
-            fn new(inner: I) -> Self {
-                Self {
-                    inner,
-                    starter: None,
-                }
-            }
-        }
-
-        impl<'s, I> Deserializer<'s> for LoggingDeserializer<'s, I>
-        where
-            I: Deserializer<'s>,
-        {
-            type Error<'es> = I::Error<'es>;
-
-            fn next(&mut self) -> Result<Event<'s>, Self::Error<'s>> {
-                if let Some(ev) = self.starter.take() {
-                    eprintln!("> (from starter) {:?}", ev);
-                    return Ok(ev);
-                }
-
-                let ev = self.inner.next()?;
-                Ok(ev)
-            }
-
-            async fn t_starting_with<T: Deserialize<'s>>(
-                &mut self,
-                starter: Option<Event<'s>>,
-            ) -> Result<T, Self::Error<'s>> {
-                if let Some(starter) = starter {
-                    if self.starter.is_some() {
-                        unreachable!("setting starter when it's already set? shouldn't happen")
-                    }
-                    self.starter = Some(starter);
-                }
-
-                T::deserialize(self).await
-            }
-        }
-
         let mut deser = LoggingDeserializer::new(deser);
 
-        let fut = deser.t::<Vec<Sample>>();
-        let fut = std::pin::pin!(fut);
-        let vtable = RawWakerVTable::new(|_| todo!(), |_| {}, |_| {}, |_| {});
-        let vtable = Box::leak(Box::new(vtable));
-        let w = unsafe { Waker::from_raw(RawWaker::new(std::ptr::null(), vtable)) };
-        let mut cx = Context::from_waker(&w);
-        match fut.poll(&mut cx) {
-            Poll::Ready(res) => {
-                let samples = res.unwrap();
-                assert_eq!(
-                    samples,
-                    vec![
-                        Sample {
-                            height: 100,
-                            kind: true
-                        },
-                        Sample {
-                            height: 200,
-                            kind: false
-                        },
-                        Sample {
-                            height: 150,
-                            kind: true
-                        }
-                    ]
-                );
-            }
-            _ => panic!("returned poll pending for some reason?"),
-        }
+        let samples = deser.deserialize::<Vec<Sample>>().unwrap();
+        assert_eq!(
+            samples,
+            vec![
+                Sample {
+                    height: 100,
+                    kind: true
+                },
+                Sample {
+                    height: 200,
+                    kind: false
+                },
+                Sample {
+                    height: 150,
+                    kind: true
+                }
+            ]
+        );
 
-        let mut deser = JsonDeserializer::new(input);
-        let fut = deser.t::<merde_core::Value>();
-        let fut = std::pin::pin!(fut);
-        let vtable = RawWakerVTable::new(|_| todo!(), |_| {}, |_| {}, |_| {});
-        let vtable = Box::leak(Box::new(vtable));
-        let w = unsafe { Waker::from_raw(RawWaker::new(std::ptr::null(), vtable)) };
-        let mut cx = Context::from_waker(&w);
-        match fut.poll(&mut cx) {
-            Poll::Ready(res) => {
-                let value = res.unwrap();
-                eprintln!("value = {:#?}", value);
+        let value = deser.deserialize::<merde_core::Value>().unwrap();
+        eprintln!("value = {:#?}", value);
 
-                assert_eq!(
-                    value,
-                    Array::new()
-                        .with(
-                            Map::new()
-                                .with("height", merde_core::Value::Int(100))
-                                .with("kind", merde_core::Value::Bool(true))
-                        )
-                        .with(
-                            Map::new()
-                                .with("height", merde_core::Value::Int(200))
-                                .with("kind", merde_core::Value::Bool(false))
-                        )
-                        .with(
-                            Map::new()
-                                .with("height", merde_core::Value::Int(150))
-                                .with("kind", merde_core::Value::Bool(true))
-                        )
-                        .into()
-                );
-            }
-            _ => panic!("returned poll pending for some reason?"),
-        }
+        assert_eq!(
+            value,
+            Array::new()
+                .with(
+                    Map::new()
+                        .with("height", merde_core::Value::I64(100))
+                        .with("kind", merde_core::Value::Bool(true))
+                )
+                .with(
+                    Map::new()
+                        .with("height", merde_core::Value::I64(200))
+                        .with("kind", merde_core::Value::Bool(false))
+                )
+                .with(
+                    Map::new()
+                        .with("height", merde_core::Value::I64(150))
+                        .with("kind", merde_core::Value::Bool(true))
+                )
+                .into()
+        );
     }
 
     #[test]

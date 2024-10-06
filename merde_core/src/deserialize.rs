@@ -7,13 +7,15 @@ use std::{
     task::{Context, Poll, RawWaker, RawWakerVTable, Waker},
 };
 
-use crate::{Array, CowStr, IntoStatic, Map, MerdeError, Value, WithLifetime};
+use crate::{Array, CowBytes, CowStr, IntoStatic, Map, MerdeError, Value, WithLifetime};
 
 #[derive(Debug)]
 pub enum Event<'s> {
-    Int(i64),
+    I64(i64),
+    U64(u64),
     Float(f64),
     Str(CowStr<'s>),
+    Bytes(CowBytes<'s>),
     Bool(bool),
     Null,
     MapStart,
@@ -24,9 +26,11 @@ pub enum Event<'s> {
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum EventType {
-    Int,
+    I64,
+    U64,
     Float,
     Str,
+    Bytes,
     Bool,
     Null,
     MapStart,
@@ -38,9 +42,11 @@ pub enum EventType {
 impl From<&Event<'_>> for EventType {
     fn from(event: &Event<'_>) -> Self {
         match event {
-            Event::Int(_) => EventType::Int,
+            Event::I64(_) => EventType::I64,
+            Event::U64(_) => EventType::U64,
             Event::Float(_) => EventType::Float,
             Event::Str(_) => EventType::Str,
+            Event::Bytes(_) => EventType::Bytes,
             Event::Bool(_) => EventType::Bool,
             Event::Null => EventType::Null,
             Event::MapStart => EventType::MapStart,
@@ -59,10 +65,20 @@ pub struct ArrayStart {
 impl<'s> Event<'s> {
     pub fn into_i64(self) -> Result<i64, MerdeError<'static>> {
         match self {
-            Event::Int(i) => Ok(i),
+            Event::I64(i) => Ok(i),
             _ => Err(MerdeError::UnexpectedEvent {
                 got: EventType::from(&self),
-                expected: &[EventType::Int],
+                expected: &[EventType::I64],
+            }),
+        }
+    }
+
+    pub fn into_u64(self) -> Result<u64, MerdeError<'static>> {
+        match self {
+            Event::U64(u) => Ok(u),
+            _ => Err(MerdeError::UnexpectedEvent {
+                got: EventType::from(&self),
+                expected: &[EventType::U64],
             }),
         }
     }
@@ -83,6 +99,16 @@ impl<'s> Event<'s> {
             _ => Err(MerdeError::UnexpectedEvent {
                 got: EventType::from(&self),
                 expected: &[EventType::Str],
+            }),
+        }
+    }
+
+    pub fn into_bytes(self) -> Result<CowBytes<'s>, MerdeError<'static>> {
+        match self {
+            Event::Bytes(b) => Ok(b),
+            _ => Err(MerdeError::UnexpectedEvent {
+                got: EventType::from(&self),
+                expected: &[EventType::Bytes],
             }),
         }
     }
@@ -249,12 +275,13 @@ impl<'s> Deserialize<'s> for i64 {
         D: Deserializer<'s> + ?Sized,
     {
         let v: i64 = match de.next()? {
-            Event::Int(i) => i,
+            Event::I64(i) => i,
+            Event::U64(u) => u.try_into().map_err(|_| MerdeError::OutOfRange)?,
             Event::Float(f) => f as _,
             ev => {
                 return Err(MerdeError::UnexpectedEvent {
                     got: EventType::from(&ev),
-                    expected: &[EventType::Int, EventType::Float],
+                    expected: &[EventType::I64, EventType::U64, EventType::Float],
                 }
                 .into())
             }
@@ -268,8 +295,19 @@ impl<'s> Deserialize<'s> for u64 {
     where
         D: Deserializer<'s> + ?Sized,
     {
-        let v: i64 = de.t().await?;
-        v.try_into().map_err(|_| MerdeError::OutOfRange.into())
+        let v: u64 = match de.next()? {
+            Event::U64(u) => u,
+            Event::I64(i) => i.try_into().map_err(|_| MerdeError::OutOfRange)?,
+            Event::Float(f) => f as u64,
+            ev => {
+                return Err(MerdeError::UnexpectedEvent {
+                    got: EventType::from(&ev),
+                    expected: &[EventType::U64, EventType::I64, EventType::Float],
+                }
+                .into())
+            }
+        };
+        Ok(v)
     }
 }
 
@@ -288,7 +326,7 @@ impl<'s> Deserialize<'s> for u32 {
     where
         D: Deserializer<'s> + ?Sized,
     {
-        let v: i64 = de.t().await?;
+        let v: u64 = de.t().await?;
         v.try_into().map_err(|_| MerdeError::OutOfRange.into())
     }
 }
@@ -308,7 +346,7 @@ impl<'s> Deserialize<'s> for u16 {
     where
         D: Deserializer<'s> + ?Sized,
     {
-        let v: i64 = de.t().await?;
+        let v: u64 = de.t().await?;
         v.try_into().map_err(|_| MerdeError::OutOfRange.into())
     }
 }
@@ -328,7 +366,7 @@ impl<'s> Deserialize<'s> for u8 {
     where
         D: Deserializer<'s> + ?Sized,
     {
-        let v: i64 = de.t().await?;
+        let v: u64 = de.t().await?;
         v.try_into().map_err(|_| MerdeError::OutOfRange.into())
     }
 }
@@ -348,7 +386,7 @@ impl<'s> Deserialize<'s> for usize {
     where
         D: Deserializer<'s> + ?Sized,
     {
-        let v: i64 = de.t().await?;
+        let v: u64 = de.t().await?;
         v.try_into().map_err(|_| MerdeError::OutOfRange.into())
     }
 }
@@ -369,11 +407,12 @@ impl<'s> Deserialize<'s> for f64 {
     {
         let v: f64 = match de.next()? {
             Event::Float(f) => f,
-            Event::Int(i) => i as f64,
+            Event::I64(i) => i as f64,
+            Event::U64(u) => u as f64,
             ev => {
                 return Err(MerdeError::UnexpectedEvent {
                     got: EventType::from(&ev),
-                    expected: &[EventType::Float, EventType::Int],
+                    expected: &[EventType::Float, EventType::I64, EventType::U64],
                 }
                 .into())
             }
@@ -561,9 +600,11 @@ impl<'s> Deserialize<'s> for Value<'s> {
         D: Deserializer<'s> + ?Sized,
     {
         match de.next()? {
-            Event::Int(i) => Ok(Value::Int(i)),
+            Event::I64(i) => Ok(Value::I64(i)),
+            Event::U64(u) => Ok(Value::U64(u)),
             Event::Float(f) => Ok(Value::Float(f.into())),
             Event::Str(s) => Ok(Value::Str(s)),
+            Event::Bytes(b) => Ok(Value::Bytes(b)),
             Event::Bool(b) => Ok(Value::Bool(b)),
             Event::Null => Ok(Value::Null),
             Event::MapStart => {
@@ -602,9 +643,11 @@ impl<'s> Deserialize<'s> for Value<'s> {
             ev => Err(MerdeError::UnexpectedEvent {
                 got: EventType::from(&ev),
                 expected: &[
-                    EventType::Int,
+                    EventType::I64,
+                    EventType::U64,
                     EventType::Float,
                     EventType::Str,
+                    EventType::Bytes,
                     EventType::Bool,
                     EventType::Null,
                     EventType::MapStart,

@@ -1,0 +1,8 @@
+[package]
+name = "merde_loggingserializer"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+merde_core = { version = "6.1.0", path = "../merde_core" }

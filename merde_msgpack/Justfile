@@ -1,0 +1,3 @@
+
+regen:
+    cargo run --manifest-path testdata-maker/Cargo.toml
