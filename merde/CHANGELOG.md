@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.1.0](https://github.com/bearcove/merde/compare/merde-v6.0.4...merde-v6.1.0) - 2024-10-06
+
+### Added
+
+- Add support for HashMap<K, V, S> (for other S)
+
 ## [6.0.4](https://github.com/bearcove/merde/compare/merde-v6.0.3...merde-v6.0.4) - 2024-10-04
 
 ### Other
