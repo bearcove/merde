@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.1.1](https://github.com/bearcove/merde/compare/merde_yaml-v7.1.0...merde_yaml-v7.1.1) - 2024-10-06
+
+### Other
+
+- Add support for msgpack deserialization
+
 ## [7.1.0](https://github.com/bearcove/merde/compare/merde_yaml-v7.0.2...merde_yaml-v7.1.0) - 2024-10-06
 
 ### Added
