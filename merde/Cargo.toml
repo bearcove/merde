@@ -1,6 +1,6 @@
 [package]
 name = "merde"
-version = "6.1.0"
+version = "6.2.0"
 edition = "2021"
 authors = ["Amos Wenger <amos@bearcove.net>"]
 description = "Serialize and deserialize with declarative macros"
@@ -46,11 +46,11 @@ path = "examples/ahash.rs"
 required-features = ["json", "ahash"]
 
 [dependencies]
-merde_core = { version = "6.1.0", path = "../merde_core", optional = true }
-merde_json = { version = "6.1.0", path = "../merde_json", optional = true }
-merde_yaml = { version = "7.1.0", path = "../merde_yaml", optional = true }
+merde_core = { version = "7.0.0", path = "../merde_core", optional = true }
+merde_json = { version = "6.2.0", path = "../merde_json", optional = true }
+merde_yaml = { version = "7.1.1", path = "../merde_yaml", optional = true }
 merde_msgpack = { version = "7.1.0", path = "../merde_msgpack", optional = true }
-merde_time = { version = "4.0.15", path = "../merde_time", optional = true, features = [
+merde_time = { version = "4.0.16", path = "../merde_time", optional = true, features = [
     "merde",
     "deserialize",
 ] }

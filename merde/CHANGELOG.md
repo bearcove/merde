@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.2.0](https://github.com/bearcove/merde/compare/merde-v6.1.0...merde-v6.2.0) - 2024-10-06
+
+### Added
+
+- Implement Eq for values
+
+### Other
+
+- Fix tests
+- Add support for msgpack deserialization
+
 ## [6.1.0](https://github.com/bearcove/merde/compare/merde-v6.0.4...merde-v6.1.0) - 2024-10-06
 
 ### Added

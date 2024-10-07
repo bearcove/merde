@@ -199,7 +199,7 @@ dependencies = [
 
 [[package]]
 name = "merde"
-version = "6.1.0"
+version = "6.2.0"
 dependencies = [
  "ahash",
  "merde_core",
@@ -211,7 +211,7 @@ dependencies = [
 
 [[package]]
 name = "merde_core"
-version = "6.1.0"
+version = "7.0.0"
 dependencies = [
  "compact_bytes",
  "compact_str",
@@ -223,7 +223,7 @@ dependencies = [
 
 [[package]]
 name = "merde_json"
-version = "6.1.0"
+version = "6.2.0"
 dependencies = [
  "lexical-parse-float",
  "merde_core",
@@ -250,7 +250,7 @@ dependencies = [
 
 [[package]]
 name = "merde_time"
-version = "4.0.15"
+version = "4.0.16"
 dependencies = [
  "merde_core",
  "merde_json",
@@ -259,7 +259,7 @@ dependencies = [
 
 [[package]]
 name = "merde_yaml"
-version = "7.1.0"
+version = "7.1.1"
 dependencies = [
  "merde_core",
  "yaml-rust2",
