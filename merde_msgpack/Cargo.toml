@@ -1,6 +1,6 @@
 [package]
 name = "merde_msgpack"
-version = "7.1.0"
+version = "7.1.1"
 edition = "2021"
 authors = ["Amos Wenger <amos@bearcove.net>"]
 description = "msgpack serizliation/deserialization for merde"

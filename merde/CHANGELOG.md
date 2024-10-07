@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.2.1](https://github.com/bearcove/merde/compare/merde-v6.2.0...merde-v6.2.1) - 2024-10-07
+
+### Fixed
+
+- Proper starter handling in merde_msgpack
+
 ## [6.2.0](https://github.com/bearcove/merde/compare/merde-v6.1.0...merde-v6.2.0) - 2024-10-06
 
 ### Added

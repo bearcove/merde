@@ -1,6 +1,6 @@
 [package]
 name = "merde_json"
-version = "6.2.0"
+version = "6.2.1"
 edition = "2021"
 authors = ["Amos Wenger <amos@bearcove.net>"]
 description = "JSON serialization and deserialization for merde, via jiter"
