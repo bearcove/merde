@@ -1097,6 +1097,7 @@ mod json_tests {
 
 // used to test out doc-tests
 mod doctest_playground {
+
     #[allow(unused_imports)]
     use crate as merde;
 

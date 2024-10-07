@@ -63,12 +63,6 @@ impl<'s> Deserializer<'s> for JsonDeserializer<'s> {
             return Ok(ev);
         }
 
-        eprintln!("stack first: {:?}", self.stack.first());
-        // Print native code backtrace
-        println!("Native Code Backtrace:");
-        let backtrace = std::backtrace::Backtrace::capture();
-        println!("{}", backtrace);
-
         let peek: Option<Peek> = match self.stack.pop() {
             Some(StackItem::ObjectKey(maybe_key)) => match maybe_key {
                 Some(key) => {
@@ -319,7 +313,6 @@ mod tests {
         let mut deser = LoggingDeserializer::new(deser);
 
         let value = deser.deserialize::<merde_core::Value>().unwrap();
-        eprintln!("value = {:#?}", value);
 
         assert_eq!(
             value,
