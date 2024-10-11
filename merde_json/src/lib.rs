@@ -622,10 +622,6 @@ pub fn from_str_owned<T>(s: &str) -> Result<T, MerdeJsonError<'_>>
 where
     T: DeserializeOwned,
 {
-    let stack_var = 0;
-    // provenance who?
-    STACK_BASE.set((&stack_var) as *const _ as u64);
-
     let mut deser = JsonDeserializer::new(s);
     T::deserialize_owned(&mut deser)
 }
