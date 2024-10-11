@@ -1,4 +1,6 @@
 mod cowstr;
+use std::cell::Cell;
+
 pub use cowstr::CowStr;
 
 mod cowbytes;
@@ -30,6 +32,10 @@ pub use deserialize::DeserializeOwned;
 pub use deserialize::Deserializer;
 pub use deserialize::Event;
 pub use deserialize::EventType;
+
+std::thread_local! {
+    pub static STACK_BASE: Cell<u64> = const { Cell::new(0) };
+}
 
 rubicon::compatibility_check! {
     ("merde_core_pkg_version", env!("CARGO_PKG_VERSION")),
