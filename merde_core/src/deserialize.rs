@@ -7,7 +7,9 @@ use std::{
     task::{Context, Poll, RawWaker, RawWakerVTable, Waker},
 };
 
-use crate::{Array, CowBytes, CowStr, IntoStatic, Map, MerdeError, Value, WithLifetime};
+use crate::{
+    Array, CowBytes, CowStr, IntoStatic, Map, MerdeError, Value, WithLifetime, STACK_BASE,
+};
 
 #[derive(Debug)]
 pub enum Event<'s> {
@@ -207,7 +209,26 @@ pub trait Deserializer<'s>: std::fmt::Debug {
     where
         's: 'd,
     {
-        Box::pin(self.t_starting_with(starter))
+        let local: u32 = 0;
+        let stack_top = &local as *const _ as u64;
+        let used_stack = STACK_BASE.get() - stack_top;
+
+        eprintln!(
+            "stack base is {:x}, top is {:x}, we're using {:.2} kB of stack",
+            STACK_BASE.get(),
+            stack_top,
+            (used_stack as f64 / 1024.0),
+        );
+
+        let fut = self.t_starting_with(starter);
+        Box::pin(async move {
+            if used_stack > 4 * 1024 * 1024 {
+                let f = RescheduleOnAnotherStackFuture { next_future: fut };
+                f.await
+            } else {
+                fut.await
+            }
+        })
     }
 
     fn deserialize<T: Deserialize<'s>>(&mut self) -> Result<T, Self::Error<'s>> {
@@ -840,5 +861,20 @@ where
         let t8 = de.t().await?;
         de.next()?.into_array_end()?;
         Ok((t1, t2, t3, t4, t5, t6, t7, t8))
+    }
+}
+
+struct RescheduleOnAnotherStackFuture<F> {
+    next_future: F,
+}
+
+impl<F> Future for RescheduleOnAnotherStackFuture<F>
+where
+    F: Future,
+{
+    type Output = <F as Future>::Output;
+
+    fn poll(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Self::Output> {
+        return Poll::Pending;
     }
 }
