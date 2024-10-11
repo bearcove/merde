@@ -3,7 +3,7 @@ use std::{
     collections::{HashMap, HashSet, VecDeque},
 };
 
-use crate::CowStr;
+use crate::{CowStr, Value};
 
 /// Allow instantiating a type with a lifetime parameter, which in
 /// turn lets us require `Deserialize<'s>` for `CowStr<'s>` for
@@ -45,6 +45,7 @@ impl<'a, 's> WithLifetime<'s> for &'a str {
 }
 
 impl_with_lifetime!(
+    Value<'s>,
     CowStr<'s>,
     String,
     u128,
