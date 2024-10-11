@@ -8,7 +8,8 @@ use std::{
 };
 
 use crate::{
-    Array, CowBytes, CowStr, IntoStatic, Map, MerdeError, Value, WithLifetime, STACK_BASE,
+    Array, CowBytes, CowStr, IntoStatic, Map, MerdeError, Value, WithLifetime, NEXT_FUTURE,
+    STACK_BASE,
 };
 
 #[derive(Debug)]
@@ -209,22 +210,34 @@ pub trait Deserializer<'s>: std::fmt::Debug {
     where
         's: 'd,
     {
-        let local: u32 = 0;
-        let stack_top = &local as *const _ as u64;
-        let used_stack = STACK_BASE.get() - stack_top;
-
+        let used_stack = get_used_stack();
         eprintln!(
-            "stack base is {:x}, top is {:x}, we're using {:.2} kB of stack",
-            STACK_BASE.get(),
-            stack_top,
-            (used_stack as f64 / 1024.0),
+            "we're using {:.2} kB of stack",
+            (get_used_stack() as f64 / 1024.0)
         );
 
         let fut = self.t_starting_with(starter);
         Box::pin(async move {
             if used_stack > 4 * 1024 * 1024 {
-                let f = RescheduleOnAnotherStackFuture { next_future: fut };
-                f.await
+                // this is probably not actually on the stack because we're in a boxed future
+                let mut result: Option<Result<T, Self::Error<'s>>> = None;
+
+                // first turn it into a trait object
+                let background_fut: Pin<Box<dyn Future<Output = ()>>> = Box::pin(async {
+                    result = Some(fut.await);
+                });
+
+                let background_fut: Pin<Box<dyn Future<Output = ()> + 'static>> = unsafe {
+                    // # Safety: this isn't actually 'static, it's "valid for the synchronous
+                    // call to deserialize".
+                    // todo: make sure that this is actually the case by handling panics and
+                    // clearing thread-locals.
+                    std::mem::transmute(background_fut)
+                };
+
+                NEXT_FUTURE.with_borrow_mut(|next_future| *next_future = Some(background_fut));
+                ReturnPendingOnce::new().await;
+                result.unwrap()
             } else {
                 fut.await
             }
@@ -238,6 +251,7 @@ pub trait Deserializer<'s>: std::fmt::Debug {
         let mut cx = Context::from_waker(&w);
         let fut = self.t_starting_with(None);
         let fut = std::pin::pin!(fut);
+
         match fut.poll(&mut cx) {
             Poll::Ready(res) => res,
             _ => unreachable!("nothing can return poll pending yet"),
@@ -864,17 +878,33 @@ where
     }
 }
 
-struct RescheduleOnAnotherStackFuture<F> {
-    next_future: F,
+struct ReturnPendingOnce {
+    polled: bool,
 }
 
-impl<F> Future for RescheduleOnAnotherStackFuture<F>
-where
-    F: Future,
-{
-    type Output = <F as Future>::Output;
+impl ReturnPendingOnce {
+    fn new() -> Self {
+        Self { polled: false }
+    }
+}
+
+impl Future for ReturnPendingOnce {
+    type Output = ();
 
     fn poll(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Self::Output> {
-        return Poll::Pending;
+        let this = self.get_mut();
+
+        if this.polled {
+            panic!("this future type is only meant to be polled once");
+        }
+
+        this.polled = true;
+        Poll::Pending
     }
+}
+
+pub fn get_used_stack() -> u64 {
+    let local: u32 = 0;
+    let stack_top = &local as *const _ as u64;
+    STACK_BASE.get() - stack_top
 }
