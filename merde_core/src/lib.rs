@@ -1,5 +1,8 @@
 mod cowstr;
 use std::cell::Cell;
+use std::cell::RefCell;
+use std::future::Future;
+use std::pin::Pin;
 
 pub use cowstr::CowStr;
 
@@ -33,8 +36,11 @@ pub use deserialize::Deserializer;
 pub use deserialize::Event;
 pub use deserialize::EventType;
 
+type BoxFuture = Pin<Box<dyn Future<Output = ()>>>;
+
 std::thread_local! {
     pub static STACK_BASE: Cell<u64> = const { Cell::new(0) };
+    pub static NEXT_FUTURE: RefCell<Option<BoxFuture>> = const { RefCell::new(None) };
 }
 
 rubicon::compatibility_check! {
