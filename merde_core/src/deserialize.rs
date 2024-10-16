@@ -211,10 +211,6 @@ pub trait Deserializer<'s>: std::fmt::Debug {
         's: 'd,
     {
         let used_stack = get_used_stack();
-        // eprintln!(
-        //     "we're using {:.2} kB of stack",
-        //     (get_used_stack() as f64 / 1024.0)
-        // );
 
         // for a 128KB max stack — TODO: actually find the thread's stack size via pthreads API or whatevs
         const STACK_RED_ZONE: u64 = 100 * 1024;
