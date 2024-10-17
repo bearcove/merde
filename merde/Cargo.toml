@@ -45,6 +45,11 @@ name = "ahash"
 path = "examples/ahash.rs"
 required-features = ["json", "ahash"]
 
+[[example]]
+name = "surprise"
+path = "examples/surprise.rs"
+required-features = ["json"]
+
 [dependencies]
 merde_core = { version = "7.0.0", path = "../merde_core", optional = true }
 merde_json = { version = "6.2.1", path = "../merde_json", optional = true }

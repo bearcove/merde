@@ -7,7 +7,10 @@ use std::{
     task::{Context, Poll, RawWaker, RawWakerVTable, Waker},
 };
 
-use crate::{Array, CowBytes, CowStr, IntoStatic, Map, MerdeError, Value, WithLifetime};
+use crate::{
+    Array, CowBytes, CowStr, IntoStatic, Map, MerdeError, Value, WithLifetime, NEXT_FUTURE,
+    STACK_BASE,
+};
 
 #[derive(Debug)]
 pub enum Event<'s> {
@@ -207,19 +210,105 @@ pub trait Deserializer<'s>: std::fmt::Debug {
     where
         's: 'd,
     {
-        Box::pin(self.t_starting_with(starter))
+        let used_stack = get_used_stack();
+
+        // for a 128KB max stack — TODO: actually find the thread's stack size via pthreads API or whatevs
+        const STACK_RED_ZONE: u64 = 100 * 1024;
+
+        let stack_used_percent = (used_stack as f64 / STACK_RED_ZONE as f64) * 100.0;
+        let stack_drawing_width = 40;
+        let stack_drawing = (0..stack_drawing_width)
+            .map(|i| {
+                let threshold = (i as f64 / stack_drawing_width as f64) * 100.0;
+                if stack_used_percent >= threshold {
+                    '█'
+                } else {
+                    '░'
+                }
+            })
+            .collect::<String>();
+
+        eprintln!(
+            "Stack usage: [{}] {:.1}%",
+            stack_drawing, stack_used_percent
+        );
+
+        let fut = self.t_starting_with(starter);
+        Box::pin(async move {
+            if used_stack > STACK_RED_ZONE {
+                // this is probably not actually on the stack because we're in a boxed future
+                let mut result: Option<Result<T, Self::Error<'s>>> = None;
+
+                // first turn it into a trait object
+                let background_fut: Pin<Box<dyn Future<Output = ()>>> = Box::pin(async {
+                    result = Some(fut.await);
+                });
+
+                let background_fut: Pin<Box<dyn Future<Output = ()> + 'static>> = unsafe {
+                    // # Safety: this isn't actually 'static, it's "valid for the synchronous
+                    // call to deserialize".
+                    // todo: make sure that this is actually the case by handling panics and
+                    // clearing thread-locals.
+                    std::mem::transmute(background_fut)
+                };
+
+                NEXT_FUTURE.with_borrow_mut(|next_future| *next_future = Some(background_fut));
+                ReturnPendingOnce::new().await;
+                result.unwrap()
+            } else {
+                fut.await
+            }
+        })
     }
 
     fn deserialize<T: Deserialize<'s>>(&mut self) -> Result<T, Self::Error<'s>> {
+        let stack_var = 0;
+        // provenance who?
+        STACK_BASE.set((&stack_var) as *const _ as u64);
+
         let vtable = RawWakerVTable::new(|_| todo!(), |_| {}, |_| {}, |_| {});
         let vtable = Box::leak(Box::new(vtable));
         let w = unsafe { Waker::from_raw(RawWaker::new(std::ptr::null(), vtable)) };
         let mut cx = Context::from_waker(&w);
-        let fut = self.t_starting_with(None);
-        let fut = std::pin::pin!(fut);
-        match fut.poll(&mut cx) {
+        let first_fut = self.t_starting_with(None);
+        let mut first_fut = std::pin::pin!(first_fut);
+
+        match first_fut.as_mut().poll(&mut cx) {
             Poll::Ready(res) => res,
-            _ => unreachable!("nothing can return poll pending yet"),
+            _ => {
+                // oh boy. okay.
+                let mut stack = vec![];
+
+                'crimes: loop {
+                    let mut fut = NEXT_FUTURE
+                        .with_borrow_mut(|next_fut| next_fut.take())
+                        .expect("NEXT_FUTURE must've been set before returning Poll::Pending");
+                    match Pin::new(&mut fut).poll(&mut cx) {
+                        Poll::Ready(_) => break 'crimes,
+                        Poll::Pending => {
+                            stack.push(fut);
+                        }
+                    }
+                }
+
+                while let Some(mut fut) = stack.pop() {
+                    match Pin::new(&mut fut).poll(&mut cx) {
+                        Poll::Ready(_) => {
+                            // cool let's keep going
+                        }
+                        Poll::Pending => {
+                            unreachable!("I'm sorry you really only get to ask for more stack once")
+                        }
+                    }
+                }
+
+                match first_fut.poll(&mut cx) {
+                    Poll::Ready(res) => res,
+                    Poll::Pending => {
+                        unreachable!("Like I said, you really only get to ask for more stack once")
+                    }
+                }
+            }
         }
     }
 
@@ -841,4 +930,35 @@ where
         de.next()?.into_array_end()?;
         Ok((t1, t2, t3, t4, t5, t6, t7, t8))
     }
+}
+
+struct ReturnPendingOnce {
+    polled: bool,
+}
+
+impl ReturnPendingOnce {
+    fn new() -> Self {
+        Self { polled: false }
+    }
+}
+
+impl Future for ReturnPendingOnce {
+    type Output = ();
+
+    fn poll(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Self::Output> {
+        let this = self.get_mut();
+
+        if this.polled {
+            Poll::Ready(())
+        } else {
+            this.polled = true;
+            Poll::Pending
+        }
+    }
+}
+
+pub fn get_used_stack() -> u64 {
+    let local: u32 = 0;
+    let stack_top = &local as *const _ as u64;
+    STACK_BASE.get() - stack_top
 }
