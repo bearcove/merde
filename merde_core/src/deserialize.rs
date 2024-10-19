@@ -8,8 +8,8 @@ use std::{
 };
 
 use crate::{
-    Array, CowBytes, CowStr, IntoStatic, Map, MerdeError, Value, WithLifetime, NEXT_FUTURE,
-    STACK_BASE,
+    Array, CowBytes, CowStr, IntoStatic, Map, MerdeError, StackInfo, Value, WithLifetime,
+    NEXT_FUTURE,
 };
 
 #[derive(Debug)]
@@ -210,32 +210,13 @@ pub trait Deserializer<'s>: std::fmt::Debug {
     where
         's: 'd,
     {
-        let used_stack = get_used_stack();
-
-        // for a 128KB max stack — TODO: actually find the thread's stack size via pthreads API or whatevs
-        const STACK_RED_ZONE: u64 = 100 * 1024;
-
-        let stack_used_percent = (used_stack as f64 / STACK_RED_ZONE as f64) * 100.0;
-        let stack_drawing_width = 40;
-        let stack_drawing = (0..stack_drawing_width)
-            .map(|i| {
-                let threshold = (i as f64 / stack_drawing_width as f64) * 100.0;
-                if stack_used_percent >= threshold {
-                    '█'
-                } else {
-                    '░'
-                }
-            })
-            .collect::<String>();
-
-        eprintln!(
-            "Stack usage: [{}] {:.1}%",
-            stack_drawing, stack_used_percent
-        );
+        // TODO: cache in a thread-local, or, more simply, in a deserialization context?
+        let stack_info = StackInfo::get();
 
         let fut = self.t_starting_with(starter);
         Box::pin(async move {
-            if used_stack > STACK_RED_ZONE {
+            // idk 8K is probably not a lot
+            if stack_info.left() < 8 * 1024 {
                 // this is probably not actually on the stack because we're in a boxed future
                 let mut result: Option<Result<T, Self::Error<'s>>> = None;
 
@@ -262,10 +243,6 @@ pub trait Deserializer<'s>: std::fmt::Debug {
     }
 
     fn deserialize<T: Deserialize<'s>>(&mut self) -> Result<T, Self::Error<'s>> {
-        let stack_var = 0;
-        // provenance who?
-        STACK_BASE.set((&stack_var) as *const _ as u64);
-
         let vtable = RawWakerVTable::new(|_| todo!(), |_| {}, |_| {}, |_| {});
         let vtable = Box::leak(Box::new(vtable));
         let w = unsafe { Waker::from_raw(RawWaker::new(std::ptr::null(), vtable)) };
@@ -955,10 +932,4 @@ impl Future for ReturnPendingOnce {
             Poll::Pending
         }
     }
-}
-
-pub fn get_used_stack() -> u64 {
-    let local: u32 = 0;
-    let stack_top = &local as *const _ as u64;
-    STACK_BASE.get() - stack_top
 }
