@@ -41,13 +41,14 @@ std::thread_local! {
     pub static NEXT_FUTURE: RefCell<Option<BoxFuture>> = const { RefCell::new(None) };
 }
 
-/// Stack information
+/// Stack information — we always assume the stack grows down (e.g. the more we
+/// allocate, the "lower" the address).
 pub struct StackInfo {
-    /// The base address of the stack
-    stack_base: u64,
+    /// The highest possible address of the stack
+    highest_address: u64,
 
     /// The size of the stack
-    stack_size: u64,
+    size: u64,
 }
 
 impl StackInfo {
@@ -91,24 +92,29 @@ impl StackInfo {
                 }
 
                 #[repr(C)]
+                #[allow(non_camel_case_types)]
                 struct pthread_attr_t {
                     __size: [u64; 7],
                 }
 
+                #[allow(non_camel_case_types)]
                 type pthread_t = usize;
 
                 let mut attr: pthread_attr_t = mem::zeroed();
-                let mut stack_addr: *mut c_void = std::ptr::null_mut();
-                let mut stack_size: usize = 0;
+                let mut lowest_address: *mut c_void = std::ptr::null_mut();
+                let mut size: usize = 0;
 
                 pthread_attr_init(&mut attr);
                 pthread_getattr_np(pthread_self(), &mut attr);
-                pthread_attr_getstack(&attr, &mut stack_addr, &mut stack_size);
+                pthread_attr_getstack(&attr, &mut lowest_address, &mut size);
                 pthread_attr_destroy(&mut attr);
 
+                let size = size as u64;
+                let highest_address = lowest_address as u64 + size;
+
                 Self {
-                    stack_base: stack_addr as u64,
-                    stack_size: stack_size as u64,
+                    highest_address,
+                    size,
                 }
             }
         }
@@ -163,9 +169,9 @@ impl StackInfo {
         let stack_var: u64 = 0;
         let stack_top = &stack_var as *const u64;
 
-        (self.stack_base + self.stack_size)
-            .checked_sub(stack_top as u64)
-            .expect("we assume the stack grows down")
+        self.size.checked_sub(
+            self.highest_address.checked_sub(stack_top as u64).expect("we assume the stack grows down")
+        ).expect("we assume we haven't exhausted the whole stack")
     }
 }
 
