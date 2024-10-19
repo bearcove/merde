@@ -161,7 +161,7 @@ impl StackInfo {
     /// How much stack space is left?
     pub fn left(&self) -> u64 {
         let stack_var: u64 = 0;
-        let stack_top = &raw const stack_var;
+        let stack_top = &stack_var as *const u64;
 
         (self.stack_base + self.stack_size)
             .checked_sub(stack_top as u64)
