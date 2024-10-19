@@ -46,8 +46,8 @@ path = "examples/ahash.rs"
 required-features = ["json", "ahash"]
 
 [[example]]
-name = "surprise"
-path = "examples/surprise.rs"
+name = "infinite-stack"
+path = "examples/infinite-stack.rs"
 required-features = ["json"]
 
 [dependencies]
