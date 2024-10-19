@@ -1,5 +1,3 @@
-use std::thread::Thread;
-
 use merde::Value;
 
 struct Person {

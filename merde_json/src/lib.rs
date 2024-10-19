@@ -9,7 +9,6 @@ mod jiter_lite;
 use jiter_lite::errors::JiterError;
 use merde_core::{
     Array, CowStr, Deserialize, DeserializeOwned, Deserializer, IntoStatic, Map, MerdeError, Value,
-    STACK_BASE,
 };
 
 use std::borrow::Cow;
