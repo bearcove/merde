@@ -215,7 +215,7 @@ pub trait Deserializer<'s>: std::fmt::Debug {
 
         let fut = self.t_starting_with(starter);
         Box::pin(async move {
-            // idk 8K is probably not a lot
+            // TODO: 8K is not one-size-fits-all
             if stack_info.left() < 8 * 1024 {
                 // this is probably not actually on the stack because we're in a boxed future
                 let mut result: Option<Result<T, Self::Error<'s>>> = None;
