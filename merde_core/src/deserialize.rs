@@ -342,11 +342,6 @@ mod mini_typeid {
 }
 
 /// Allows filling in a field of a struct while deserializing.
-///
-/// Enforces some type safety at runtime, by carrying lifetimes
-/// around and making sure that at least the type_name matches.
-/// There's a non-zero chance I messed something up and this is
-/// actually badly UB though. I should ask miri.
 pub struct FieldSlot<'s, 'borrow> {
     option: *mut Option<()>,
     type_id_of_field: TypeId,
