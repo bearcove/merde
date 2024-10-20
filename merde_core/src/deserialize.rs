@@ -3,6 +3,7 @@ use std::{
     collections::HashMap,
     future::Future,
     hash::{BuildHasher, Hash},
+    marker::PhantomData,
     pin::Pin,
     task::{Context, Poll, RawWaker, RawWakerVTable, Waker},
 };
@@ -299,6 +300,72 @@ pub trait Deserializer<'s>: std::fmt::Debug {
     {
         self.deserialize()
             .map(|t: <T as WithLifetime<'s>>::Lifetimed| t.into_static())
+    }
+}
+
+/// Allows filling in a field of a struct while deserializing.
+///
+/// Enforces some type safety at runtime.
+pub struct FieldSlot<'s, 'borrow> {
+    option: &'borrow mut Option<()>,
+    type_name_of_slot: &'static str,
+    _phantom: PhantomData<&'s ()>,
+}
+
+impl<'s, 'borrow> FieldSlot<'s, 'borrow> {
+    /// Fill this field with a value
+    pub fn fill<T: 's>(self, t: T) {
+        let type_name_of_t = std::any::type_name::<T>();
+        assert_eq!(self.type_name_of_slot, type_name_of_t);
+
+        let option_ref: &mut Option<T> = unsafe { std::mem::transmute(&mut *self.option) };
+        option_ref.replace(t);
+    }
+}
+
+/// Opinions you have about deserialization: should unknown fields
+/// be allowed, etc.
+///
+/// These are opinions _for a specific type_, not for the whole
+/// deserialization tree. They cannot be set from the outside, they
+/// can only be used to control the behavior of code generated via
+/// `merde::derive!`.
+pub trait DeserOpinions {
+    /// Should `{ a: 1, b: 2 }` be rejected when encountering b,
+    /// if we are deserializing `struct Foo { a: i32 }`?
+    fn deny_unknown_fields(&self) -> bool;
+
+    /// If we encounter `{ a: 1 }`, but we are deserializing `struct Foo { a: i32, b: i32 }`,
+    /// `fill_default` will be called with `key = "b"` and decide what to do.
+    #[allow(clippy::needless_lifetimes)]
+    fn default_field_value<'s, 'borrow>(&self, key: &'borrow str, slot: FieldSlot<'s, 'borrow>);
+
+    /// If we encounter `{ "jazz_band": 1 }`, should we try to find a field
+    /// named `jazz_band` on the struct we're deserializing, or should we
+    /// map it to something else, like "JazzBand"?
+    fn map_key_name<'s>(&self, key: CowStr<'s>) -> CowStr<'s>;
+}
+
+struct DefaultDeserOpinions;
+
+impl DeserOpinions for DefaultDeserOpinions {
+    #[inline(always)]
+    fn deny_unknown_fields(&self) -> bool {
+        // by default, allow unknown fields
+        false
+    }
+
+    #[inline(always)]
+    #[allow(clippy::needless_lifetimes)]
+    fn default_field_value<'s, 'borrow>(&self, _key: &'borrow str, _slot: FieldSlot<'s, 'borrow>) {
+        // by default, don't fill in default values for any fields
+        // (they will just error out)
+    }
+
+    #[inline(always)]
+    fn map_key_name<'s>(&self, key: CowStr<'s>) -> CowStr<'s> {
+        // by default, keep key names as-is
+        key
     }
 }
 
