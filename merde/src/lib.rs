@@ -100,8 +100,7 @@ macro_rules! impl_deserialize {
                 Ok($struct_name {
                     $($field: {
                         if $field.is_none() {
-                            let __field_type_name = std::any::type_name_of_val(&$field);
-                            let __slot = $crate::FieldSlot::new(&mut $field, __field_type_name);
+                            let __slot = $crate::FieldSlot::new(&mut $field);
                             __opinions.default_field_value(stringify!($field), __slot);
                         }
                         $crate::Deserialize::from_option($field, stringify!($field).into())?
@@ -163,8 +162,7 @@ macro_rules! impl_deserialize {
                 Ok($struct_name {
                     $($field: {
                         if $field.is_none() {
-                            let __field_type_name = std::any::type_name_of_val(&$field);
-                            let __slot = $crate::FieldSlot::new(&mut $field, __field_type_name);
+                            let __slot = $crate::FieldSlot::new(&mut $field);
                             __opinions.default_field_value(stringify!($field), __slot);
                         }
                         $crate::Deserialize::from_option($field, stringify!($field).into())?

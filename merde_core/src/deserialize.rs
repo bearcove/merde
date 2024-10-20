@@ -317,12 +317,13 @@ pub struct FieldSlot<'s, 'borrow> {
 impl<'s, 'borrow> FieldSlot<'s, 'borrow> {
     /// Construct a new `FieldSlot`, ready to be filled
     #[inline(always)]
-    pub fn new<T: 's>(option: &'borrow mut Option<T>, type_name_of_slot: &'static str) -> Self {
+    #[doc(hidden)]
+    pub fn new<T: 's>(option: &'borrow mut Option<T>) -> Self {
         Self {
             option: unsafe {
                 std::mem::transmute::<*mut Option<T>, *mut Option<()>>(option as *mut _)
             },
-            type_name_of_option_field: type_name_of_slot,
+            type_name_of_option_field: std::any::type_name::<Option<T>>(),
             _phantom: PhantomData,
         }
     }
