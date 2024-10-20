@@ -32,3 +32,6 @@ compact_str = ["dep:compact_str"]
 compact_bytes = ["dep:compact_bytes"]
 serde = ["dep:serde", "compact_str/serde"]
 rusqlite = ["dep:rusqlite"]
+
+[dev-dependencies]
+trybuild = "1.0.101"

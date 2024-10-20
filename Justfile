@@ -28,4 +28,4 @@ check:
 
 miri:
     cargo +nightly miri run --example opinions -F json
-    cargo +nightly miri test -p merde_core
+    cargo +nightly miri test -p merde_core fieldslot

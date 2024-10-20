@@ -342,14 +342,14 @@ mod mini_typeid {
 }
 
 /// Allows filling in a field of a struct while deserializing.
-pub struct FieldSlot<'s, 'borrow> {
+pub struct FieldSlot<'s, 'borrow: 's> {
     option: *mut Option<()>,
     type_id_of_field: TypeId,
     type_name_of_field: &'static str,
-    _phantom: PhantomData<(&'s (), &'borrow mut ())>,
+    _phantom: PhantomData<&'borrow mut &'s mut ()>,
 }
 
-impl<'s, 'borrow> FieldSlot<'s, 'borrow> {
+impl<'s, 'borrow: 's> FieldSlot<'s, 'borrow> {
     /// Construct a new `FieldSlot`, ready to be filled
     #[inline(always)]
     #[doc(hidden)]

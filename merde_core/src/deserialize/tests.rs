@@ -33,3 +33,9 @@ fn test_fieldslot_with_assign_mismatched_type() {
     let slot = FieldSlot::new(&mut option);
     slot.fill::<i32>(42);
 }
+
+#[test]
+fn ui() {
+    let t = trybuild::TestCases::new();
+    t.compile_fail("tests/ui/*.rs");
+}
