@@ -23,3 +23,8 @@ check:
       cargo run --features full,ahash --example "$example"
     done
     popd
+
+    just miri
+
+miri:
+    cargo +nightly miri run --example opinions -F json

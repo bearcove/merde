@@ -349,15 +349,19 @@ pub trait DeserOpinions {
     /// if we are deserializing `struct Foo { a: i32 }`?
     fn deny_unknown_fields(&self) -> bool;
 
+    /// If we encounter `{ "jazzBand": 1 }`, should we try to find a field
+    /// named "jazzBand" on the struct we're deserializing, or should we
+    /// map it to something else, like "jazz_band"?
+    fn map_key_name<'s>(&self, key: CowStr<'s>) -> CowStr<'s>;
+
     /// If we encounter `{ a: 1 }`, but we are deserializing `struct Foo { a: i32, b: i32 }`,
     /// `fill_default` will be called with `key = "b"` and decide what to do.
+    ///
+    /// Note that this is called with the field name, not whatever name we found in the
+    /// "document" — if `map_key_name` mapped "jazzBand" to "jazz_band", then this is
+    /// called with "jazz_band".
     #[allow(clippy::needless_lifetimes)]
     fn default_field_value<'s, 'borrow>(&self, key: &'borrow str, slot: FieldSlot<'s, 'borrow>);
-
-    /// If we encounter `{ "jazz_band": 1 }`, should we try to find a field
-    /// named `jazz_band` on the struct we're deserializing, or should we
-    /// map it to something else, like "JazzBand"?
-    fn map_key_name<'s>(&self, key: CowStr<'s>) -> CowStr<'s>;
 }
 
 /// merde's default opinions for deserialization: allow unknown fields, don't fill in default values

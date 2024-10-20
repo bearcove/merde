@@ -50,6 +50,11 @@ name = "infinite-stack"
 path = "examples/infinite-stack.rs"
 required-features = ["json"]
 
+[[example]]
+name = "opinions"
+path = "examples/opinions.rs"
+required-features = ["json"]
+
 [dependencies]
 merde_core = { version = "7.0.0", path = "../merde_core", optional = true }
 merde_json = { version = "6.2.1", path = "../merde_json", optional = true }
