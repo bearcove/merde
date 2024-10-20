@@ -1,4 +1,5 @@
 use std::{
+    any::TypeId,
     borrow::Cow,
     collections::HashMap,
     future::Future,
@@ -302,6 +303,44 @@ pub trait Deserializer<'s>: std::fmt::Debug {
     }
 }
 
+mod mini_typeid {
+    // vendored straight from https://github.com/dtolnay/typeid — which is dual-licensed under
+    // MIT and Apache-2.0, just like merde.
+    //
+    // We don't really need const type_id construction or older rustc support, so this is a minimal
+    // take on it.
+
+    use std::{any::TypeId, marker::PhantomData};
+
+    #[must_use]
+    #[inline(always)]
+    pub fn of<T>() -> TypeId
+    where
+        T: ?Sized,
+    {
+        trait NonStaticAny {
+            fn get_type_id(&self) -> TypeId
+            where
+                Self: 'static;
+        }
+
+        impl<T: ?Sized> NonStaticAny for PhantomData<T> {
+            #[inline(always)]
+            fn get_type_id(&self) -> TypeId
+            where
+                Self: 'static,
+            {
+                TypeId::of::<T>()
+            }
+        }
+
+        let phantom_data = PhantomData::<T>;
+        NonStaticAny::get_type_id(unsafe {
+            std::mem::transmute::<&dyn NonStaticAny, &(dyn NonStaticAny + 'static)>(&phantom_data)
+        })
+    }
+}
+
 /// Allows filling in a field of a struct while deserializing.
 ///
 /// Enforces some type safety at runtime, by carrying lifetimes
@@ -310,7 +349,8 @@ pub trait Deserializer<'s>: std::fmt::Debug {
 /// actually badly UB though. I should ask miri.
 pub struct FieldSlot<'s, 'borrow> {
     option: *mut Option<()>,
-    type_name_of_option_field: &'static str,
+    type_id_of_field: TypeId,
+    type_name_of_field: &'static str,
     _phantom: PhantomData<(&'s (), &'borrow mut ())>,
 }
 
@@ -323,15 +363,22 @@ impl<'s, 'borrow> FieldSlot<'s, 'borrow> {
             option: unsafe {
                 std::mem::transmute::<*mut Option<T>, *mut Option<()>>(option as *mut _)
             },
-            type_name_of_option_field: std::any::type_name::<Option<T>>(),
+            type_id_of_field: mini_typeid::of::<T>(),
+            type_name_of_field: std::any::type_name::<T>(),
             _phantom: PhantomData,
         }
     }
 
     /// Fill this field with a value.
     pub fn fill<T: 's>(self, value: T) {
-        let type_name_of_option_value = std::any::type_name::<Option<T>>();
-        assert_eq!(self.type_name_of_option_field, type_name_of_option_value);
+        let type_id_of_value = mini_typeid::of::<T>();
+        assert_eq!(
+            self.type_id_of_field,
+            type_id_of_value,
+            "tried to assign a \x1b[33m{}\x1b[0m to a slot of type \x1b[34m{}\x1b[0m",
+            std::any::type_name::<T>(),
+            self.type_name_of_field,
+        );
 
         unsafe {
             let option_ptr: *mut Option<T> = std::mem::transmute(self.option);
@@ -1023,3 +1070,6 @@ impl Future for ReturnPendingOnce {
         }
     }
 }
+
+#[cfg(test)]
+mod tests;
