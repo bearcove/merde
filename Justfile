@@ -1,8 +1,13 @@
 check:
     #!/bin/bash -eux
+    cargo check --all-targets
+    cargo check --all-features --all-targets
+    cargo hack --each-feature --exclude-features=default,full check
+
     cargo check --example simple --no-default-features --features=json
     cargo run --example simple --features=core,json
-    cargo hack --each-feature --exclude-features=default,full check -p merde
+
+    # can't use cargo-nextest because we want to run doctests
     cargo test -F full
 
     pushd zerodeps-example
