@@ -29,11 +29,14 @@ pub use value::Value;
 
 mod deserialize;
 pub use deserialize::ArrayStart;
+pub use deserialize::DefaultDeserOpinions;
+pub use deserialize::DeserOpinions;
 pub use deserialize::Deserialize;
 pub use deserialize::DeserializeOwned;
 pub use deserialize::Deserializer;
 pub use deserialize::Event;
 pub use deserialize::EventType;
+pub use deserialize::FieldSlot;
 
 type BoxFuture = Pin<Box<dyn Future<Output = ()>>>;
 

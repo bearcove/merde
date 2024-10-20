@@ -305,21 +305,35 @@ pub trait Deserializer<'s>: std::fmt::Debug {
 
 /// Allows filling in a field of a struct while deserializing.
 ///
-/// Enforces some type safety at runtime.
+/// Enforces some type safety at runtime, by carrying lifetimes
+/// around and making sure that at least the type_name matches.
+/// There's a non-zero chance I messed something up and this is
+/// actually badly UB though. I should ask miri.
 pub struct FieldSlot<'s, 'borrow> {
     option: &'borrow mut Option<()>,
-    type_name_of_slot: &'static str,
+    type_name_of_option_field: &'static str,
     _phantom: PhantomData<&'s ()>,
 }
 
 impl<'s, 'borrow> FieldSlot<'s, 'borrow> {
-    /// Fill this field with a value
-    pub fn fill<T: 's>(self, t: T) {
-        let type_name_of_t = std::any::type_name::<T>();
-        assert_eq!(self.type_name_of_slot, type_name_of_t);
+    /// Construct a new `FieldSlot`, ready to be filled
+    #[inline(always)]
+    pub fn new<T: 's>(option: &'borrow mut Option<T>, type_name_of_slot: &'static str) -> Self {
+        Self {
+            option: unsafe { std::mem::transmute::<&mut Option<T>, &mut Option<()>>(option) },
+            type_name_of_option_field: type_name_of_slot,
+            _phantom: PhantomData,
+        }
+    }
 
-        let option_ref: &mut Option<T> = unsafe { std::mem::transmute(&mut *self.option) };
-        option_ref.replace(t);
+    /// Fill this field with a value.
+    pub fn fill<T: 's>(self, value: T) {
+        let type_name_of_option_value = std::any::type_name::<Option<T>>();
+        assert_eq!(self.type_name_of_option_field, type_name_of_option_value);
+
+        let option_ref =
+            unsafe { std::mem::transmute::<&mut Option<()>, &mut Option<T>>(self.option) };
+        option_ref.replace(value);
     }
 }
 
@@ -346,7 +360,9 @@ pub trait DeserOpinions {
     fn map_key_name<'s>(&self, key: CowStr<'s>) -> CowStr<'s>;
 }
 
-struct DefaultDeserOpinions;
+/// merde's default opinions for deserialization: allow unknown fields, don't fill in default values
+/// and keep key names as-is.
+pub struct DefaultDeserOpinions;
 
 impl DeserOpinions for DefaultDeserOpinions {
     #[inline(always)]
