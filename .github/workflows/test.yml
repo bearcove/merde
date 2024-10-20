@@ -23,4 +23,5 @@ jobs:
       - name: Run tests
         shell: bash
         run: |
+          rustup toolchain install nightly --component miri
           just
