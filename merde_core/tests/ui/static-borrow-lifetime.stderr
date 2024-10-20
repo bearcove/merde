@@ -1,0 +1,13 @@
+error[E0597]: `option` does not live long enough
+  --> tests/ui/static-borrow-lifetime.rs:5:31
+   |
+4  |     let mut option: Option<i32> = None;
+   |         ---------- binding `option` declared here
+5  |     let slot = FieldSlot::new(&mut option);
+   |                ---------------^^^^^^^^^^^-
+   |                |              |
+   |                |              borrowed value does not live long enough
+   |                argument requires that `option` is borrowed for `'static`
+...
+11 | }
+   | - `option` dropped here while still borrowed
