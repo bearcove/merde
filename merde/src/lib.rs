@@ -53,27 +53,34 @@ macro_rules! impl_deserialize {
         #[automatically_derived]
         impl<'s> $crate::Deserialize<'s> for $struct_name {
             #[inline(always)]
-            async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
+            async fn deserialize<D>(__de: &mut D) -> Result<Self, D::Error<'s>>
             where
                 D: $crate::Deserializer<'s> + ?Sized {
-
                 #![allow(unreachable_code)]
 
-                de.next()?.into_map_start()?;
+                use $crate::DeserOpinions;
+
+                let __opinions = $crate::DefaultDeserOpinions;
+                __de.next()?.into_map_start()?;
 
                 $(
                     let mut $field = $crate::none_of(|i: $struct_name| i.$field);
                 )+
 
                 loop {
-                    match de.next()? {
+                    match __de.next()? {
                         $crate::Event::MapEnd => break,
-                        $crate::Event::Str(key) => match key.as_ref() {
-                            $(stringify!($field) => {
-                                $field = Some(de.t().await?);
-                            })*
-                            _ => {
-                                return Err($crate::MerdeError::UnknownProperty(key).into());
+                        $crate::Event::Str(key) => {
+                            let key = __opinions.map_key_name(key);
+                            match key.as_ref() {
+                                $(stringify!($field) => {
+                                    $field = Some(__de.t().await?);
+                                })*
+                                _ => {
+                                    if __opinions.deny_unknown_fields() {
+                                        return Err($crate::MerdeError::UnknownProperty(key).into());
+                                    }
+                                }
                             }
                         }
                         ev => {
@@ -87,7 +94,14 @@ macro_rules! impl_deserialize {
                 }
 
                 Ok($struct_name {
-                    $($field: $crate::Deserialize::from_option($field, stringify!($field).into())?,)+
+                    $($field: {
+                        if $field.is_none() {
+                            let __field_type_name = std::any::type_name_of_val(&$field);
+                            let __slot = $crate::FieldSlot::new(&mut $field, __field_type_name);
+                            __opinions.default_field_value(stringify!($field), __slot);
+                        }
+                        $crate::Deserialize::from_option($field, stringify!($field).into())?
+                    },)+
                 })
             }
         }
