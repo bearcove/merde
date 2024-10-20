@@ -65,11 +65,11 @@ impl StackInfo {
 
             let thread = pthread_self();
             let stack_addr = pthread_get_stackaddr_np(thread) as u64;
-            let stack_size = pthread_get_stacksize_np(thread) as u64;
+            let size = pthread_get_stacksize_np(thread) as u64;
 
             Self {
-                stack_base: stack_addr - stack_size,
-                stack_size,
+                highest_address: stack_addr,
+                size,
             }
         }
 
@@ -169,9 +169,13 @@ impl StackInfo {
         let stack_var: u64 = 0;
         let stack_top = &stack_var as *const u64;
 
-        self.size.checked_sub(
-            self.highest_address.checked_sub(stack_top as u64).expect("we assume the stack grows down")
-        ).expect("we assume we haven't exhausted the whole stack")
+        self.size
+            .checked_sub(
+                self.highest_address
+                    .checked_sub(stack_top as u64)
+                    .expect("we assume the stack grows down"),
+            )
+            .expect("we assume we haven't exhausted the whole stack")
     }
 }
 
