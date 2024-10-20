@@ -244,9 +244,8 @@ pub trait Deserializer<'s>: std::fmt::Debug {
     }
 
     fn deserialize<T: Deserialize<'s>>(&mut self) -> Result<T, Self::Error<'s>> {
-        let vtable = RawWakerVTable::new(|_| todo!(), |_| {}, |_| {}, |_| {});
-        let vtable = Box::leak(Box::new(vtable));
-        let w = unsafe { Waker::from_raw(RawWaker::new(std::ptr::null(), vtable)) };
+        const VTABLE: RawWakerVTable = RawWakerVTable::new(|_| todo!(), |_| {}, |_| {}, |_| {});
+        let w = unsafe { Waker::from_raw(RawWaker::new(std::ptr::null(), &VTABLE)) };
         let mut cx = Context::from_waker(&w);
         let first_fut = self.t_starting_with(None);
         let mut first_fut = std::pin::pin!(first_fut);
@@ -310,9 +309,9 @@ pub trait Deserializer<'s>: std::fmt::Debug {
 /// There's a non-zero chance I messed something up and this is
 /// actually badly UB though. I should ask miri.
 pub struct FieldSlot<'s, 'borrow> {
-    option: &'borrow mut Option<()>,
+    option: *mut Option<()>,
     type_name_of_option_field: &'static str,
-    _phantom: PhantomData<&'s ()>,
+    _phantom: PhantomData<(&'s (), &'borrow mut ())>,
 }
 
 impl<'s, 'borrow> FieldSlot<'s, 'borrow> {
@@ -320,7 +319,9 @@ impl<'s, 'borrow> FieldSlot<'s, 'borrow> {
     #[inline(always)]
     pub fn new<T: 's>(option: &'borrow mut Option<T>, type_name_of_slot: &'static str) -> Self {
         Self {
-            option: unsafe { std::mem::transmute::<&mut Option<T>, &mut Option<()>>(option) },
+            option: unsafe {
+                std::mem::transmute::<*mut Option<T>, *mut Option<()>>(option as *mut _)
+            },
             type_name_of_option_field: type_name_of_slot,
             _phantom: PhantomData,
         }
@@ -331,9 +332,10 @@ impl<'s, 'borrow> FieldSlot<'s, 'borrow> {
         let type_name_of_option_value = std::any::type_name::<Option<T>>();
         assert_eq!(self.type_name_of_option_field, type_name_of_option_value);
 
-        let option_ref =
-            unsafe { std::mem::transmute::<&mut Option<()>, &mut Option<T>>(self.option) };
-        option_ref.replace(value);
+        unsafe {
+            let option_ptr: *mut Option<T> = std::mem::transmute(self.option);
+            (*option_ptr).replace(value);
+        }
     }
 }
 
