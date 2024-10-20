@@ -55,8 +55,6 @@ where
 
 #[cfg(feature = "merde")]
 mod merde_impls {
-    use merde_core::CowStr;
-
     use super::*;
 
     impl merde_core::IntoStatic for Rfc3339<OffsetDateTime> {
@@ -73,7 +71,7 @@ mod merde_impls {
         where
             D: merde_core::Deserializer<'s> + ?Sized,
         {
-            let s = CowStr::deserialize(de).await?;
+            let s = merde_core::CowStr::deserialize(de).await?;
             Ok(Rfc3339(
                 time::OffsetDateTime::parse(
                     s.as_ref(),

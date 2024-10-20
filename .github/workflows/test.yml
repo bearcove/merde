@@ -9,34 +9,18 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v4
-      - name: Run tests (including doctests)
-        run: cargo test -F full
-      - name: Install cargo-hack
+      - name: Install tools
         uses: taiki-e/install-action@v2
         with:
-          tool: cargo-hack
-      - name: Check a few configurations
-        run: |
-          cargo hack --feature-powerset --exclude-features=default,full check
-      - name: Run examples
+          tool: cargo-hack,just
+      - name: Run tests
         shell: bash
         run: |
-          pushd merde
-          EXAMPLES=($(cd examples && for i in *; do echo "${i%.rs}"; done))
-          for example in "${EXAMPLES[@]}"; do
-            cargo run --features full,ahash --example "$example"
-          done
-          popd
-      - name: Test zerodeps-example
-        shell: bash
-        run: |
-          pushd zerodeps-example
-          cargo check
-          cargo check --features=merde
-          cargo tree --prefix none --no-dedupe | grep -v compact_str
-          cargo tree --prefix none --no-dedupe --features=merde | grep compact_str
-          popd
+          just
