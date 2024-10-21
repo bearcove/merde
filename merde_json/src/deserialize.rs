@@ -1,8 +1,6 @@
 //! An experimental JSON deserializer implementation
 
-use merde_core::{
-    CowStr, {ArrayStart, Deserialize, Deserializer, Event},
-};
+use merde_core::{ArrayStart, CowStr, Deserialize, Deserializer, Event, MapStart};
 
 use crate::{
     jiter_lite::{errors::JiterError, jiter::Jiter, parse::Peek},
@@ -142,7 +140,7 @@ impl<'s> Deserializer<'s> for JsonDeserializer<'s> {
             if num.fract() == 0.0 && num >= i64::MIN as f64 && num <= i64::MAX as f64 {
                 Event::I64(num as i64)
             } else {
-                Event::Float(num)
+                Event::F64(num)
             }
         } else if peek == Peek::String {
             let s = self
@@ -173,7 +171,7 @@ impl<'s> Deserializer<'s> for JsonDeserializer<'s> {
             } else {
                 self.stack.push(StackItem::ObjectEnd);
             }
-            Event::MapStart
+            Event::MapStart(MapStart { size_hint: None })
         } else {
             panic!("Unknown peek: {:?}", peek);
         };

@@ -2,7 +2,7 @@
 // Error Handling and Field Type
 // -------------------------------------------------------------------------
 
-use crate::{deserialize::EventType, CowStr, IntoStatic, Value};
+use crate::{CowStr, EventType, IntoStatic, Value};
 
 /// A content-less variant of the [`Value`] enum, used for reporting errors, see [`MerdeError::MismatchedType`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

@@ -11,15 +11,19 @@ keywords = ["json", "serialization", "deserialization", "jiter"]
 categories = ["encoding", "parser-implementations"]
 
 [dependencies]
+itoa = "1.0.11"
 lexical-parse-float = { version = "0.8.5", features = ["format"] }
 merde_core = { version = "7.0.0", path = "../merde_core" }
 num-bigint = { version = "0.4.6", optional = true }
 num-traits = { version = "0.2.19", optional = true }
+ryu = "1.0.18"
+tokio = { version = "1", optional = true, features = ["io-util"] }
 
 [features]
 default = []
-full = ["num-bigint"]
+full = ["num-bigint", "tokio"]
 num-bigint = ["dep:num-bigint", "dep:num-traits"]
+tokio = ["dep:tokio"]
 
 [dev-dependencies]
 merde_loggingserializer = { path = "../merde_loggingserializer" }

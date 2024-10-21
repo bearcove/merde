@@ -9,7 +9,7 @@ readme = "README.md"
 repository = "https://github.com/bearcove/merde"
 keywords = ["merde", "serialization", "deserialization"]
 categories = ["encoding", "parser-implementations"]
-rust-version = "1.75"
+rust-version = "1.80"
 
 [dependencies]
 compact_str = { version = "0.8.0", optional = true }
@@ -18,6 +18,7 @@ ordered-float = "4.3.0"
 rubicon = "3.4.9"
 rusqlite = { version = "0.32.1", optional = true }
 serde = { version = "1", optional = true }
+pin-project-lite = "0.2.15"
 
 [features]
 default = []
@@ -34,4 +35,5 @@ serde = ["dep:serde", "compact_str/serde"]
 rusqlite = ["dep:rusqlite"]
 
 [dev-dependencies]
+insta = "1.40.0"
 trybuild = "1.0.101"

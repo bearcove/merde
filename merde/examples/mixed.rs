@@ -6,7 +6,8 @@ struct MixedArray<'s> {
     items: Vec<Value<'s>>,
 }
 merde::derive! {
-    impl (JsonSerialize, Deserialize) for struct MixedArray<'s> { items }
+
+    impl (Serialize, Deserialize) for struct MixedArray<'s> { items }
 }
 
 #[derive(Debug, PartialEq)]
@@ -14,7 +15,7 @@ struct MixedArray2<'s> {
     items: (u64, CowStr<'s>, bool),
 }
 merde::derive! {
-    impl (JsonSerialize, Deserialize) for struct MixedArray2<'s> { items }
+    impl (Serialize, Deserialize) for struct MixedArray2<'s> { items }
 }
 
 fn main() {

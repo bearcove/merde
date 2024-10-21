@@ -5,6 +5,8 @@ use std::collections::VecDeque;
 use std::hash::BuildHasher;
 use std::hash::Hash;
 
+use crate::Event;
+
 /// Allow turning a value into an "owned" variant, which can then be
 /// returned, moved, etc.
 ///
@@ -45,6 +47,26 @@ where
         match self {
             Cow::Borrowed(b) => Cow::Owned(b.to_owned()),
             Cow::Owned(o) => Cow::Owned(o),
+        }
+    }
+}
+
+impl<'s> IntoStatic for Event<'s> {
+    type Output = Event<'static>;
+
+    fn into_static(self) -> Self::Output {
+        match self {
+            Event::I64(v) => Event::I64(v),
+            Event::U64(v) => Event::U64(v),
+            Event::F64(v) => Event::F64(v),
+            Event::Str(v) => Event::Str(v.into_static()),
+            Event::Bytes(v) => Event::Bytes(v.into_static()),
+            Event::Bool(v) => Event::Bool(v),
+            Event::Null => Event::Null,
+            Event::MapStart(v) => Event::MapStart(v),
+            Event::MapEnd => Event::MapEnd,
+            Event::ArrayStart(v) => Event::ArrayStart(v),
+            Event::ArrayEnd => Event::ArrayEnd,
         }
     }
 }
