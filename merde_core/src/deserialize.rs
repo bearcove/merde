@@ -6,12 +6,11 @@ use std::{
     hash::{BuildHasher, Hash},
     marker::PhantomData,
     pin::Pin,
-    task::{Context, Poll, RawWaker, RawWakerVTable, Waker},
 };
 
 use crate::{
-    Array, CowStr, Event, EventType, IntoStatic, Map, MerdeError, StackInfo, Value, WithLifetime,
-    NEXT_FUTURE,
+    infinite_stack::InfiniteStackExt, Array, CowStr, Event, EventType, IntoStatic, Map, MerdeError,
+    Value, WithLifetime,
 };
 
 pub trait Deserializer<'s>: std::fmt::Debug {
@@ -47,82 +46,12 @@ pub trait Deserializer<'s>: std::fmt::Debug {
     where
         's: 'd,
     {
-        // TODO: cache in a thread-local, or, more simply, in a deserialization context?
-        let stack_info = StackInfo::get();
-
-        let fut = self.t_starting_with(starter);
-        Box::pin(async move {
-            // TODO: 8K is not one-size-fits-all
-            if stack_info.left() < 8 * 1024 {
-                // this is probably not actually on the stack because we're in a boxed future
-                let mut result: Option<Result<T, Self::Error<'s>>> = None;
-
-                // first turn it into a trait object
-                let background_fut: Pin<Box<dyn Future<Output = ()>>> = Box::pin(async {
-                    result = Some(fut.await);
-                });
-
-                let background_fut: Pin<Box<dyn Future<Output = ()> + 'static>> = unsafe {
-                    // # Safety: this isn't actually 'static, it's "valid for the synchronous
-                    // call to deserialize".
-                    // todo: make sure that this is actually the case by handling panics and
-                    // clearing thread-locals.
-                    std::mem::transmute(background_fut)
-                };
-
-                NEXT_FUTURE.with_borrow_mut(|next_future| *next_future = Some(background_fut));
-                ReturnPendingOnce::new().await;
-                result.unwrap()
-            } else {
-                fut.await
-            }
-        })
+        self.t_starting_with(starter).with_infinite_stack()
     }
 
+    /// Deserialize a value of type `T`, with infinite stack support.
     fn deserialize<T: Deserialize<'s>>(&mut self) -> Result<T, Self::Error<'s>> {
-        const VTABLE: RawWakerVTable = RawWakerVTable::new(|_| todo!(), |_| {}, |_| {}, |_| {});
-        let w = unsafe { Waker::from_raw(RawWaker::new(std::ptr::null(), &VTABLE)) };
-        let mut cx = Context::from_waker(&w);
-        let first_fut = self.t_starting_with(None);
-        let mut first_fut = std::pin::pin!(first_fut);
-
-        match first_fut.as_mut().poll(&mut cx) {
-            Poll::Ready(res) => res,
-            _ => {
-                // oh boy. okay.
-                let mut stack = vec![];
-
-                'crimes: loop {
-                    let mut fut = NEXT_FUTURE
-                        .with_borrow_mut(|next_fut| next_fut.take())
-                        .expect("NEXT_FUTURE must've been set before returning Poll::Pending");
-                    match Pin::new(&mut fut).poll(&mut cx) {
-                        Poll::Ready(_) => break 'crimes,
-                        Poll::Pending => {
-                            stack.push(fut);
-                        }
-                    }
-                }
-
-                while let Some(mut fut) = stack.pop() {
-                    match Pin::new(&mut fut).poll(&mut cx) {
-                        Poll::Ready(_) => {
-                            // cool let's keep going
-                        }
-                        Poll::Pending => {
-                            unreachable!("I'm sorry you really only get to ask for more stack once")
-                        }
-                    }
-                }
-
-                match first_fut.poll(&mut cx) {
-                    Poll::Ready(res) => res,
-                    Poll::Pending => {
-                        unreachable!("Like I said, you really only get to ask for more stack once")
-                    }
-                }
-            }
-        }
+        self.t_starting_with(None).run_with_infinite_stack_sync()
     }
 
     /// Deserialize a value of type `T` and return its static variant
@@ -876,31 +805,6 @@ where
         let t8 = de.t().await?;
         de.next()?.into_array_end()?;
         Ok((t1, t2, t3, t4, t5, t6, t7, t8))
-    }
-}
-
-struct ReturnPendingOnce {
-    polled: bool,
-}
-
-impl ReturnPendingOnce {
-    fn new() -> Self {
-        Self { polled: false }
-    }
-}
-
-impl Future for ReturnPendingOnce {
-    type Output = ();
-
-    fn poll(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Self::Output> {
-        let this = self.get_mut();
-
-        if this.polled {
-            Poll::Ready(())
-        } else {
-            this.polled = true;
-            Poll::Pending
-        }
     }
 }
 

@@ -517,7 +517,7 @@ macro_rules! impl_json_serialize {
                 #[allow(unused_imports)]
                 use $crate::MerdeError;
 
-                let mut guard = serializer.write_obj();
+                let mut guard = serializer.write_map();
                 match self {
                     $(
                         Self::$variant(value) => {
