@@ -80,9 +80,9 @@ impl JsonSerializer {
     /// This writes the opening brace of an object, and gives you
     /// a guard object to write the key-value pairs. When the guard
     /// is dropped, the closing brace is written.
-    pub fn write_obj(&mut self) -> ObjectGuard<'_> {
+    pub fn write_map(&mut self) -> MapGuard<'_> {
         self.buffer.push(b'{');
-        ObjectGuard {
+        MapGuard {
             serializer: self,
             first: true,
         }
@@ -113,12 +113,12 @@ impl JsonSerializer {
 }
 
 /// Allows writing JSON objects
-pub struct ObjectGuard<'a> {
+pub struct MapGuard<'a> {
     serializer: &'a mut JsonSerializer,
     first: bool,
 }
 
-impl<'a> ObjectGuard<'a> {
+impl<'a> MapGuard<'a> {
     /// Writes a key-value pair to the object.
     #[inline]
     pub fn pair(&mut self, key: &str, value: &dyn JsonSerialize) -> &mut Self {
@@ -133,7 +133,7 @@ impl<'a> ObjectGuard<'a> {
     }
 }
 
-impl<'a> Drop for ObjectGuard<'a> {
+impl<'a> Drop for MapGuard<'a> {
     #[inline]
     fn drop(&mut self) {
         self.serializer.buffer.push(b'}');
@@ -222,7 +222,7 @@ impl JsonSerialize for Value<'_> {
 
 impl JsonSerialize for Map<'_> {
     fn json_serialize(&self, serializer: &mut JsonSerializer) {
-        let mut guard = serializer.write_obj();
+        let mut guard = serializer.write_map();
         for (key, value) in self.iter() {
             guard.pair(key, value);
         }
@@ -352,7 +352,7 @@ impl JsonSerialize for bool {
 
 impl<K: AsRef<str>, V: JsonSerialize, S> JsonSerialize for HashMap<K, V, S> {
     fn json_serialize(&self, serializer: &mut JsonSerializer) {
-        let mut guard = serializer.write_obj();
+        let mut guard = serializer.write_map();
         for (key, value) in self {
             guard.pair(key.as_ref(), value);
         }

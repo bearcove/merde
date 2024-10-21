@@ -27,15 +27,22 @@ pub use with_lifetime::WithLifetime;
 mod value;
 pub use value::Value;
 
+mod event;
+pub use event::ArrayStart;
+pub use event::Event;
+pub use event::EventType;
+pub use event::MapStart;
+
+mod serialize;
+pub use serialize::Serialize;
+pub use serialize::Serializer;
+
 mod deserialize;
-pub use deserialize::ArrayStart;
 pub use deserialize::DefaultDeserOpinions;
 pub use deserialize::DeserOpinions;
 pub use deserialize::Deserialize;
 pub use deserialize::DeserializeOwned;
 pub use deserialize::Deserializer;
-pub use deserialize::Event;
-pub use deserialize::EventType;
 pub use deserialize::FieldSlot;
 
 type BoxFuture = Pin<Box<dyn Future<Output = ()>>>;

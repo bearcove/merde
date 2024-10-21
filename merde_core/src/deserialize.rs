@@ -10,174 +10,9 @@ use std::{
 };
 
 use crate::{
-    Array, CowBytes, CowStr, IntoStatic, Map, MerdeError, StackInfo, Value, WithLifetime,
+    Array, CowStr, Event, EventType, IntoStatic, Map, MerdeError, StackInfo, Value, WithLifetime,
     NEXT_FUTURE,
 };
-
-#[derive(Debug)]
-pub enum Event<'s> {
-    I64(i64),
-    U64(u64),
-    Float(f64),
-    Str(CowStr<'s>),
-    Bytes(CowBytes<'s>),
-    Bool(bool),
-    Null,
-    MapStart,
-    MapEnd,
-    ArrayStart(ArrayStart),
-    ArrayEnd,
-}
-
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub enum EventType {
-    I64,
-    U64,
-    Float,
-    Str,
-    Bytes,
-    Bool,
-    Null,
-    MapStart,
-    MapEnd,
-    ArrayStart,
-    ArrayEnd,
-}
-
-impl From<&Event<'_>> for EventType {
-    fn from(event: &Event<'_>) -> Self {
-        match event {
-            Event::I64(_) => EventType::I64,
-            Event::U64(_) => EventType::U64,
-            Event::Float(_) => EventType::Float,
-            Event::Str(_) => EventType::Str,
-            Event::Bytes(_) => EventType::Bytes,
-            Event::Bool(_) => EventType::Bool,
-            Event::Null => EventType::Null,
-            Event::MapStart => EventType::MapStart,
-            Event::MapEnd => EventType::MapEnd,
-            Event::ArrayStart(_) => EventType::ArrayStart,
-            Event::ArrayEnd => EventType::ArrayEnd,
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct ArrayStart {
-    pub size_hint: Option<usize>,
-}
-
-impl<'s> Event<'s> {
-    pub fn into_i64(self) -> Result<i64, MerdeError<'static>> {
-        match self {
-            Event::I64(i) => Ok(i),
-            _ => Err(MerdeError::UnexpectedEvent {
-                got: EventType::from(&self),
-                expected: &[EventType::I64],
-            }),
-        }
-    }
-
-    pub fn into_u64(self) -> Result<u64, MerdeError<'static>> {
-        match self {
-            Event::U64(u) => Ok(u),
-            _ => Err(MerdeError::UnexpectedEvent {
-                got: EventType::from(&self),
-                expected: &[EventType::U64],
-            }),
-        }
-    }
-
-    pub fn into_f64(self) -> Result<f64, MerdeError<'static>> {
-        match self {
-            Event::Float(f) => Ok(f),
-            _ => Err(MerdeError::UnexpectedEvent {
-                got: EventType::from(&self),
-                expected: &[EventType::Float],
-            }),
-        }
-    }
-
-    pub fn into_str(self) -> Result<CowStr<'s>, MerdeError<'static>> {
-        match self {
-            Event::Str(s) => Ok(s),
-            _ => Err(MerdeError::UnexpectedEvent {
-                got: EventType::from(&self),
-                expected: &[EventType::Str],
-            }),
-        }
-    }
-
-    pub fn into_bytes(self) -> Result<CowBytes<'s>, MerdeError<'static>> {
-        match self {
-            Event::Bytes(b) => Ok(b),
-            _ => Err(MerdeError::UnexpectedEvent {
-                got: EventType::from(&self),
-                expected: &[EventType::Bytes],
-            }),
-        }
-    }
-
-    pub fn into_bool(self) -> Result<bool, MerdeError<'static>> {
-        match self {
-            Event::Bool(b) => Ok(b),
-            _ => Err(MerdeError::UnexpectedEvent {
-                got: EventType::from(&self),
-                expected: &[EventType::Bool],
-            }),
-        }
-    }
-
-    pub fn into_null(self) -> Result<(), MerdeError<'static>> {
-        match self {
-            Event::Null => Ok(()),
-            _ => Err(MerdeError::UnexpectedEvent {
-                got: EventType::from(&self),
-                expected: &[EventType::Null],
-            }),
-        }
-    }
-
-    pub fn into_map_start(self) -> Result<(), MerdeError<'static>> {
-        match self {
-            Event::MapStart => Ok(()),
-            _ => Err(MerdeError::UnexpectedEvent {
-                got: EventType::from(&self),
-                expected: &[EventType::MapStart],
-            }),
-        }
-    }
-
-    pub fn into_map_end(self) -> Result<(), MerdeError<'static>> {
-        match self {
-            Event::MapEnd => Ok(()),
-            _ => Err(MerdeError::UnexpectedEvent {
-                got: EventType::from(&self),
-                expected: &[EventType::MapEnd],
-            }),
-        }
-    }
-
-    pub fn into_array_start(self) -> Result<ArrayStart, MerdeError<'static>> {
-        match self {
-            Event::ArrayStart(array_start) => Ok(array_start),
-            _ => Err(MerdeError::UnexpectedEvent {
-                got: EventType::from(&self),
-                expected: &[EventType::ArrayStart],
-            }),
-        }
-    }
-
-    pub fn into_array_end(self) -> Result<(), MerdeError<'static>> {
-        match self {
-            Event::ArrayEnd => Ok(()),
-            _ => Err(MerdeError::UnexpectedEvent {
-                got: EventType::from(&self),
-                expected: &[EventType::ArrayEnd],
-            }),
-        }
-    }
-}
 
 pub trait Deserializer<'s>: std::fmt::Debug {
     type Error<'es>: From<MerdeError<'es>>;
@@ -813,8 +648,11 @@ impl<'s> Deserialize<'s> for Value<'s> {
             Event::Bytes(b) => Ok(Value::Bytes(b)),
             Event::Bool(b) => Ok(Value::Bool(b)),
             Event::Null => Ok(Value::Null),
-            Event::MapStart => {
-                let mut map = Map::new();
+            Event::MapStart(ms) => {
+                let mut map = match ms.size_hint {
+                    Some(size) => Map::with_capacity(size),
+                    None => Map::new(),
+                };
                 loop {
                     match de.next()? {
                         Event::MapEnd => break,
