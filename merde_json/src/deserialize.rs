@@ -1,8 +1,6 @@
 //! An experimental JSON deserializer implementation
 
-use merde_core::{
-    CowStr, {ArrayStart, Deserialize, Deserializer, Event},
-};
+use merde_core::{ArrayStart, CowStr, Deserialize, Deserializer, Event, MapStart};
 
 use crate::{
     jiter_lite::{errors::JiterError, jiter::Jiter, parse::Peek},
@@ -173,7 +171,7 @@ impl<'s> Deserializer<'s> for JsonDeserializer<'s> {
             } else {
                 self.stack.push(StackItem::ObjectEnd);
             }
-            Event::MapStart
+            Event::MapStart(MapStart { size_hint: None })
         } else {
             panic!("Unknown peek: {:?}", peek);
         };
