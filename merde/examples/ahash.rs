@@ -11,7 +11,7 @@ fn main() {
 
     println!("h: {:#?}", h);
 
-    let serialized = json::to_string(&h);
+    let serialized = json::to_string(&h).unwrap();
     println!("serialized: {}", serialized);
 
     let deserialized: HashMap<String, String> = json::from_str(&serialized).unwrap();

@@ -1,7 +1,7 @@
 #![deny(missing_docs)]
 #![doc = include_str!("../README.md")]
 
-use merde_core::{Deserialize, DeserializeOwned, Deserializer, Event};
+use merde_core::{Deserialize, DeserializeOwned, Deserializer, Event, MapStart};
 
 /// A MessagePack deserializer, that implements [`merde_core::Deserializer`].
 pub struct MsgpackDeserializer<'s> {
@@ -123,8 +123,8 @@ impl<'s> merde_core::Deserializer<'s> for MsgpackDeserializer<'s> {
             0xd1 => self.read_i16().map(|v| Event::I64(v as i64)),
             0xd2 => self.read_i32().map(|v| Event::I64(v as i64)),
             0xd3 => self.read_i64().map(Event::I64),
-            0xca => self.read_f32().map(|v| Event::Float(v as f64)),
-            0xcb => self.read_f64().map(Event::Float),
+            0xca => self.read_f32().map(|v| Event::F64(v as f64)),
+            0xcb => self.read_f64().map(Event::F64),
             0xa0..=0xbf => {
                 let len = (byte & 0x1f) as usize;
                 self.read_str(len)
@@ -144,17 +144,23 @@ impl<'s> merde_core::Deserializer<'s> for MsgpackDeserializer<'s> {
             0x80..=0x8f => {
                 let len = (byte & 0x0f) as usize;
                 self.stack.push(StackItem::Map(len * 2));
-                Ok(Event::MapStart)
+                Ok(Event::MapStart(MapStart {
+                    size_hint: Some(len as _),
+                }))
             }
             0xde => {
                 let len = self.read_u16()?;
                 self.stack.push(StackItem::Map(len as usize * 2));
-                Ok(Event::MapStart)
+                Ok(Event::MapStart(MapStart {
+                    size_hint: Some(len as _),
+                }))
             }
             0xdf => {
                 let len = self.read_u32()?;
                 self.stack.push(StackItem::Map(len as usize * 2));
-                Ok(Event::MapStart)
+                Ok(Event::MapStart(MapStart {
+                    size_hint: Some(len as _),
+                }))
             }
             0x00..=0x7f => Ok(Event::U64(byte as u64)),
             0xe0..=0xff => Ok(Event::I64((byte as i8) as i64)),

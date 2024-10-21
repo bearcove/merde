@@ -3,7 +3,7 @@
 
 use std::str::Chars;
 
-use merde_core::{ArrayStart, Deserialize, DeserializeOwned, Deserializer, Event};
+use merde_core::{ArrayStart, Deserialize, DeserializeOwned, Deserializer, Event, MapStart};
 use yaml_rust2::{parser::Parser, scanner::TScalarStyle, ScanError};
 
 /// A YAML deserializer, that implements [`merde_core::Deserializer`].
@@ -114,7 +114,7 @@ impl<'s> Deserializer<'s> for YamlDeserializer<'s> {
                                     }),
                                 },
                                 "float" => match s.parse::<f64>() {
-                                    Ok(v) => Ok(Event::Float(v)),
+                                    Ok(v) => Ok(Event::F64(v)),
                                     Err(_) => Err(MerdeYamlError::ParseError {
                                         expected_type: "float",
                                     }),
@@ -137,7 +137,7 @@ impl<'s> Deserializer<'s> for YamlDeserializer<'s> {
                         } else if let Ok(v) = s.parse::<i64>() {
                             Ok(Event::I64(v))
                         } else if let Ok(v) = s.parse::<f64>() {
-                            Ok(Event::Float(v))
+                            Ok(Event::F64(v))
                         } else if s == "~" || s == "null" {
                             Ok(Event::Null)
                         } else {
@@ -149,7 +149,7 @@ impl<'s> Deserializer<'s> for YamlDeserializer<'s> {
                     Ok(Event::ArrayStart(ArrayStart { size_hint: None }))
                 }
                 YEvent::SequenceEnd => Ok(Event::ArrayEnd),
-                YEvent::MappingStart(_, _tag) => Ok(Event::MapStart),
+                YEvent::MappingStart(_, _tag) => Ok(Event::MapStart(MapStart { size_hint: None })),
                 YEvent::MappingEnd => Ok(Event::MapEnd),
             };
             return res;

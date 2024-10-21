@@ -88,15 +88,18 @@ mod merde_json_impls {
     use super::*;
 
     #[cfg(feature = "serialize")]
-    impl merde_json::JsonSerialize for Rfc3339<time::OffsetDateTime> {
-        fn json_serialize(&self, s: &mut merde_json::JsonSerializer) {
-            // Note: we assume there's no need to escape the string
-            let buf = s.as_mut_vec();
-            buf.push(b'"');
-            self.0
-                .format_into(buf, &time::format_description::well_known::Rfc3339)
+    impl merde_core::Serialize for Rfc3339<time::OffsetDateTime> {
+        async fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+        where
+            S: merde_core::Serializer + ?Sized,
+        {
+            let s = self
+                .0
+                .format(&time::format_description::well_known::Rfc3339)
                 .unwrap();
-            buf.push(b'"');
+            serializer
+                .write(merde_core::Event::Str(merde_core::CowStr::Borrowed(&s)))
+                .await
         }
     }
 }
@@ -110,7 +113,7 @@ mod tests {
     #[test]
     fn test_rfc3339_offset_date_time_roundtrip() {
         let original = Rfc3339(datetime!(2023-05-15 14:30:00 UTC));
-        let serialized = original.to_json_string();
+        let serialized = original.to_json_string().unwrap();
         let deserialized: Rfc3339<time::OffsetDateTime> = from_str(&serialized).unwrap();
         assert_eq!(original, deserialized);
     }
@@ -118,7 +121,7 @@ mod tests {
     #[test]
     fn test_rfc3339_offset_date_time_serialization() {
         let dt = Rfc3339(datetime!(2023-05-15 14:30:00 UTC));
-        let serialized = dt.to_json_string();
+        let serialized = dt.to_json_string().unwrap();
         assert_eq!(serialized, r#""2023-05-15T14:30:00Z""#);
     }
 

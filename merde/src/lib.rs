@@ -453,14 +453,17 @@ macro_rules! impl_with_lifetime {
 
 #[doc(hidden)]
 #[macro_export]
-#[cfg(all(feature = "core", feature = "json"))]
-macro_rules! impl_json_serialize {
+#[cfg(feature = "core")]
+macro_rules! impl_serialize {
     // owned tuple struct (transparent)
     (struct $struct_name:ident transparent) => {
         #[automatically_derived]
-        impl $crate::json::JsonSerialize for $struct_name {
-            fn json_serialize(&self, serializer: &mut $crate::json::JsonSerializer) {
-                self.0.json_serialize(serializer)
+        impl $crate::Serialize for $struct_name {
+            async fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+            where
+                S: $crate::Serializer + ?Sized,
+            {
+                self.0.serialize(serializer).await
             }
         }
     };
@@ -468,9 +471,12 @@ macro_rules! impl_json_serialize {
     // lifetimed tuple struct (transparent)
     (struct $struct_name:ident <$lifetime:lifetime> transparent) => {
         #[automatically_derived]
-        impl<$lifetime> $crate::json::JsonSerialize for $struct_name<$lifetime> {
-            fn json_serialize(&self, serializer: &mut $crate::json::JsonSerializer) {
-                self.0.json_serialize(serializer)
+        impl<$lifetime> $crate::Serialize for $struct_name<$lifetime> {
+            async fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+            where
+                S: $crate::Serializer + ?Sized,
+            {
+                self.0.serialize(serializer).await
             }
         }
     };
@@ -478,15 +484,21 @@ macro_rules! impl_json_serialize {
     // lifetimed struct
     (struct $struct_name:ident < $lifetime:lifetime > { $($field:ident),* }) => {
         #[automatically_derived]
-        impl<$lifetime> $crate::json::JsonSerialize for $struct_name<$lifetime> {
-            fn json_serialize(&self, serializer: &mut $crate::json::JsonSerializer) {
-                #[allow(unused_imports)]
-                use $crate::MerdeError;
-
-                let mut guard = serializer.write_obj();
+        impl<$lifetime> $crate::Serialize for $struct_name<$lifetime> {
+            async fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+            where
+                S: $crate::Serializer + ?Sized,
+            {
+                serializer
+                    .write($crate::Event::MapStart($crate::MapStart {
+                        size_hint: Some($crate::count_ident_tokens!($($field)*)),
+                    }))
+                    .await?;
                 $(
-                    guard.pair(stringify!($field), &self.$field);
+                    serializer.write($crate::Event::Str($crate::CowStr::Borrowed(stringify!($field)))).await?;
+                    self.$field.serialize(serializer).await?;
                 )+
+                serializer.write($crate::Event::MapEnd).await
             }
         }
     };
@@ -494,15 +506,21 @@ macro_rules! impl_json_serialize {
     // owned struct
     (struct $struct_name:ident { $($field:ident),* }) => {
         #[automatically_derived]
-        impl $crate::json::JsonSerialize for $struct_name {
-            fn json_serialize(&self, serializer: &mut $crate::json::JsonSerializer) {
-                #[allow(unused_imports)]
-                use $crate::MerdeError;
-
-                let mut guard = serializer.write_obj();
+        impl $crate::Serialize for $struct_name {
+            async fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+            where
+                S: $crate::Serializer + ?Sized,
+            {
+                serializer
+                    .write($crate::Event::MapStart($crate::MapStart {
+                        size_hint: Some($crate::count_ident_tokens!($($field)*)),
+                    }))
+                    .await?;
                 $(
-                    guard.pair(stringify!($field), &self.$field);
+                    serializer.write($crate::Event::Str($crate::CowStr::Borrowed(stringify!($field)))).await?;
+                    self.$field.serialize(serializer).await?;
                 )+
+                serializer.write($crate::Event::MapEnd).await
             }
         }
     };
@@ -512,19 +530,27 @@ macro_rules! impl_json_serialize {
         $($variant_str:literal => $variant:ident),* $(,)?
     }) => {
         #[automatically_derived]
-        impl $crate::json::JsonSerialize for $enum_name {
-            fn json_serialize(&self, serializer: &mut $crate::json::JsonSerializer) {
-                #[allow(unused_imports)]
-                use $crate::MerdeError;
+        impl $crate::Serialize for $enum_name {
+            async fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+            where
+                S: $crate::Serializer + ?Sized,
+            {
+                serializer
+                    .write($crate::Event::MapStart($crate::MapStart {
+                        size_hint: Some(1),
+                    }))
+                    .await?;
 
-                let mut guard = serializer.write_obj();
                 match self {
                     $(
                         Self::$variant(value) => {
-                            guard.pair($variant_str, &value);
+                            serializer.write($crate::Event::Str($crate::CowStr::Borrowed($variant_str))).await?;
+                            value.serialize(serializer).await?;
                         }
                     )+
                 }
+
+                serializer.write($crate::Event::MapEnd).await
             }
         }
     };
@@ -534,19 +560,27 @@ macro_rules! impl_json_serialize {
         $($variant_str:literal => $variant:ident),* $(,)?
     }) => {
         #[automatically_derived]
-        impl<$lifetime> $crate::json::JsonSerialize for $enum_name<$lifetime> {
-            fn json_serialize(&self, serializer: &mut $crate::json::JsonSerializer) {
-                #[allow(unused_imports)]
-                use $crate::MerdeError;
+        impl<$lifetime> $crate::Serialize for $enum_name<$lifetime> {
+            async fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+            where
+                S: $crate::Serializer + ?Sized,
+            {
+                serializer
+                    .write($crate::Event::MapStart($crate::MapStart {
+                        size_hint: Some(1),
+                    }))
+                    .await?;
 
-                let mut guard = serializer.write_obj();
                 match self {
                     $(
                         Self::$variant(value) => {
-                            guard.pair($variant_str, &value);
+                            serializer.write($crate::Event::Str($crate::CowStr::Borrowed($variant_str))).await?;
+                            value.serialize(serializer).await?;
                         }
                     )+
                 }
+
+                serializer.write($crate::Event::MapEnd).await
             }
         }
     };
@@ -556,15 +590,15 @@ macro_rules! impl_json_serialize {
         $($variant_str:literal => $variant:ident),* $(,)?
     }) => {
         #[automatically_derived]
-        impl $crate::json::JsonSerialize for $enum_name {
-            fn json_serialize(&self, serializer: &mut $crate::json::JsonSerializer) {
-                #[allow(unused_imports)]
-                use $crate::MerdeError;
-
+        impl $crate::Serialize for $enum_name {
+            async fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+            where
+                S: $crate::Serializer + ?Sized,
+            {
                 match self {
                     $(
                         Self::$variant => {
-                            serializer.write_str($variant_str);
+                            serializer.write($crate::Event::Str($crate::CowStr::Borrowed($variant_str))).await
                         }
                     )+
                 }
@@ -575,9 +609,9 @@ macro_rules! impl_json_serialize {
 
 #[doc(hidden)]
 #[macro_export]
-#[cfg(not(all(feature = "core", feature = "json")))]
-macro_rules! impl_json_serialize {
-    ($($tt:tt)*) => {};
+#[cfg(not(feature = "core"))]
+macro_rules! impl_serialize {
+    ($($rest:tt)*) => {};
 }
 
 #[doc(hidden)]
@@ -590,14 +624,14 @@ macro_rules! impl_trait {
         $crate::impl_with_lifetime!($($rest)*);
     };
 
-    (JsonSerialize for $($rest:tt)*) => {
-        $crate::impl_json_serialize!($($rest)*);
+    (Serialize for $($rest:tt)*) => {
+        $crate::impl_serialize!($($rest)*);
     };
 }
 
 /// Derives the specified traits for a struct.
 ///
-/// This macro can be used to generate implementations of [`JsonSerialize`] and [`Deserialize`],
+/// This macro can be used to generate implementations of [`Serialize`] and [`Deserialize`],
 /// traits for a given struct.
 ///
 /// # Usage
@@ -610,7 +644,7 @@ macro_rules! impl_trait {
 /// }
 ///
 /// merde::derive! {
-///     impl (JsonSerialize, Deserialize) for struct MyStruct<'s> { a, b, c }
+///     impl (Serialize, Deserialize) for struct MyStruct<'s> { a, b, c }
 /// }
 /// ```
 ///
@@ -628,7 +662,7 @@ macro_rules! impl_trait {
 ///
 /// merde::derive! {
 ///     //                          no lifetime param here 👇
-///     impl (JsonSerialize, Deserialize) for struct MyStruct { a, b, c }
+///     impl (Serialize, Deserialize) for struct MyStruct { a, b, c }
 /// }
 /// ```
 ///
@@ -640,12 +674,12 @@ macro_rules! impl_trait {
 /// struct MyStruct(String);
 ///
 /// merde::derive! {
-///     impl (JsonSerialize, Deserialize) for struct MyStruct transparent
+///     impl (Serialize, Deserialize) for struct MyStruct transparent
 /// }
 ///
 /// use merde::json::JsonSerialize;
 /// assert_eq!(
-///   MyStruct("foobar".into()).to_json_string(),
+///   MyStruct("foobar".into()).to_json_string().unwrap(),
 ///   r#""foobar""#
 /// );
 /// ```
@@ -659,7 +693,7 @@ macro_rules! impl_trait {
 /// }
 ///
 /// merde::derive! {
-///     impl (JsonSerialize, Deserialize) for enum MyEnum
+///     impl (Serialize, Deserialize) for enum MyEnum
 ///     externally_tagged {
 ///         "variant1" => Variant1,
 ///         "variant2" => Variant2,
@@ -672,7 +706,7 @@ macro_rules! impl_trait {
 /// }
 ///
 /// merde::derive! {
-///     impl (JsonSerialize, Deserialize) for enum MyLifetimedEnum<'wot>
+///     impl (Serialize, Deserialize) for enum MyLifetimedEnum<'wot>
 ///     externally_tagged {
 ///         "variant1" => Variant1,
 ///         "variant2" => Variant2,
@@ -703,6 +737,15 @@ pub fn none_of<I, T>(_f: impl FnOnce(I) -> T) -> Option<T> {
     None
 }
 
+#[doc(hidden)]
+#[macro_export]
+macro_rules! count_ident_tokens {
+    () => { 0 };
+    ($first:ident) => { 1 };
+    ($first:ident $($rest:ident)*) => {
+        1 + $crate::count_ident_tokens!($($rest)*)
+    };
+}
 #[cfg(test)]
 #[cfg(feature = "json")]
 mod json_tests {
@@ -723,7 +766,7 @@ mod json_tests {
         }
 
         derive! {
-            impl (JsonSerialize, Deserialize) for struct SecondStruct<'s> {
+            impl (Serialize, Deserialize) for struct SecondStruct<'s> {
                 string_field,
                 int_field
             }
@@ -749,7 +792,7 @@ mod json_tests {
         }
 
         derive! {
-            impl (JsonSerialize, Deserialize) for struct ComplexStruct<'s> {
+            impl (Serialize, Deserialize) for struct ComplexStruct<'s> {
                 string_field,
                 u8_field,
                 u16_field,
@@ -792,7 +835,7 @@ mod json_tests {
             },
         };
 
-        let serialized = original.to_json_string();
+        let serialized = original.to_json_string().unwrap();
         let deserialized: ComplexStruct = from_str(&serialized).unwrap();
 
         assert_eq!(original, deserialized);
@@ -801,7 +844,7 @@ mod json_tests {
     #[test]
     fn test_u8_zero() {
         let original: u8 = 0;
-        let serialized = original.to_json_string();
+        let serialized = original.to_json_string().unwrap();
         let deserialized: u8 = from_str(&serialized).unwrap();
         assert_eq!(original, deserialized);
     }
@@ -809,7 +852,7 @@ mod json_tests {
     #[test]
     fn test_u8_max() {
         let original: u8 = u8::MAX;
-        let serialized = original.to_json_string();
+        let serialized = original.to_json_string().unwrap();
         let deserialized: u8 = from_str(&serialized).unwrap();
         assert_eq!(original, deserialized);
     }
@@ -817,7 +860,7 @@ mod json_tests {
     #[test]
     fn test_i8_min() {
         let original: i8 = i8::MIN;
-        let serialized = original.to_json_string();
+        let serialized = original.to_json_string().unwrap();
         let deserialized: i8 = from_str(&serialized).unwrap();
         assert_eq!(original, deserialized);
     }
@@ -825,7 +868,7 @@ mod json_tests {
     #[test]
     fn test_i8_max() {
         let original: i8 = i8::MAX;
-        let serialized = original.to_json_string();
+        let serialized = original.to_json_string().unwrap();
         let deserialized: i8 = from_str(&serialized).unwrap();
         assert_eq!(original, deserialized);
     }
@@ -833,7 +876,7 @@ mod json_tests {
     #[test]
     fn test_i64_min() {
         let original: i64 = i64::MIN;
-        let serialized = original.to_json_string();
+        let serialized = original.to_json_string().unwrap();
         let deserialized: i64 = from_str(&serialized).unwrap();
         assert_eq!(original, deserialized);
     }
@@ -841,7 +884,7 @@ mod json_tests {
     #[test]
     fn test_i64_max() {
         let original: i64 = i64::MAX;
-        let serialized = original.to_json_string();
+        let serialized = original.to_json_string().unwrap();
         let deserialized: i64 = from_str(&serialized).unwrap();
         assert_eq!(original, deserialized);
     }
@@ -849,7 +892,7 @@ mod json_tests {
     #[test]
     fn test_string_owned() {
         let original = String::from("Hello, World!");
-        let serialized = original.to_json_string();
+        let serialized = original.to_json_string().unwrap();
         let deserialized: String = from_str(&serialized).unwrap();
         assert_eq!(original, deserialized);
     }
@@ -857,7 +900,7 @@ mod json_tests {
     #[test]
     fn test_string_borrowed() {
         let original: &str = "Hello, World!";
-        let serialized = original.to_json_string();
+        let serialized = original.to_json_string().unwrap();
         let deserialized: String = from_str(&serialized).unwrap();
         assert_eq!(original, deserialized);
     }
@@ -865,7 +908,7 @@ mod json_tests {
     #[test]
     fn test_vec_empty() {
         let original: Vec<i32> = Vec::new();
-        let serialized = original.to_json_string();
+        let serialized = original.to_json_string().unwrap();
         let deserialized: Vec<i32> = from_str(&serialized).unwrap();
         assert_eq!(original, deserialized);
     }
@@ -873,7 +916,7 @@ mod json_tests {
     #[test]
     fn test_vec_non_empty() {
         let original = vec![1, 2, 3, 4, 5];
-        let serialized = original.to_json_string();
+        let serialized = original.to_json_string().unwrap();
         let deserialized: Vec<i32> = from_str(&serialized).unwrap();
         assert_eq!(original, deserialized);
     }
@@ -881,7 +924,7 @@ mod json_tests {
     #[test]
     fn test_hashmap_empty() {
         let original: HashMap<String, i32> = HashMap::new();
-        let serialized = original.to_json_string();
+        let serialized = original.to_json_string().unwrap();
         let deserialized: HashMap<String, i32> = from_str(&serialized).unwrap();
         assert_eq!(original, deserialized);
     }
@@ -891,7 +934,7 @@ mod json_tests {
         let mut original = HashMap::new();
         original.insert("key1".to_string(), 42);
         original.insert("key2".to_string(), -10);
-        let serialized = original.to_json_string();
+        let serialized = original.to_json_string().unwrap();
         let deserialized: HashMap<String, i32> = from_str(&serialized).unwrap();
         assert_eq!(original, deserialized);
     }
@@ -899,7 +942,7 @@ mod json_tests {
     #[test]
     fn test_option_some() {
         let original: Option<i32> = Some(42);
-        let serialized = original.to_json_string();
+        let serialized = original.to_json_string().unwrap();
         let deserialized: Option<i32> = from_str(&serialized).unwrap();
         assert_eq!(original, deserialized);
     }
@@ -907,7 +950,7 @@ mod json_tests {
     #[test]
     fn test_option_none() {
         let original: Option<i32> = None;
-        let serialized = original.to_json_string();
+        let serialized = original.to_json_string().unwrap();
         let deserialized: Option<i32> = from_str(&serialized).unwrap();
         assert_eq!(original, deserialized);
     }
@@ -915,7 +958,7 @@ mod json_tests {
     #[test]
     fn test_bool_true() {
         let original = true;
-        let serialized = original.to_json_string();
+        let serialized = original.to_json_string().unwrap();
         let deserialized: bool = from_str(&serialized).unwrap();
         assert_eq!(original, deserialized);
     }
@@ -923,7 +966,7 @@ mod json_tests {
     #[test]
     fn test_bool_false() {
         let original = false;
-        let serialized = original.to_json_string();
+        let serialized = original.to_json_string().unwrap();
         let deserialized: bool = from_str(&serialized).unwrap();
         assert_eq!(original, deserialized);
     }

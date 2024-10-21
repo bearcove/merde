@@ -1,0 +1,20 @@
+---
+source: merde_core/src/serialize/tests.rs
+expression: s.events
+---
+[
+    MapStart(
+        MapStart {
+            size_hint: Some(
+                1,
+            ),
+        },
+    ),
+    Str(
+        "foo",
+    ),
+    I64(
+        42,
+    ),
+    MapEnd,
+]

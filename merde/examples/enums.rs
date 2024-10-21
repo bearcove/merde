@@ -1,22 +1,22 @@
 use merde::CowStr;
 
 fn main() {
-    use merde::json::JsonSerialize;
+    use merde_json::JsonSerialize;
 
     let events = vec![
-        Event::MouseUp(MouseUp { x: 10, y: 20 }),
-        Event::MouseDown(MouseDown { x: 30, y: 40 }),
-        Event::TextInput(TextInput {
+        ExampleEvent::MouseUp(MouseUp { x: 10, y: 20 }),
+        ExampleEvent::MouseDown(MouseDown { x: 30, y: 40 }),
+        ExampleEvent::TextInput(TextInput {
             text: "Hello".into(),
         }),
-        Event::StringStuff(StringStuff("Some string".into())),
-        Event::Emergency(Emergency::NoPizzaLeft),
+        ExampleEvent::StringStuff(StringStuff("Some string".into())),
+        ExampleEvent::Emergency(Emergency::NoPizzaLeft),
     ];
 
     for event in events {
-        let json = event.to_json_string();
+        let json = event.to_json_string().unwrap();
         println!("JSON: {}", json);
-        let deserialized: Event = merde::json::from_str(&json).unwrap();
+        let deserialized: ExampleEvent = merde::json::from_str(&json).unwrap();
         println!("Deserialized: {:?}", deserialized);
         assert_eq!(event, deserialized);
     }
@@ -25,7 +25,7 @@ fn main() {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-enum Event<'s> {
+enum ExampleEvent<'s> {
     MouseUp(MouseUp),
     MouseDown(MouseDown),
     TextInput(TextInput<'s>),
@@ -34,7 +34,7 @@ enum Event<'s> {
 }
 
 merde::derive! {
-    impl (JsonSerialize, Deserialize) for enum Event<'s>
+    impl (Serialize, Deserialize) for enum ExampleEvent<'s>
     externally_tagged {
         "mouseup" => MouseUp,
         "mousedown" => MouseDown,
@@ -51,7 +51,7 @@ struct MouseUp {
 }
 
 merde::derive! {
-    impl (JsonSerialize, Deserialize) for struct MouseUp {
+    impl (Serialize, Deserialize) for struct MouseUp {
         x,
         y
     }
@@ -64,7 +64,7 @@ struct MouseDown {
 }
 
 merde::derive! {
-    impl (JsonSerialize, Deserialize) for struct MouseDown {
+    impl (Serialize, Deserialize) for struct MouseDown {
         x,
         y
     }
@@ -75,13 +75,13 @@ struct TextInput<'s> {
     text: CowStr<'s>,
 }
 
-merde::derive! { impl (JsonSerialize, Deserialize) for struct TextInput<'s> { text } }
+merde::derive! { impl (Serialize, Deserialize) for struct TextInput<'s> { text } }
 
 #[derive(Debug, PartialEq, Eq)]
 struct StringStuff<'s>(CowStr<'s>);
 
 merde::derive! {
-    impl (JsonSerialize, Deserialize) for struct StringStuff<'s> transparent
+    impl (Serialize, Deserialize) for struct StringStuff<'s> transparent
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -92,7 +92,7 @@ enum Emergency {
 }
 
 merde::derive! {
-    impl (JsonSerialize, Deserialize) for enum Emergency string_like {
+    impl (Serialize, Deserialize) for enum Emergency string_like {
         "nopizza" => NoPizzaLeft,
         "cuddles" => CuddlesRequired,
         "smoothie" => SmoothieReady,

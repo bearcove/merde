@@ -29,7 +29,7 @@ fn main() {
     // Round-trip! Again, every binding borrows from the previous one, and
     // everything can be converted from `F<'a>` to `F<'static>` via the
     // `IntoStatic` trait.
-    let serialized = person.to_json_string();
+    let serialized = person.to_json_string().unwrap();
     let person2: Person = merde_json::from_str(&serialized).unwrap();
     println!("{:#?}", person2);
 
@@ -56,7 +56,7 @@ struct Address<'s> {
 }
 
 merde::derive! {
-    impl (JsonSerialize, Deserialize) for struct Address<'s> {
+    impl (Serialize, Deserialize) for struct Address<'s> {
         street,
         city,
         state,
@@ -74,5 +74,5 @@ struct Person<'s> {
 }
 
 merde::derive! {
-    impl (JsonSerialize, Deserialize) for struct Person<'s> { name, age, address }
+    impl (Serialize, Deserialize) for struct Person<'s> { name, age, address }
 }

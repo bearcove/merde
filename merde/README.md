@@ -11,7 +11,15 @@ that might run slower, but compiles faster.
 
 This is the "hub" crate, which re-exports all types from [merde_core](https://crates.io/crates/merde_core),
 including [`Value`], [`Array`], and [`Map`], and provides a declarative [`derive`] macro that helps implement
-traits like [`Deserialize`], [`IntoStatic`] and [`JsonSerialize`].
+traits like [`Deserialize`], [`IntoStatic`] and [`Serialize`].
+
+## Support matrix
+
+| Format | Deserialize | Serialize | Production-ready? |
+|--------|-------------|-----------|------------------|
+| [JSON](https://crates.io/crates/merde_json) | 👍 | 👍 | lol no — please no |
+| [YAML](https://crates.io/crates/merde_yaml) | 👍 | 🙅‍♀️ | still experimenting |
+| [MsgPack](https://crates.io/crates/merde_msgpack) | 👍 | 🙅‍♀️ | here be dragons etc. |
 
 ## From `serde` to `merde`
 
@@ -41,7 +49,7 @@ fn main() {
 ```
 
 By contrast, `merde` provides declarative macros — impls for traits
-like `Deserialize`, `JsonSerialize` can be generated with `merde::derive!`:
+like `Deserialize`, `Serialize` can be generated with `merde::derive!`:
 
 ```rust
 #[derive(Debug)]
@@ -51,14 +59,14 @@ struct Point {
 }
 
 merde::derive! {
-    impl (Deserialize, JsonSerialize) for struct Point { x, y }
+    impl (Deserialize, Serialize) for struct Point { x, y }
 }
 
 fn main() {
     let point = Point { x: 1, y: 2 };
 
     // note: `merde_json` is re-exported as `merde::json` if `merde`'s `json` feature is enabled
-    let serialized = merde::json::to_string(&point);
+    let serialized = merde::json::to_string(&point).unwrap();
     println!("serialized = {}", serialized);
 
     let deserialized: Point = merde::json::from_str(&serialized).unwrap();
@@ -121,7 +129,7 @@ struct Name {
 }
 
 merde::derive! {
-    impl (Deserialize, JsonSerialize) for struct Name { first, middle, last }
+    impl (Deserialize, Serialize) for struct Name { first, middle, last }
 }
 ```
 
@@ -140,7 +148,7 @@ struct Name<'s> {
 
 merde::derive! {
     //                                                     👇
-    impl (Deserialize, JsonSerialize) for struct Name<'s> { first, middle, last }
+    impl (Deserialize, Serialize) for struct Name<'s> { first, middle, last }
 }
 ```
 
@@ -163,7 +171,7 @@ use merde::CowStr;
 struct Wrapper<'s>(CowStr<'s>);
 
 merde::derive! {
-    impl (Deserialize, JsonSerialize)
+    impl (Deserialize, Serialize)
     for struct Wrapper<'s> transparent
 }
 
@@ -179,13 +187,13 @@ to specify field names and variant names:
 
 ```rust
 #[derive(Debug)]
-enum Event {
+enum TestEvent {
     MouseUp(MouseUp),
     MouseDown(MouseDown),
 }
 
 merde::derive! {
-    impl (JsonSerialize, Deserialize) for enum Event
+    impl (Serialize, Deserialize) for enum TestEvent
     externally_tagged {
         "mouseup" => MouseUp,
         "mousedown" => MouseDown,
@@ -199,7 +207,7 @@ struct MouseUp {
 }
 
 merde::derive! {
-    impl (JsonSerialize, Deserialize) for struct MouseUp {
+    impl (Serialize, Deserialize) for struct MouseUp {
         x,
         y
     }
@@ -212,7 +220,7 @@ struct MouseDown {
 }
 
 merde::derive! {
-    impl (JsonSerialize, Deserialize) for struct MouseDown {
+    impl (Serialize, Deserialize) for struct MouseDown {
         x,
         y
     }
@@ -220,8 +228,8 @@ merde::derive! {
 
 fn main() {
     let input = r#"{"mouseup": {"x": 100, "y": 200}}"#;
-    let event: Event = merde::json::from_str(input).unwrap();
-    println!("Event: {:?}", event);
+    let event: TestEvent = merde::json::from_str(input).unwrap();
+    println!("TestEvent: {:?}", event);
 }
 ```
 
@@ -237,7 +245,7 @@ enum Emergency {
 }
 
 merde::derive! {
-    impl (JsonSerialize, Deserialize) for enum Emergency
+    impl (Serialize, Deserialize) for enum Emergency
     string_like {
         "cuddle" => Cuddle,
         "smoothie" => Smoothie,
@@ -267,7 +275,7 @@ struct Name<'s> {
 }
 
 merde::derive! {
-    impl (Deserialize, JsonSerialize) for struct Nam<'s> { first, middle, last }
+    impl (Deserialize, Serialize) for struct Nam<'s> { first, middle, last }
 }
 ```
 
@@ -276,7 +284,7 @@ error[E0277]: the trait bound `&str: Deserialize<'_>` is not satisfied
   --> merde/src/lib.rs:183:1
    |
 12 | / merde::derive! {
-13 | |     impl (Deserialize, JsonSerialize) for struct Name<'s> { first, middle, last }
+13 | |     impl (Deserialize, Serialize) for struct Name<'s> { first, middle, last }
 14 | | }
    | |_^ the trait `Deserialize<'_>` is not implemented for `&str`
 ```
@@ -353,7 +361,7 @@ struct Message<'s> {
 }
 
 merde::derive! {
-    impl (Deserialize, JsonSerialize)
+    impl (Deserialize, Serialize)
     for struct Message<'s> { kind, payload }
 }
 
@@ -399,7 +407,7 @@ struct Message<'s> {
 }
 
 merde::derive! {
-    impl (Deserialize, JsonSerialize)
+    impl (Deserialize, Serialize)
     for struct Message<'s> { kind, payload }
 }
 
@@ -466,7 +474,7 @@ struct Person<'s> {
 }
 
 merde::derive! {
-    impl (Deserialize, JsonSerialize) for struct Person<'s> { name, birth }
+    impl (Deserialize, Serialize) for struct Person<'s> { name, birth }
 }
 
 fn main() {
@@ -515,11 +523,11 @@ struct Person<'s> {
 }
 
 merde::derive! {
-    impl (Deserialize, JsonSerialize) for struct Person<'s> { name, age }
+    impl (Deserialize, Serialize) for struct Person<'s> { name, age }
 }
 ```
 
-And the `impl` blocks for `Deserialize`, and `JsonSerialize` wouldn't actually
+And the `impl` blocks for `Deserialize`, and `Serialize` wouldn't actually
 be generated unless crates downstream of yours enable `merde/deserialize` or `merde/json`.
 
 ### Approach 2: zero-deps
@@ -555,7 +563,7 @@ pub struct Person<'s> {
 }
 
 merde::derive! {
-    impl (Deserialize, JsonSerialize) for struct Person<'s> { name, age }
+    impl (Deserialize, Serialize) for struct Person<'s> { name, age }
 }
 ```
 

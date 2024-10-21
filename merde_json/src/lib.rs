@@ -8,12 +8,53 @@ mod jiter_lite;
 
 use jiter_lite::errors::JiterError;
 use merde_core::{
-    Array, CowStr, Deserialize, DeserializeOwned, Deserializer, IntoStatic, Map, MerdeError, Value,
+    CowStr, Deserialize, DeserializeOwned, Deserializer, IntoStatic, MerdeError, Serialize,
+    Serializer,
 };
 
-use std::borrow::Cow;
-use std::collections::HashMap;
-use std::io::Write;
+use std::{collections::VecDeque, future::Future, io::Write};
+
+/// Something the JSON serializer can write to
+pub trait JsonSerializerWriter {
+    /// Extend the buffer with the given slice
+    fn extend_from_slice(
+        &mut self,
+        slice: &[u8],
+    ) -> impl Future<Output = Result<(), std::io::Error>>;
+}
+
+impl JsonSerializerWriter for &mut Vec<u8> {
+    async fn extend_from_slice(&mut self, slice: &[u8]) -> Result<(), std::io::Error> {
+        Vec::extend_from_slice(self, slice);
+        Ok(())
+    }
+}
+
+struct SyncWriteWrapper<'s>(&'s mut dyn std::io::Write);
+
+impl<'s> JsonSerializerWriter for SyncWriteWrapper<'s> {
+    async fn extend_from_slice(&mut self, slice: &[u8]) -> Result<(), std::io::Error> {
+        self.0.write_all(slice)
+    }
+}
+
+#[cfg(feature = "tokio")]
+pub mod tokio_io {
+    //! Adapter types from `tokio::io::AsyncWrite` to `JsonSerializerWriter`
+
+    use std::pin::Pin;
+
+    use tokio::io::AsyncWriteExt;
+
+    /// Implements `JsonSerializerWriter` for `tokio::io::AsyncWrite`
+    pub struct AsyncWriteWrapper<'s>(pub Pin<&'s mut dyn tokio::io::AsyncWrite>);
+
+    impl super::JsonSerializerWriter for AsyncWriteWrapper<'_> {
+        async fn extend_from_slice(&mut self, slice: &[u8]) -> Result<(), std::io::Error> {
+            self.0.write_all(slice).await
+        }
+    }
+}
 
 /// Writes JSON to a `Vec<u8>`. None of its methods can fail, since it doesn't target
 /// an `io::Write`. You can provide your own buffer via `JsonSerializer::from_vec`.
@@ -21,490 +62,183 @@ use std::io::Write;
 /// When you're done with the serializer, you can call `JsonSerializer::into_inner` to
 /// get the buffer back.
 #[derive(Default)]
-pub struct JsonSerializer {
-    buffer: Vec<u8>,
+pub struct JsonSerializer<W>
+where
+    W: JsonSerializerWriter,
+{
+    w: W,
+    stack: VecDeque<StackFrame>,
 }
 
-impl JsonSerializer {
-    /// Uses the provided buffer as the target for serialization.
-    pub fn from_vec(vec: Vec<u8>) -> Self {
-        JsonSerializer { buffer: vec }
-    }
+enum StackFrame {
+    // the next item to be written is an array element
+    Array { first: bool },
+    // the next item to be written is a map key
+    MapKey { first: bool },
+    // the next item to be written is a map value
+    // (and needs a ":" before it)
+    MapValue,
+}
 
-    /// Allocates a new buffer for serialization.
-    pub fn new() -> Self {
-        Self::default()
-    }
+impl<W> Serializer for JsonSerializer<W>
+where
+    W: JsonSerializerWriter,
+{
+    type Error = MerdeJsonError<'static>;
 
-    /// Writes the JSON `null` value.
-    pub fn write_null(&mut self) {
-        self.buffer.extend_from_slice(b"null");
-    }
-
-    /// Writes the JSON `true` or `false` value.
-    pub fn write_bool(&mut self, value: bool) {
-        self.buffer
-            .extend_from_slice(if value { b"true" } else { b"false" });
-    }
-
-    /// Write a number as a JSON number. Numbers bigger than 2**53 might
-    /// not be parsed correctly by other implementations.
-    pub fn write_i64(&mut self, value: i64) {
-        let _ = write!(self.buffer, "{}", value);
-    }
-
-    /// Write a floating-point number as a JSON number.
-    pub fn write_f64(&mut self, value: f64) {
-        let _ = write!(self.buffer, "{}", value);
-    }
-
-    /// Write a string, with escaping.
-    pub fn write_str(&mut self, value: &str) {
-        self.buffer.push(b'"');
-        for c in value.chars() {
-            match c {
-                '"' => self.buffer.extend_from_slice(b"\\\""),
-                '\\' => self.buffer.extend_from_slice(b"\\\\"),
-                '\n' => self.buffer.extend_from_slice(b"\\n"),
-                '\r' => self.buffer.extend_from_slice(b"\\r"),
-                '\t' => self.buffer.extend_from_slice(b"\\t"),
-                c if c.is_control() => {
-                    let _ = write!(self.buffer, "\\u{:04x}", c as u32);
+    async fn write(&mut self, ev: merde_core::Event<'_>) -> Result<(), Self::Error> {
+        let stack_top = self.stack.back_mut();
+        if let Some(stack_top) = stack_top {
+            match stack_top {
+                StackFrame::Array { first } => {
+                    if matches!(ev, merde_core::Event::ArrayEnd) {
+                        self.w.extend_from_slice(b"]").await?;
+                        self.stack.pop_back();
+                        return Ok(());
+                    } else if *first {
+                        *first = false
+                    } else {
+                        self.w.extend_from_slice(b",").await?;
+                    }
                 }
-                c => self.buffer.extend_from_slice(c.to_string().as_bytes()),
+                StackFrame::MapKey { first } => {
+                    if matches!(ev, merde_core::Event::MapEnd) {
+                        self.w.extend_from_slice(b"}").await?;
+                        self.stack.pop_back();
+                        return Ok(());
+                    } else {
+                        if !*first {
+                            self.w.extend_from_slice(b",").await?;
+                        }
+                        *stack_top = StackFrame::MapValue;
+                        // and then let the value write itself
+                    }
+                }
+                StackFrame::MapValue => {
+                    self.w.extend_from_slice(b":").await?;
+                    *stack_top = StackFrame::MapKey { first: false };
+                }
             }
         }
-        self.buffer.push(b'"');
-    }
 
-    /// This writes the opening brace of an object, and gives you
-    /// a guard object to write the key-value pairs. When the guard
-    /// is dropped, the closing brace is written.
-    pub fn write_obj(&mut self) -> ObjectGuard<'_> {
-        self.buffer.push(b'{');
-        ObjectGuard {
-            serializer: self,
-            first: true,
+        match ev {
+            merde_core::Event::Null => {
+                self.w.extend_from_slice(b"null").await?;
+            }
+            merde_core::Event::Bool(b) => {
+                self.w
+                    .extend_from_slice(if b { b"true" } else { b"false" })
+                    .await?;
+            }
+            merde_core::Event::I64(i) => {
+                let mut buf = itoa::Buffer::new();
+                self.w.extend_from_slice(buf.format(i).as_bytes()).await?;
+            }
+            merde_core::Event::U64(u) => {
+                let mut buf = itoa::Buffer::new();
+                self.w.extend_from_slice(buf.format(u).as_bytes()).await?;
+            }
+            merde_core::Event::F64(f) => {
+                let mut buf = ryu::Buffer::new();
+                self.w.extend_from_slice(buf.format(f).as_bytes()).await?;
+            }
+            merde_core::Event::Str(s) => {
+                // slow path
+                self.w.extend_from_slice(b"\"").await?;
+                for c in s.chars() {
+                    match c {
+                        '"' => self.w.extend_from_slice(b"\\\"").await?,
+                        '\\' => self.w.extend_from_slice(b"\\\\").await?,
+                        '\n' => self.w.extend_from_slice(b"\\n").await?,
+                        '\r' => self.w.extend_from_slice(b"\\r").await?,
+                        '\t' => self.w.extend_from_slice(b"\\t").await?,
+                        c if c.is_control() => {
+                            let mut buf = [0u8; 6];
+                            write!(&mut buf[..], "\\u{:04x}", c as u32).unwrap();
+                            self.w.extend_from_slice(&buf[..6]).await?;
+                        }
+                        c => self.w.extend_from_slice(c.to_string().as_bytes()).await?,
+                    }
+                }
+                self.w.extend_from_slice(b"\"").await?;
+            }
+            merde_core::Event::MapStart(_) => {
+                self.w.extend_from_slice(b"{").await?;
+                self.stack.push_back(StackFrame::MapKey { first: true });
+            }
+            merde_core::Event::MapEnd => {
+                self.w.extend_from_slice(b"}").await?;
+            }
+            merde_core::Event::ArrayStart(_) => {
+                self.w.extend_from_slice(b"[").await?;
+                self.stack.push_back(StackFrame::Array { first: true });
+            }
+            merde_core::Event::ArrayEnd => {
+                panic!("array end without array start");
+            }
+            merde_core::Event::Bytes(_) => {
+                // figure out what to do with those? maybe base64, maybe an array of
+                // integers? unclear. maybe it should be a serializer setting.
+            }
+        }
+        Ok(())
+    }
+}
+
+impl<W> JsonSerializer<W>
+where
+    W: JsonSerializerWriter,
+{
+    /// Uses the provided buffer as the target for serialization.
+    pub fn new(w: W) -> Self {
+        JsonSerializer {
+            w,
+            stack: Default::default(),
         }
     }
+}
 
-    /// This writes the opening bracket of an array, and gives you
-    /// a guard object to write the elements. When the guard
-    /// is dropped, the closing bracket is written.
-    pub fn write_arr(&mut self) -> ArrayGuard<'_> {
-        self.buffer.push(b'[');
-        ArrayGuard {
-            serializer: self,
-            first: true,
-        }
-    }
-
-    /// Get back the internal buffer
-    pub fn into_inner(self) -> Vec<u8> {
-        self.buffer
-    }
-
-    /// Mutably borrow the internal buffer (as a `Vec<u8>` so it's growable).
-    ///
-    /// This is particularly useful when you want to use an interface like format_into that expects a dyn Writer?
-    pub fn as_mut_vec(&mut self) -> &mut Vec<u8> {
-        &mut self.buffer
+impl<'w> JsonSerializer<SyncWriteWrapper<'w>> {
+    /// Makes a json serializer that writes to a std::io::Write
+    pub fn from_writer<SW: std::io::Write + 'w>(
+        w: &'w mut SW,
+    ) -> JsonSerializer<SyncWriteWrapper<'w>> {
+        JsonSerializer::new(SyncWriteWrapper(w))
     }
 }
 
-/// Allows writing JSON objects
-pub struct ObjectGuard<'a> {
-    serializer: &'a mut JsonSerializer,
-    first: bool,
-}
-
-impl<'a> ObjectGuard<'a> {
-    /// Writes a key-value pair to the object.
-    #[inline]
-    pub fn pair(&mut self, key: &str, value: &dyn JsonSerialize) -> &mut Self {
-        if !self.first {
-            self.serializer.buffer.push(b',');
-        }
-        self.first = false;
-        self.serializer.write_str(key);
-        self.serializer.buffer.push(b':');
-        value.json_serialize(self.serializer);
-        self
+#[cfg(feature = "tokio")]
+impl<'w> JsonSerializer<tokio_io::AsyncWriteWrapper<'w>> {
+    /// Makes a json serializer that writes to a tokio::io::AsyncWrite
+    pub fn from_tokio_writer<SW: tokio::io::AsyncWrite + 'w>(
+        w: std::pin::Pin<&'w mut SW>,
+    ) -> JsonSerializer<tokio_io::AsyncWriteWrapper<'w>> {
+        JsonSerializer::new(tokio_io::AsyncWriteWrapper(w))
     }
 }
 
-impl<'a> Drop for ObjectGuard<'a> {
-    #[inline]
-    fn drop(&mut self) {
-        self.serializer.buffer.push(b'}');
-    }
-}
-
-/// A guard object for writing an array.
-pub struct ArrayGuard<'a> {
-    serializer: &'a mut JsonSerializer,
-    first: bool,
-}
-
-impl<'a> ArrayGuard<'a> {
-    /// Writes an element to the array.
-    #[inline]
-    pub fn elem(&mut self, value: &dyn JsonSerialize) -> &mut Self {
-        if !self.first {
-            self.serializer.buffer.push(b',');
-        }
-        self.first = false;
-        value.json_serialize(self.serializer);
-        self
-    }
-}
-
-impl<'a> Drop for ArrayGuard<'a> {
-    #[inline]
-    fn drop(&mut self) {
-        self.serializer.buffer.push(b']');
-    }
-}
-
-/// Implemented by anything that can be serialized to JSON.
-///
-/// Default implementations are provided for primitive types, strings, arrays,
-/// HashMap, Option, and slices of tuples (for when you don't _need_ the
-/// "hash" part of the HashMap).
-///
-/// `u64` and `i64` numbers, even those bigger than 2**53, are written as numbers, not strings,
-/// which might trip up other JSON parsers. If that's a concern, consider writing numbers
-/// as strings yourself, or sticking to `u32`.
-///
-/// Empty maps and vectors are written as `{}` and `[]`, respectively, not omitted.
-///
-/// `None` Options are omitted, not written as `null`. There is no way to specify a
-/// struct field that serializes to `null` at the moment (a custom implementation could
-/// use `Value::Null` internally).
-pub trait JsonSerialize {
-    /// Write self to a `JsonSerializer`.
-    fn json_serialize(&self, s: &mut JsonSerializer);
-
+/// Adds convenience methods to serializable objects to write them as JSON
+pub trait JsonSerialize: Serialize + Sized {
     /// Allocate a new `Vec<u8>` and serialize self to it.
-    fn to_json_bytes(&self) -> Vec<u8> {
-        let mut s = JsonSerializer::new();
-        self.json_serialize(&mut s);
-        s.into_inner()
+    fn to_json_bytes(&self) -> Result<Vec<u8>, MerdeJsonError<'static>> {
+        let mut v: Vec<u8> = vec![];
+        {
+            let mut s = JsonSerializer::new(&mut v);
+            s.serialize_sync(self)?;
+        }
+        Ok(v)
     }
 
     /// Serialize self to a `String`.
-    fn to_json_string(&self) -> String {
+    fn to_json_string(&self) -> Result<String, MerdeJsonError<'static>> {
         // SAFETY: This is safe because we know that the JSON serialization
         // produced by `to_json_bytes` will always be valid UTF-8.
-        unsafe { String::from_utf8_unchecked(self.to_json_bytes()) }
+        let res = unsafe { String::from_utf8_unchecked(self.to_json_bytes()?) };
+        Ok(res)
     }
 }
 
-impl JsonSerialize for Value<'_> {
-    fn json_serialize(&self, serializer: &mut JsonSerializer) {
-        match self {
-            Value::Null => serializer.write_null(),
-            Value::Bool(b) => serializer.write_bool(*b),
-            Value::I64(i) => serializer.write_i64(*i),
-            Value::U64(u) => serializer.write_i64(*u as i64),
-            Value::Float(f) => serializer.write_f64(f.into_inner()),
-            Value::Str(s) => serializer.write_str(s),
-            Value::Bytes(_b) => {
-                // TODO: we're going to need to make json_serialize return
-                // an error at some point, aren't we.
-                panic!("cannot serialize bytes as JSON")
-            }
-            Value::Array(arr) => arr.json_serialize(serializer),
-            Value::Map(map) => map.json_serialize(serializer),
-        }
-    }
-}
-
-impl JsonSerialize for Map<'_> {
-    fn json_serialize(&self, serializer: &mut JsonSerializer) {
-        let mut guard = serializer.write_obj();
-        for (key, value) in self.iter() {
-            guard.pair(key, value);
-        }
-    }
-}
-
-impl JsonSerialize for Array<'_> {
-    fn json_serialize(&self, serializer: &mut JsonSerializer) {
-        let mut guard = serializer.write_arr();
-        for value in self.iter() {
-            guard.elem(value);
-        }
-    }
-}
-
-impl<T> JsonSerialize for &T
-where
-    T: ?Sized + JsonSerialize,
-{
-    fn json_serialize(&self, serializer: &mut JsonSerializer) {
-        let this: &T = self;
-        JsonSerialize::json_serialize(this, serializer)
-    }
-}
-
-impl JsonSerialize for String {
-    fn json_serialize(&self, serializer: &mut JsonSerializer) {
-        serializer.write_str(self)
-    }
-}
-
-impl<'s> JsonSerialize for &'s str {
-    fn json_serialize(&self, serializer: &mut JsonSerializer) {
-        serializer.write_str(self)
-    }
-}
-
-impl<'s> JsonSerialize for Cow<'s, str> {
-    fn json_serialize(&self, serializer: &mut JsonSerializer) {
-        serializer.write_str(self)
-    }
-}
-
-impl<'s> JsonSerialize for CowStr<'s> {
-    fn json_serialize(&self, serializer: &mut JsonSerializer) {
-        serializer.write_str(self)
-    }
-}
-
-impl JsonSerialize for u8 {
-    fn json_serialize(&self, serializer: &mut JsonSerializer) {
-        serializer.write_i64(*self as i64);
-    }
-}
-
-impl JsonSerialize for u16 {
-    fn json_serialize(&self, serializer: &mut JsonSerializer) {
-        serializer.write_i64(*self as i64);
-    }
-}
-
-impl JsonSerialize for u32 {
-    fn json_serialize(&self, serializer: &mut JsonSerializer) {
-        serializer.write_i64(*self as i64);
-    }
-}
-
-impl JsonSerialize for u64 {
-    fn json_serialize(&self, serializer: &mut JsonSerializer) {
-        serializer.write_i64(*self as i64);
-    }
-}
-
-impl JsonSerialize for i8 {
-    fn json_serialize(&self, serializer: &mut JsonSerializer) {
-        serializer.write_i64(*self as i64);
-    }
-}
-
-impl JsonSerialize for i16 {
-    fn json_serialize(&self, serializer: &mut JsonSerializer) {
-        serializer.write_i64(*self as i64);
-    }
-}
-
-impl JsonSerialize for i32 {
-    fn json_serialize(&self, serializer: &mut JsonSerializer) {
-        serializer.write_i64(*self as i64);
-    }
-}
-
-impl JsonSerialize for i64 {
-    fn json_serialize(&self, serializer: &mut JsonSerializer) {
-        serializer.write_i64(*self);
-    }
-}
-
-impl JsonSerialize for usize {
-    fn json_serialize(&self, serializer: &mut JsonSerializer) {
-        serializer.write_i64(*self as i64);
-    }
-}
-
-impl JsonSerialize for isize {
-    fn json_serialize(&self, serializer: &mut JsonSerializer) {
-        serializer.write_i64(*self as i64);
-    }
-}
-
-impl JsonSerialize for f32 {
-    fn json_serialize(&self, serializer: &mut JsonSerializer) {
-        serializer.write_f64(*self as f64);
-    }
-}
-
-impl JsonSerialize for f64 {
-    fn json_serialize(&self, serializer: &mut JsonSerializer) {
-        serializer.write_f64(*self);
-    }
-}
-
-impl JsonSerialize for bool {
-    fn json_serialize(&self, serializer: &mut JsonSerializer) {
-        serializer.write_bool(*self);
-    }
-}
-
-impl<K: AsRef<str>, V: JsonSerialize, S> JsonSerialize for HashMap<K, V, S> {
-    fn json_serialize(&self, serializer: &mut JsonSerializer) {
-        let mut guard = serializer.write_obj();
-        for (key, value) in self {
-            guard.pair(key.as_ref(), value);
-        }
-    }
-}
-
-impl<T: JsonSerialize> JsonSerialize for Vec<T> {
-    fn json_serialize(&self, serializer: &mut JsonSerializer) {
-        let mut guard = serializer.write_arr();
-        for value in self {
-            guard.elem(value);
-        }
-    }
-}
-
-impl<T: JsonSerialize> JsonSerialize for Option<T> {
-    fn json_serialize(&self, serializer: &mut JsonSerializer) {
-        match self {
-            Some(value) => value.json_serialize(serializer),
-            None => serializer.write_null(),
-        }
-    }
-}
-
-impl<T: JsonSerialize> JsonSerialize for &[T] {
-    fn json_serialize(&self, serializer: &mut JsonSerializer) {
-        let mut guard = serializer.write_arr();
-        for value in *self {
-            guard.elem(value);
-        }
-    }
-}
-
-impl<T1: JsonSerialize> JsonSerialize for (T1,) {
-    fn json_serialize(&self, serializer: &mut JsonSerializer) {
-        let mut guard = serializer.write_arr();
-        guard.elem(&self.0);
-    }
-}
-
-impl<T1: JsonSerialize, T2: JsonSerialize> JsonSerialize for (T1, T2) {
-    fn json_serialize(&self, serializer: &mut JsonSerializer) {
-        let mut guard = serializer.write_arr();
-        guard.elem(&self.0);
-        guard.elem(&self.1);
-    }
-}
-
-impl<T1: JsonSerialize, T2: JsonSerialize, T3: JsonSerialize> JsonSerialize for (T1, T2, T3) {
-    fn json_serialize(&self, serializer: &mut JsonSerializer) {
-        let mut guard = serializer.write_arr();
-        guard.elem(&self.0);
-        guard.elem(&self.1);
-        guard.elem(&self.2);
-    }
-}
-
-impl<T1: JsonSerialize, T2: JsonSerialize, T3: JsonSerialize, T4: JsonSerialize> JsonSerialize
-    for (T1, T2, T3, T4)
-{
-    fn json_serialize(&self, serializer: &mut JsonSerializer) {
-        let mut guard = serializer.write_arr();
-        guard.elem(&self.0);
-        guard.elem(&self.1);
-        guard.elem(&self.2);
-        guard.elem(&self.3);
-    }
-}
-
-impl<
-        T1: JsonSerialize,
-        T2: JsonSerialize,
-        T3: JsonSerialize,
-        T4: JsonSerialize,
-        T5: JsonSerialize,
-    > JsonSerialize for (T1, T2, T3, T4, T5)
-{
-    fn json_serialize(&self, serializer: &mut JsonSerializer) {
-        let mut guard = serializer.write_arr();
-        guard.elem(&self.0);
-        guard.elem(&self.1);
-        guard.elem(&self.2);
-        guard.elem(&self.3);
-        guard.elem(&self.4);
-    }
-}
-
-impl<
-        T1: JsonSerialize,
-        T2: JsonSerialize,
-        T3: JsonSerialize,
-        T4: JsonSerialize,
-        T5: JsonSerialize,
-        T6: JsonSerialize,
-    > JsonSerialize for (T1, T2, T3, T4, T5, T6)
-{
-    fn json_serialize(&self, serializer: &mut JsonSerializer) {
-        let mut guard = serializer.write_arr();
-        guard.elem(&self.0);
-        guard.elem(&self.1);
-        guard.elem(&self.2);
-        guard.elem(&self.3);
-        guard.elem(&self.4);
-        guard.elem(&self.5);
-    }
-}
-
-impl<
-        T1: JsonSerialize,
-        T2: JsonSerialize,
-        T3: JsonSerialize,
-        T4: JsonSerialize,
-        T5: JsonSerialize,
-        T6: JsonSerialize,
-        T7: JsonSerialize,
-    > JsonSerialize for (T1, T2, T3, T4, T5, T6, T7)
-{
-    fn json_serialize(&self, serializer: &mut JsonSerializer) {
-        let mut guard = serializer.write_arr();
-        guard.elem(&self.0);
-        guard.elem(&self.1);
-        guard.elem(&self.2);
-        guard.elem(&self.3);
-        guard.elem(&self.4);
-        guard.elem(&self.5);
-        guard.elem(&self.6);
-    }
-}
-
-impl<
-        T1: JsonSerialize,
-        T2: JsonSerialize,
-        T3: JsonSerialize,
-        T4: JsonSerialize,
-        T5: JsonSerialize,
-        T6: JsonSerialize,
-        T7: JsonSerialize,
-        T8: JsonSerialize,
-    > JsonSerialize for (T1, T2, T3, T4, T5, T6, T7, T8)
-{
-    fn json_serialize(&self, serializer: &mut JsonSerializer) {
-        let mut guard = serializer.write_arr();
-        guard.elem(&self.0);
-        guard.elem(&self.1);
-        guard.elem(&self.2);
-        guard.elem(&self.3);
-        guard.elem(&self.4);
-        guard.elem(&self.5);
-        guard.elem(&self.6);
-        guard.elem(&self.7);
-    }
-}
+impl<T> JsonSerialize for T where T: Serialize {}
 
 /// Unifies [MerdeError] and [JiterError] into a single type
 pub enum MerdeJsonError<'s> {
@@ -521,6 +255,18 @@ pub enum MerdeJsonError<'s> {
         /// The JSON source, if available
         source: Option<CowStr<'s>>,
     },
+
+    /// An I/O error that occured while writing
+    Io(std::io::Error),
+
+    /// Tried to serialize bytes to JSON
+    JsonDoesNotSupportBytes,
+}
+
+impl From<std::io::Error> for MerdeJsonError<'static> {
+    fn from(e: std::io::Error) -> Self {
+        MerdeJsonError::Io(e)
+    }
 }
 
 impl<'s> MerdeJsonError<'s> {
@@ -532,6 +278,8 @@ impl<'s> MerdeJsonError<'s> {
             MerdeJsonError::JiterError { err, source: _ } => {
                 MerdeJsonError::JiterError { err, source: None }
             }
+            MerdeJsonError::JsonDoesNotSupportBytes => MerdeJsonError::JsonDoesNotSupportBytes,
+            MerdeJsonError::Io(e) => MerdeJsonError::Io(e),
         }
     }
 
@@ -544,6 +292,8 @@ impl<'s> MerdeJsonError<'s> {
                 err,
                 source: source.map(|s| s.into_static()),
             },
+            MerdeJsonError::JsonDoesNotSupportBytes => MerdeJsonError::JsonDoesNotSupportBytes,
+            MerdeJsonError::Io(e) => MerdeJsonError::Io(e),
         }
     }
 }
@@ -588,6 +338,15 @@ impl<'s> std::fmt::Display for MerdeJsonError<'s> {
                 }
                 Ok(())
             }
+            MerdeJsonError::JsonDoesNotSupportBytes => {
+                write!(
+                    f,
+                    "tried to serialize bytes to JSON (bytes are not supported)"
+                )
+            }
+            MerdeJsonError::Io(e) => {
+                write!(f, "IO Error: {}", e)
+            }
         }
     }
 }
@@ -626,20 +385,23 @@ where
 }
 
 /// Serialize the given data structure as a String of JSON.
-pub fn to_string<T: JsonSerialize>(value: &T) -> String {
+pub fn to_string<T: JsonSerialize>(value: &T) -> Result<String, MerdeJsonError<'static>> {
     value.to_json_string()
 }
 
 /// Serialize the given data structure as a JSON byte vector.
-pub fn to_vec<T: JsonSerialize>(value: &T) -> Vec<u8> {
+pub fn to_vec<T: JsonSerialize>(value: &T) -> Result<Vec<u8>, MerdeJsonError<'static>> {
     value.to_json_bytes()
 }
 
 /// Serialize the given data structure as JSON into the I/O stream.
-pub fn to_writer<W, T>(mut writer: impl std::io::Write, value: &T) -> std::io::Result<()>
+pub fn to_writer<W, T>(
+    mut writer: impl std::io::Write,
+    value: &T,
+) -> Result<(), MerdeJsonError<'static>>
 where
     T: JsonSerialize,
 {
-    let bytes = value.to_json_bytes();
-    writer.write_all(&bytes)
+    let bytes = value.to_json_bytes()?;
+    writer.write_all(&bytes).map_err(MerdeJsonError::Io)
 }
