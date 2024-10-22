@@ -46,7 +46,7 @@ pub trait Deserializer<'s>: std::fmt::Debug {
     where
         's: 'd,
     {
-        self.t_starting_with(starter).as_metastack_resume_point()
+        self.t_starting_with(starter).with_metastack_resume_point()
     }
 
     /// Deserialize a value of type `T`, with infinite stack support.

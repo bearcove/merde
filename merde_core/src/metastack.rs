@@ -36,7 +36,7 @@ pub trait MetastackExt<'s>: Sized {
 
     /// Transforms a future into a future that will return `Poll::Pending` if there
     /// is not enough stack space to execute the future.
-    fn as_metastack_resume_point(self) -> Pin<Box<dyn Future<Output = Self::Output> + 's>>;
+    fn with_metastack_resume_point(self) -> Pin<Box<dyn Future<Output = Self::Output> + 's>>;
 
     /// Sets up a landing pad to catch `Poll::Pending` returns and run the next
     /// scheduled future on a slightly emptier stack.
@@ -49,8 +49,8 @@ where
 {
     type Output = F::Output;
 
-    fn as_metastack_resume_point(self) -> Pin<Box<dyn Future<Output = Self::Output> + 's>> {
-        with_metastack(self)
+    fn with_metastack_resume_point(self) -> Pin<Box<dyn Future<Output = Self::Output> + 's>> {
+        with_metastack_resume_point(self)
     }
 
     fn run_synchronously_with_metastack(self) -> Self::Output {
@@ -101,7 +101,7 @@ where
 /// is not enough stack space to execute the future.
 ///
 /// This relies on the current async stack being invoked via `run_with_infinite_stack`
-pub fn with_metastack<'s, F>(fut: F) -> Pin<Box<dyn Future<Output = F::Output> + 's>>
+pub fn with_metastack_resume_point<'s, F>(fut: F) -> Pin<Box<dyn Future<Output = F::Output> + 's>>
 where
     F: Future + 's,
 {
