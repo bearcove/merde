@@ -1,7 +1,7 @@
 #![deny(missing_docs)]
 #![doc = include_str!("../README.md")]
 
-use merde_core::{Deserialize, DeserializeOwned, Deserializer, Event};
+use merde_core::{Deserialize, DeserializeOwned, Deserializer, Event, MapStart};
 
 /// A MessagePack deserializer, that implements [`merde_core::Deserializer`].
 pub struct MsgpackDeserializer<'s> {
@@ -144,17 +144,23 @@ impl<'s> merde_core::Deserializer<'s> for MsgpackDeserializer<'s> {
             0x80..=0x8f => {
                 let len = (byte & 0x0f) as usize;
                 self.stack.push(StackItem::Map(len * 2));
-                Ok(Event::MapStart)
+                Ok(Event::MapStart(MapStart {
+                    size_hint: Some(len as _),
+                }))
             }
             0xde => {
                 let len = self.read_u16()?;
                 self.stack.push(StackItem::Map(len as usize * 2));
-                Ok(Event::MapStart)
+                Ok(Event::MapStart(MapStart {
+                    size_hint: Some(len as _),
+                }))
             }
             0xdf => {
                 let len = self.read_u32()?;
                 self.stack.push(StackItem::Map(len as usize * 2));
-                Ok(Event::MapStart)
+                Ok(Event::MapStart(MapStart {
+                    size_hint: Some(len as _),
+                }))
             }
             0x00..=0x7f => Ok(Event::U64(byte as u64)),
             0xe0..=0xff => Ok(Event::I64((byte as i8) as i64)),
