@@ -24,8 +24,8 @@ pub use with_lifetime::WithLifetime;
 mod value;
 pub use value::Value;
 
-mod infinite_stack;
-pub use infinite_stack::with_infinite_stack;
+mod metastack;
+pub use metastack::with_metastack;
 
 mod event;
 pub use event::ArrayStart;

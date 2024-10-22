@@ -9,8 +9,8 @@ use std::{
 };
 
 use crate::{
-    infinite_stack::InfiniteStackExt, Array, CowStr, Event, EventType, IntoStatic, Map, MerdeError,
-    Value, WithLifetime,
+    metastack::MetastackExt, Array, CowStr, Event, EventType, IntoStatic, Map, MerdeError, Value,
+    WithLifetime,
 };
 
 pub trait Deserializer<'s>: std::fmt::Debug {
@@ -46,12 +46,13 @@ pub trait Deserializer<'s>: std::fmt::Debug {
     where
         's: 'd,
     {
-        self.t_starting_with(starter).with_infinite_stack()
+        self.t_starting_with(starter).as_metastack_resume_point()
     }
 
     /// Deserialize a value of type `T`, with infinite stack support.
     fn deserialize<T: Deserialize<'s>>(&mut self) -> Result<T, Self::Error<'s>> {
-        self.t_starting_with(None).run_with_infinite_stack_sync()
+        self.t_starting_with(None)
+            .run_synchronously_with_metastack()
     }
 
     /// Deserialize a value of type `T` and return its static variant

@@ -1,3 +1,13 @@
+//! The "metastack" technique allows running deeply recursive code without blowing up the stack.
+//! It's an alternative to the [stacker](https://crates.io/crates/stacker) crate that uses Rust's
+//! async machinery.
+//!
+//! metastack involves making functions into async functions: this turns them into state machines.
+//! As a result, just before we're about to the overflow the stack, we put the rest of the work in
+//! a "next future" thread-local, and returns `Poll::Pending`.
+//!
+//! This unwinds the stack all the way to the metastack landing pad, which then polls the "next future"
+//! from an empty stack. That future is in turn free to schedule another "next future", and so on.
 use std::{
     cell::RefCell,
     future::Future,
@@ -21,31 +31,29 @@ std::thread_local! {
     pub static STACK_INFO: LazyLock<StackInfo> = LazyLock::new(StackInfo::get);
 }
 
-pub trait InfiniteStackExt<'s>: Sized {
+pub trait MetastackExt<'s>: Sized {
     type Output;
 
     /// Transforms a future into a future that will return `Poll::Pending` if there
     /// is not enough stack space to execute the future.
-    fn with_infinite_stack(self) -> Pin<Box<dyn Future<Output = Self::Output> + 's>>;
+    fn as_metastack_resume_point(self) -> Pin<Box<dyn Future<Output = Self::Output> + 's>>;
 
-    /// Runs the future with "infinite stack space": if it returns `Poll::Pending`,
-    /// and `NEXT_FUTURE` has been set (via `with_infinite_stack`), that next
-    /// future will be polled from an "empty" stack — the cycle can repeat until
-    /// all the work is finished.
-    fn run_with_infinite_stack_sync(self) -> Self::Output;
+    /// Sets up a landing pad to catch `Poll::Pending` returns and run the next
+    /// scheduled future on a slightly emptier stack.
+    fn run_synchronously_with_metastack(self) -> Self::Output;
 }
 
-impl<'s, F> InfiniteStackExt<'s> for F
+impl<'s, F> MetastackExt<'s> for F
 where
     F: Future + 's,
 {
     type Output = F::Output;
 
-    fn with_infinite_stack(self) -> Pin<Box<dyn Future<Output = Self::Output> + 's>> {
-        with_infinite_stack(self)
+    fn as_metastack_resume_point(self) -> Pin<Box<dyn Future<Output = Self::Output> + 's>> {
+        with_metastack(self)
     }
 
-    fn run_with_infinite_stack_sync(self) -> Self::Output {
+    fn run_synchronously_with_metastack(self) -> Self::Output {
         let mut cx = Context::from_waker(DUMMY_WAKER);
         let mut first_fut = std::pin::pin!(self);
 
@@ -93,7 +101,7 @@ where
 /// is not enough stack space to execute the future.
 ///
 /// This relies on the current async stack being invoked via `run_with_infinite_stack`
-pub fn with_infinite_stack<'s, F>(fut: F) -> Pin<Box<dyn Future<Output = F::Output> + 's>>
+pub fn with_metastack<'s, F>(fut: F) -> Pin<Box<dyn Future<Output = F::Output> + 's>>
 where
     F: Future + 's,
 {
