@@ -4,19 +4,19 @@ fn main() {
     use merde::json::JsonSerialize;
 
     let events = vec![
-        Event::MouseUp(MouseUp { x: 10, y: 20 }),
-        Event::MouseDown(MouseDown { x: 30, y: 40 }),
-        Event::TextInput(TextInput {
+        ExampleEvent::MouseUp(MouseUp { x: 10, y: 20 }),
+        ExampleEvent::MouseDown(MouseDown { x: 30, y: 40 }),
+        ExampleEvent::TextInput(TextInput {
             text: "Hello".into(),
         }),
-        Event::StringStuff(StringStuff("Some string".into())),
-        Event::Emergency(Emergency::NoPizzaLeft),
+        ExampleEvent::StringStuff(StringStuff("Some string".into())),
+        ExampleEvent::Emergency(Emergency::NoPizzaLeft),
     ];
 
     for event in events {
         let json = event.to_json_string();
         println!("JSON: {}", json);
-        let deserialized: Event = merde::json::from_str(&json).unwrap();
+        let deserialized: ExampleEvent = merde::json::from_str(&json).unwrap();
         println!("Deserialized: {:?}", deserialized);
         assert_eq!(event, deserialized);
     }
@@ -25,7 +25,7 @@ fn main() {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-enum Event<'s> {
+enum ExampleEvent<'s> {
     MouseUp(MouseUp),
     MouseDown(MouseDown),
     TextInput(TextInput<'s>),
@@ -34,7 +34,7 @@ enum Event<'s> {
 }
 
 merde::derive! {
-    impl (JsonSerialize, Deserialize) for enum Event<'s>
+    impl (JsonSerialize, Deserialize) for enum ExampleEvent<'s>
     externally_tagged {
         "mouseup" => MouseUp,
         "mousedown" => MouseDown,

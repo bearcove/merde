@@ -2,10 +2,8 @@ use std::{
     any::TypeId,
     borrow::Cow,
     collections::HashMap,
-    future::Future,
     hash::{BuildHasher, Hash},
     marker::PhantomData,
-    pin::Pin,
 };
 
 use crate::{
@@ -34,20 +32,6 @@ pub trait Deserializer<'s>: std::fmt::Debug {
         &mut self,
         starter: Option<Event<'s>>,
     ) -> Result<T, Self::Error<'s>>;
-
-    /// Return a boxed version of `Self::t_starting_with`, useful to avoid
-    /// future sizes becoming infinite, for example when deserializing Value,
-    /// etc.
-    #[doc(hidden)]
-    fn t_starting_with_boxed<'d, T: Deserialize<'s> + 'd>(
-        &'d mut self,
-        starter: Option<Event<'s>>,
-    ) -> Pin<Box<dyn Future<Output = Result<T, Self::Error<'s>>> + 'd>>
-    where
-        's: 'd,
-    {
-        self.t_starting_with(starter).with_metastack_resume_point()
-    }
 
     /// Deserialize a value of type `T`, with infinite stack support.
     fn deserialize<T: Deserialize<'s>>(&mut self) -> Result<T, Self::Error<'s>> {
@@ -587,7 +571,10 @@ impl<'s> Deserialize<'s> for Value<'s> {
                     match de.next()? {
                         Event::MapEnd => break,
                         Event::Str(key) => {
-                            let value: Value = de.t_starting_with_boxed(None).await?;
+                            let value: Value = de
+                                .t_starting_with(None)
+                                .with_metastack_resume_point()
+                                .await?;
                             map.insert(key, value);
                         }
                         ev => {
@@ -607,7 +594,10 @@ impl<'s> Deserialize<'s> for Value<'s> {
                     match de.next()? {
                         Event::ArrayEnd => break,
                         ev => {
-                            let item: Value = de.t_starting_with_boxed(Some(ev)).await?;
+                            let item: Value = de
+                                .t_starting_with(Some(ev))
+                                .with_metastack_resume_point()
+                                .await?;
                             vec.push(item);
                         }
                     }

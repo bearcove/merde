@@ -38,27 +38,49 @@ impl IntoStatic for Value<'_> {
     }
 }
 
-impl<'s> From<i64> for Value<'s> {
-    fn from(v: i64) -> Self {
-        Value::I64(v)
-    }
+macro_rules! impl_from_for_value {
+    ($ty:ty => $variant:ident, $($rest:tt)*) => {
+        impl_from_for_value!($ty => $variant);
+        impl_from_for_value!($($rest)*);
+    };
+
+    ($ty:ty => $variant:ident) => {
+        impl<'s> From<$ty> for Value<'s> {
+            fn from(v: $ty) -> Self {
+                Value::$variant(v.into())
+            }
+        }
+    };
+
+    (,) => {};
+    () => {};
 }
 
-impl<'s> From<u64> for Value<'s> {
-    fn from(v: u64) -> Self {
-        Value::U64(v)
+impl_from_for_value! {
+    // signed
+    i8 => I64,
+    i16 => I64,
+    i32 => I64,
+    i64 => I64,
+    // unsigned
+    u8 => U64,
+    u16 => U64,
+    u32 => U64,
+    u64 => U64,
+    // misc.
+    CowStr<'s> => Str,
+    CowBytes<'s> => Bytes,
+}
+
+impl<'s> From<f32> for Value<'s> {
+    fn from(v: f32) -> Self {
+        Value::Float((v as f64).into())
     }
 }
 
 impl<'s> From<f64> for Value<'s> {
     fn from(v: f64) -> Self {
         Value::Float(v.into())
-    }
-}
-
-impl<'s> From<CowStr<'s>> for Value<'s> {
-    fn from(v: CowStr<'s>) -> Self {
-        Value::Str(v)
     }
 }
 

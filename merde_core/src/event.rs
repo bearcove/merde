@@ -18,6 +18,11 @@ pub enum Event<'s> {
 }
 
 macro_rules! impl_from_for_event {
+    ($ty:ty => $variant:ident, $($rest:tt)*) => {
+        impl_from_for_event!($ty => $variant);
+        impl_from_for_event!($($rest)*);
+    };
+
     ($ty:ty => $variant:ident) => {
         impl From<$ty> for Event<'_> {
             fn from(v: $ty) -> Self {
@@ -25,20 +30,40 @@ macro_rules! impl_from_for_event {
             }
         }
     };
+
+    (,) => {};
+    () => {};
 }
 
-impl_from_for_event!(i8 => I64);
-impl_from_for_event!(i16 => I64);
-impl_from_for_event!(i32 => I64);
-impl_from_for_event!(i64 => I64);
+impl_from_for_event! {
+    // signed
+    i8 => I64,
+    i16 => I64,
+    i32 => I64,
+    i64 => I64,
+    // unsigned
+    u8 => U64,
+    u16 => U64,
+    u32 => U64,
+    u64 => U64,
+    // floats
+    f32 => Float,
+    f64 => Float,
+    // misc.
+    bool => Bool,
+}
 
-impl_from_for_event!(u8 => U64);
-impl_from_for_event!(u16 => U64);
-impl_from_for_event!(u32 => U64);
-impl_from_for_event!(u64 => U64);
+impl From<isize> for Event<'_> {
+    fn from(v: isize) -> Self {
+        Event::I64(i64::try_from(v).unwrap())
+    }
+}
 
-impl_from_for_event!(f32 => Float);
-impl_from_for_event!(f64 => Float);
+impl From<usize> for Event<'_> {
+    fn from(v: usize) -> Self {
+        Event::U64(u64::try_from(v).unwrap())
+    }
+}
 
 impl<'s> From<&'s str> for Event<'s> {
     fn from(v: &'s str) -> Self {
@@ -73,12 +98,6 @@ impl<'s> From<Vec<u8>> for Event<'s> {
 impl<'s> From<CowBytes<'s>> for Event<'s> {
     fn from(b: CowBytes<'s>) -> Self {
         Event::Bytes(b)
-    }
-}
-
-impl<'s> From<bool> for Event<'s> {
-    fn from(v: bool) -> Self {
-        Event::Bool(v)
     }
 }
 

@@ -34,4 +34,5 @@ serde = ["dep:serde", "compact_str/serde"]
 rusqlite = ["dep:rusqlite"]
 
 [dev-dependencies]
+insta = "1.40.0"
 trybuild = "1.0.101"
