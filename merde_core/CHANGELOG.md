@@ -6,6 +6,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [8.0.0](https://github.com/bearcove/merde/compare/merde_core-v7.0.0...merde_core-v8.0.0) - 2024-11-04
+
+### Added
+
+- Impl WithLifetime for Value (woops)
+
+### Other
+
+- Make compact_str / compact_bytes non-optional
+- Introduce Serialize trait
+- As pointed out, FieldSlot must be invariant
+- We did ask miri
+- More tests around FieldSlot ([#101](https://github.com/bearcove/merde/pull/101))
+- Don't allow trivial UB via FieldSlot in safe code
+- I made miri unsad
+- I made miri sad
+- Add deserializer opinions, cf. [#89](https://github.com/bearcove/merde/pull/89)
+- Introduce deserialization opinions
+- macOS fixes
+- Fix infinite stack linux support
+- Oh yeah our MSRV is 1.75 because AFIT
+- fine let's not make msrv rust 1.82
+- Actually query the stack size, don't hardcode anything
+- Comments--
+- The trick actually works
+- Committing before something bad happens
+- Start the trick
+- Deserialize borrowed variants of cowstr
+
 ## [7.0.0](https://github.com/bearcove/merde/compare/merde_core-v6.1.0...merde_core-v7.0.0) - 2024-10-06
 
 ### Added

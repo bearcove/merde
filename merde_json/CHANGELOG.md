@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [8.0.0](https://github.com/bearcove/merde/compare/merde_json-v6.2.1...merde_json-v8.0.0) - 2024-11-04
+
+### Other
+
+- Introduce Serialize trait
+
 ## [6.2.1](https://github.com/bearcove/merde/compare/merde_json-v6.2.0...merde_json-v6.2.1) - 2024-10-07
 
 ### Fixed

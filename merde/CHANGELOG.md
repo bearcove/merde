@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [8.0.0](https://github.com/bearcove/merde/compare/merde-v6.2.1...merde-v8.0.0) - 2024-11-04
+
+### Other
+
+- Make compact_str / compact_bytes non-optional
+- Introduce Serialize trait
+- Don't allow trivial UB via FieldSlot in safe code
+- I made miri sad
+- Add deserializer opinions, cf. [#89](https://github.com/bearcove/merde/pull/89)
+- woops wrong examples
+- Actually query the stack size, don't hardcode anything
+- The trick actually works
+- Add surprise example
+
 ## [6.2.1](https://github.com/bearcove/merde/compare/merde-v6.2.0...merde-v6.2.1) - 2024-10-07
 
 ### Fixed
