@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.1.2](https://github.com/bearcove/merde/compare/merde_msgpack-v7.1.1...merde_msgpack-v7.1.2) - 2024-11-04
+
+### Other
+
+- Introduce Serialize trait
+
 ## [7.1.1](https://github.com/bearcove/merde/compare/merde_msgpack-v7.1.0...merde_msgpack-v7.1.1) - 2024-10-07
 
 ### Fixed

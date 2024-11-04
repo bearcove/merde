@@ -1,6 +1,6 @@
 [package]
 name = "merde"
-version = "6.2.1"
+version = "6.2.2"
 edition = "2021"
 authors = ["Amos Wenger <amos@bearcove.net>"]
 description = "Serialize and deserialize with declarative macros"
@@ -56,11 +56,11 @@ path = "examples/opinions.rs"
 required-features = ["json"]
 
 [dependencies]
-merde_core = { version = "7.0.0", path = "../merde_core", optional = true }
-merde_json = { version = "6.2.1", path = "../merde_json", optional = true }
-merde_yaml = { version = "7.1.1", path = "../merde_yaml", optional = true }
-merde_msgpack = { version = "7.1.1", path = "../merde_msgpack", optional = true }
-merde_time = { version = "4.0.17", path = "../merde_time", optional = true, features = [
+merde_core = { version = "8.0.0", path = "../merde_core", optional = true }
+merde_json = { version = "7.0.0", path = "../merde_json", optional = true }
+merde_yaml = { version = "7.1.2", path = "../merde_yaml", optional = true }
+merde_msgpack = { version = "7.1.2", path = "../merde_msgpack", optional = true }
+merde_time = { version = "4.0.18", path = "../merde_time", optional = true, features = [
     "merde",
     "deserialize",
 ] }
