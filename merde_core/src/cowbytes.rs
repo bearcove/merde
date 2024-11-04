@@ -1,12 +1,10 @@
+use compact_bytes::CompactBytes;
 use std::{
     borrow::Cow,
     fmt,
     hash::{Hash, Hasher},
     ops::Deref,
 };
-
-#[cfg(feature = "compact_bytes")]
-use compact_bytes::CompactBytes;
 
 use crate::IntoStatic;
 
@@ -15,10 +13,7 @@ use crate::IntoStatic;
 #[derive(Clone)]
 pub enum CowBytes<'a> {
     Borrowed(&'a [u8]),
-    #[cfg(feature = "compact_bytes")]
     Owned(CompactBytes),
-    #[cfg(not(feature = "compact_bytes"))]
-    Owned(Vec<u8>),
 }
 
 impl<'a> CowBytes<'a> {
@@ -29,10 +24,7 @@ impl<'a> CowBytes<'a> {
     pub fn into_owned(self) -> Vec<u8> {
         match self {
             CowBytes::Borrowed(b) => b.to_vec(),
-            #[cfg(feature = "compact_bytes")]
             CowBytes::Owned(b) => b.to_vec(),
-            #[cfg(not(feature = "compact_bytes"))]
-            CowBytes::Owned(b) => b,
         }
     }
 }
@@ -62,14 +54,7 @@ impl<'a> From<&'a [u8]> for CowBytes<'a> {
 
 impl<'a> From<Vec<u8>> for CowBytes<'a> {
     fn from(v: Vec<u8>) -> Self {
-        #[cfg(feature = "compact_bytes")]
-        {
-            CowBytes::Owned(CompactBytes::from(v))
-        }
-        #[cfg(not(feature = "compact_bytes"))]
-        {
-            CowBytes::Owned(v)
-        }
+        CowBytes::Owned(CompactBytes::from(v))
     }
 }
 
@@ -119,10 +104,7 @@ impl IntoStatic for CowBytes<'_> {
 
     fn into_static(self) -> Self::Output {
         match self {
-            #[cfg(feature = "compact_bytes")]
             CowBytes::Borrowed(b) => CowBytes::Owned(CompactBytes::new(b)),
-            #[cfg(not(feature = "compact_bytes"))]
-            CowBytes::Borrowed(b) => CowBytes::Owned(b.to_vec()),
             CowBytes::Owned(b) => CowBytes::Owned(b),
         }
     }
