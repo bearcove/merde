@@ -5,7 +5,6 @@ use std::{
     ops::Deref,
 };
 
-#[cfg(feature = "compact_str")]
 use compact_str::CompactString;
 
 use crate::IntoStatic;
@@ -18,10 +17,7 @@ use crate::IntoStatic;
 #[derive(Clone)]
 pub enum CowStr<'s> {
     Borrowed(&'s str),
-    #[cfg(feature = "compact_str")]
     Owned(CompactString),
-    #[cfg(not(feature = "compact_str"))]
-    Owned(String),
 }
 
 impl CowStr<'static> {
@@ -29,15 +25,7 @@ impl CowStr<'static> {
     /// if the `compact_str` feature is disabled, or if the string is longer
     /// than `MAX_INLINE_SIZE`.
     pub fn copy_from_str(s: &str) -> Self {
-        #[cfg(feature = "compact_str")]
-        {
-            Self::Owned(CompactString::from(s))
-        }
-
-        #[cfg(not(feature = "compact_str"))]
-        {
-            Self::Owned(s.into())
-        }
+        Self::Owned(CompactString::from(s))
     }
 }
 
@@ -49,26 +37,12 @@ impl<'s> CowStr<'s> {
 
     #[inline]
     pub fn from_utf8_owned(s: Vec<u8>) -> Result<Self, std::str::Utf8Error> {
-        #[cfg(feature = "compact_str")]
-        {
-            Ok(Self::Owned(CompactString::from_utf8(s)?))
-        }
-        #[cfg(not(feature = "compact_str"))]
-        {
-            Ok(String::from_utf8(s).map_err(|e| e.utf8_error())?.into())
-        }
+        Ok(Self::Owned(CompactString::from_utf8(s)?))
     }
 
     #[inline]
     pub fn from_utf8_lossy(s: &'s [u8]) -> Self {
-        #[cfg(feature = "compact_str")]
-        {
-            Self::Owned(CompactString::from_utf8_lossy(s))
-        }
-        #[cfg(not(feature = "compact_str"))]
-        {
-            String::from_utf8_lossy(s).into()
-        }
+        Self::Owned(CompactString::from_utf8_lossy(s))
     }
 
     /// # Safety
@@ -76,14 +50,7 @@ impl<'s> CowStr<'s> {
     /// This function is unsafe because it does not check that the bytes are valid UTF-8.
     #[inline]
     pub unsafe fn from_utf8_unchecked(s: &'s [u8]) -> Self {
-        #[cfg(feature = "compact_str")]
-        {
-            Self::Owned(CompactString::from_utf8_unchecked(s))
-        }
-        #[cfg(not(feature = "compact_str"))]
-        {
-            Self::Borrowed(std::str::from_utf8_unchecked(s))
-        }
+        Self::Owned(CompactString::from_utf8_unchecked(s))
     }
 }
 

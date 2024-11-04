@@ -9,4 +9,4 @@ merde = { path = "../merde", default-features = false }
 
 [features]
 default = []
-merde = ["merde/core", "merde/compact_str"]
+merde = ["merde/core"]
