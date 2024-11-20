@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [8.1.1](https://github.com/bearcove/merde/compare/merde-v8.1.0...merde-v8.1.1) - 2024-11-20
+
+### Other
+
+- Enable 'serialize' feature of merde_time by default, when merde's time feature is enabled
+
 ## [8.1.0](https://github.com/bearcove/merde/compare/merde-v8.0.0...merde-v8.1.0) - 2024-11-20
 
 ### Added
