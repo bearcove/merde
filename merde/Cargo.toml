@@ -85,7 +85,7 @@ serde = ["merde_core/serde"]
 rusqlite = ["merde_core/rusqlite"]
 
 # non-core crates
-json = ["dep:merde_json", "merde_time/json"]
+json = ["dep:merde_json"]
 yaml = ["dep:merde_yaml"]
 msgpack = ["dep:merde_msgpack"]
 time = ["dep:merde_time"]

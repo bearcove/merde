@@ -16,12 +16,13 @@ merde_json = { version = "8.0.1", path = "../merde_json", optional = true }
 time = "0.3.36"
 
 [dev-dependencies]
+merde_json = { path = "../merde_json" }
 time = { version = "0.3.36", features = ["macros"] }
 
 [features]
 default = []
-full = ["merde", "json", "serialize", "deserialize"]
+full = ["merde", "serialize", "deserialize"]
 merde = ["dep:merde_core"]
-json = ["merde", "dep:merde_json", "serialize"]
+json = []
 serialize = ["time/formatting"]
 deserialize = ["merde", "time/parsing"]
