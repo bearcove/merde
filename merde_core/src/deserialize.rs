@@ -409,6 +409,16 @@ impl<'s> Deserialize<'s> for Cow<'s, str> {
     }
 }
 
+impl<'s, T: Deserialize<'s>> Deserialize<'s> for Box<T> {
+    async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
+    where
+        D: Deserializer<'s> + ?Sized,
+    {
+        let value: T = de.t().await?;
+        Ok(Box::new(value))
+    }
+}
+
 impl<'s, T: Deserialize<'s>> Deserialize<'s> for Option<T> {
     async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
     where
