@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [8.1.0](https://github.com/bearcove/merde/compare/merde-v8.0.0...merde-v8.1.0) - 2024-11-20
+
+### Added
+
+- Implement Deserialize and IntoStatic for `Box<T>` ([#107](https://github.com/bearcove/merde/pull/107))
+
 ## [8.0.0](https://github.com/bearcove/merde/compare/merde-v6.2.1...merde-v8.0.0) - 2024-11-04
 
 ### Other
