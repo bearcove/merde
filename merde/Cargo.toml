@@ -62,6 +62,7 @@ merde_yaml = { version = "8.0.1", path = "../merde_yaml", optional = true }
 merde_msgpack = { version = "8.0.1", path = "../merde_msgpack", optional = true }
 merde_time = { version = "8.0.1", path = "../merde_time", optional = true, features = [
     "merde",
+    "serialize",
     "deserialize",
 ] }
 ahash = { version = "0.8.11", optional = true }
