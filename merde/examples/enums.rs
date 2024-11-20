@@ -10,7 +10,7 @@ fn main() {
             text: "Hello".into(),
         }),
         ExampleEvent::StringStuff(StringStuff("Some string".into())),
-        ExampleEvent::Emergency(Emergency::NoPizzaLeft),
+        ExampleEvent::Emergency(Box::new(Emergency::NoPizzaLeft)),
     ];
 
     for event in events {
@@ -30,7 +30,7 @@ enum ExampleEvent<'s> {
     MouseDown(MouseDown),
     TextInput(TextInput<'s>),
     StringStuff(StringStuff<'s>),
-    Emergency(Emergency),
+    Emergency(Box<Emergency>),
 }
 
 merde::derive! {
