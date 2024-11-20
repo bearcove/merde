@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [8.1.2](https://github.com/bearcove/merde/compare/merde-v8.1.1...merde-v8.1.2) - 2024-11-20
+
+### Other
+
+- Fix deser/ser impls in merde_time after phasing out JsonSerialize trait
+
 ## [8.1.1](https://github.com/bearcove/merde/compare/merde-v8.1.0...merde-v8.1.1) - 2024-11-20
 
 ### Other
