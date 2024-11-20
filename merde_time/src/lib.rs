@@ -1,5 +1,5 @@
 //! Provides [Rfc3339], a wrapper around [time::OffsetDateTime] that implements
-//! [merde_json::JsonSerialize] and [merde_core::Deserialize] when the right
+//! [merde_core::Serialize] and [merde_core::Deserialize] when the right
 //! cargo features are enabled.
 
 use std::{
@@ -9,7 +9,7 @@ use std::{
 
 pub use time::OffsetDateTime;
 
-/// A wrapper around date-time types that implements `JsonSerialize` and `JsonDeserialize`
+/// A wrapper around date-time types that implements `Serialize` and `Deserialize`
 /// when the right cargo features are enabled.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
@@ -81,11 +81,6 @@ mod merde_impls {
             ))
         }
     }
-}
-
-#[cfg(feature = "json")]
-mod merde_json_impls {
-    use super::*;
 
     #[cfg(feature = "serialize")]
     impl merde_core::Serialize for Rfc3339<time::OffsetDateTime> {
@@ -104,7 +99,7 @@ mod merde_json_impls {
     }
 }
 
-#[cfg(all(test, feature = "full",))]
+#[cfg(all(test, feature = "full"))]
 mod tests {
     use super::*;
     use merde_json::{from_str, JsonSerialize};
