@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [8.0.2](https://github.com/bearcove/merde/compare/merde_json-v8.0.1...merde_json-v8.0.2) - 2024-11-24
+
+### Other
+
+- updated the following local packages: merde_core
+
 ## [8.0.1](https://github.com/bearcove/merde/compare/merde_json-v8.0.0...merde_json-v8.0.1) - 2024-11-20
 
 ### Other

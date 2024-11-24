@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [8.1.1](https://github.com/bearcove/merde/compare/merde_core-v8.1.0...merde_core-v8.1.1) - 2024-11-24
+
+### Other
+
+- impl WIthLifetime for Option<T>
+
 ## [8.1.0](https://github.com/bearcove/merde/compare/merde_core-v8.0.0...merde_core-v8.1.0) - 2024-11-20
 
 ### Added
