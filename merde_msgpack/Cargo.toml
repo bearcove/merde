@@ -1,6 +1,6 @@
 [package]
 name = "merde_msgpack"
-version = "8.0.1"
+version = "8.0.2"
 edition = "2021"
 authors = ["Amos Wenger <amos@bearcove.net>"]
 description = "msgpack serizliation/deserialization for merde"
@@ -11,7 +11,7 @@ keywords = ["msgpack", "messagepack", "serialization", "deserialization"]
 categories = ["encoding", "parser-implementations"]
 
 [dependencies]
-merde_core = { version = "8.1.0", path = "../merde_core" }
+merde_core = { version = "8.1.1", path = "../merde_core" }
 rmp = "0.8.14"
 
 [dev-dependencies]
