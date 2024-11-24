@@ -70,6 +70,13 @@ impl<'s> WithLifetime<'s> for () {
     type Lifetimed = ();
 }
 
+impl<'s, T> WithLifetime<'s> for Option<T>
+where
+    T: WithLifetime<'s>,
+{
+    type Lifetimed = Option<T::Lifetimed>;
+}
+
 impl<'s, T> WithLifetime<'s> for Vec<T>
 where
     T: WithLifetime<'s>,
