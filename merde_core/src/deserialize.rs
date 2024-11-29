@@ -35,19 +35,40 @@ pub trait Deserializer<'s>: std::fmt::Debug {
     ) -> Result<T, Self::Error<'s>>;
 
     /// Deserialize a value of type `T`, with infinite stack support.
-    fn deserialize<T: Deserialize<'s>>(&mut self) -> Result<T, Self::Error<'s>> {
+    fn deserialize_sync<T: Deserialize<'s>>(&mut self) -> Result<T, Self::Error<'s>> {
         self.t_starting_with(None).run_sync_with_metastack()
     }
 
     /// Deserialize a value of type `T` and return its static variant
     /// e.g. (CowStr<'static>, etc.)
-    fn deserialize_owned<T>(&mut self) -> Result<T, Self::Error<'s>>
+    fn deserialize_sync_owned<T>(&mut self) -> Result<T, Self::Error<'s>>
+    where
+        T: 'static,
+        T: WithLifetime<'s>,
+        <T as WithLifetime<'s>>::Lifetimed: Deserialize<'s> + IntoStatic<Output = T>,
+    {
+        self.deserialize_sync()
+            .map(|t: <T as WithLifetime<'s>>::Lifetimed| t.into_static())
+    }
+
+    /// Deserialize a value of type `T`, with infinite stack support,
+    /// asynchronously
+    #[allow(async_fn_in_trait)]
+    async fn deserialize<T: Deserialize<'s>>(&mut self) -> Result<T, Self::Error<'s>> {
+        self.t_starting_with(None).run_async_with_metastack().await
+    }
+
+    /// Deserialize a value of type `T` and return its static variant
+    /// e.g. (CowStr<'static>, etc.), asynchronously
+    #[allow(async_fn_in_trait)]
+    async fn deserialize_owned<T>(&mut self) -> Result<T, Self::Error<'s>>
     where
         T: 'static,
         T: WithLifetime<'s>,
         <T as WithLifetime<'s>>::Lifetimed: Deserialize<'s> + IntoStatic<Output = T>,
     {
         self.deserialize()
+            .await
             .map(|t: <T as WithLifetime<'s>>::Lifetimed| t.into_static())
     }
 }
@@ -212,7 +233,7 @@ where
     where
         D: Deserializer<'s> + ?Sized,
     {
-        de.deserialize_owned()
+        de.deserialize_sync_owned()
     }
 }
 

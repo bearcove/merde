@@ -153,7 +153,7 @@ mod tests {
         let mut journal: Journal = Default::default();
 
         journal.serialize_sync(&original).unwrap();
-        let deserialized: Rfc3339<time::OffsetDateTime> = journal.deserialize_owned().unwrap();
+        let deserialized: Rfc3339<time::OffsetDateTime> = journal.deserialize_sync_owned().unwrap();
 
         assert_eq!(original, deserialized);
     }

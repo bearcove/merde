@@ -371,7 +371,7 @@ where
     T: Deserialize<'s>,
 {
     let mut deser = JsonDeserializer::new(s);
-    deser.deserialize::<T>()
+    deser.deserialize_sync::<T>()
 }
 
 /// Deserialize an instance of type `T` from a string of JSON text,

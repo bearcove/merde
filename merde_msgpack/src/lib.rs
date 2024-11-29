@@ -336,7 +336,7 @@ where
     T: Deserialize<'s>,
 {
     let mut deser = MsgpackDeserializer::new(slice);
-    deser.deserialize::<T>()
+    deser.deserialize_sync::<T>()
 }
 
 /// Deserialize an instance of type `T` from a byte slice of MessagePack data,
@@ -365,7 +365,7 @@ mod tests {
         let deser = super::MsgpackDeserializer::new(TEST_INPUT);
         let mut deser = LoggingDeserializer::new(deser);
 
-        let value = deser.deserialize::<merde_core::Value>().unwrap();
+        let value = deser.deserialize_sync::<merde_core::Value>().unwrap();
 
         let array = value.as_array().unwrap();
         let mut iter = array.iter();
