@@ -10,7 +10,8 @@ pub trait Serializer {
     // (note: this is an async fn but because there's a lifetime, it won't let us!)
     fn write(&mut self, ev: Event<'_>) -> impl Future<Output = Result<(), Self::Error>>;
 
-    /// Serializes synchronously
+    /// Serializes synchronously. Note that the underlying serializer may
+    /// require an async context (e.g. if writing to a tokio::io::AsyncWrite).
     fn serialize_sync<T: Serialize>(&mut self, t: &T) -> Result<(), Self::Error> {
         Serialize::serialize(t, self).run_sync_with_metastack()
     }

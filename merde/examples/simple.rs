@@ -1,5 +1,4 @@
 use merde::CowStr;
-use merde_json::JsonSerialize;
 
 fn main() {
     let input = r#"
@@ -23,7 +22,7 @@ fn main() {
     // Round-trip! Again, every binding borrows from the previous one, and
     // everything can be converted from `F<'a>` to `F<'static>` via the
     // `IntoStatic` trait.
-    let serialized = person.to_json_string().unwrap();
+    let serialized = merde_json::to_string(&person).unwrap();
     let person2: Person = merde_json::from_str(&serialized).unwrap();
     println!("{:#?}", person2);
 

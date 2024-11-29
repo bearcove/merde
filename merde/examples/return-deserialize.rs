@@ -1,4 +1,3 @@
-use merde::json::JsonSerialize;
 use merde::{CowStr, DeserializeOwned};
 
 fn deser_and_return<T>(s: String) -> Result<T, merde_json::MerdeJsonError<'static>>
@@ -29,7 +28,7 @@ fn main() {
     let person: Person = merde_json::from_str(input).unwrap();
     println!("{:?}", person);
 
-    let serialized = person.to_json_string().unwrap();
+    let serialized = merde_json::to_string(&person).unwrap();
     let person2: Person = merde_json::from_str(&serialized).unwrap();
     println!("{:?}", person2);
 

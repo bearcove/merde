@@ -1,8 +1,6 @@
 use merde::CowStr;
 
 fn main() {
-    use merde_json::JsonSerialize;
-
     let events = vec![
         ExampleEvent::MouseUp(MouseUp { x: 10, y: 20 }),
         ExampleEvent::MouseDown(MouseDown { x: 30, y: 40 }),
@@ -14,7 +12,7 @@ fn main() {
     ];
 
     for event in events {
-        let json = event.to_json_string().unwrap();
+        let json = merde::json::to_string(&event).unwrap();
         println!("JSON: {}", json);
         let deserialized: ExampleEvent = merde::json::from_str(&json).unwrap();
         println!("Deserialized: {:?}", deserialized);
