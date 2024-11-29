@@ -37,13 +37,13 @@ where
 {
     type Error<'es> = I::Error<'es>;
 
-    fn next(&mut self) -> Result<Event<'s>, Self::Error<'s>> {
+    async fn next(&mut self) -> Result<Event<'s>, Self::Error<'s>> {
         if let Some(ev) = self.starter.take() {
             eprintln!("> (from starter) {:?}", ev);
             return Ok(ev);
         }
 
-        let ev = self.inner.next()?;
+        let ev = self.inner.next().await?;
         eprintln!("> (from inner.next) {:?}", ev);
         Ok(ev)
     }

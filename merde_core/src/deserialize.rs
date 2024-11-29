@@ -16,7 +16,8 @@ pub trait Deserializer<'s>: std::fmt::Debug {
 
     /// Get the next event from the deserializer.
     #[doc(hidden)]
-    fn next(&mut self) -> Result<Event<'s>, Self::Error<'s>>;
+    #[allow(async_fn_in_trait)]
+    async fn next(&mut self) -> Result<Event<'s>, Self::Error<'s>>;
 
     /// Deserialize a value of type `T`.
     #[doc(hidden)]
@@ -220,7 +221,7 @@ impl<'s> Deserialize<'s> for i64 {
     where
         D: Deserializer<'s> + ?Sized,
     {
-        let v: i64 = match de.next()? {
+        let v: i64 = match de.next().await? {
             Event::I64(i) => i,
             Event::U64(u) => u.try_into().map_err(|_| MerdeError::OutOfRange)?,
             Event::F64(f) => f as _,
@@ -241,7 +242,7 @@ impl<'s> Deserialize<'s> for u64 {
     where
         D: Deserializer<'s> + ?Sized,
     {
-        let v: u64 = match de.next()? {
+        let v: u64 = match de.next().await? {
             Event::U64(u) => u,
             Event::I64(i) => i.try_into().map_err(|_| MerdeError::OutOfRange)?,
             Event::F64(f) => f as u64,
@@ -342,7 +343,7 @@ impl<'s> Deserialize<'s> for bool {
     where
         D: Deserializer<'s> + ?Sized,
     {
-        Ok(de.next()?.into_bool()?)
+        Ok(de.next().await?.into_bool()?)
     }
 }
 
@@ -351,7 +352,7 @@ impl<'s> Deserialize<'s> for f64 {
     where
         D: Deserializer<'s> + ?Sized,
     {
-        let v: f64 = match de.next()? {
+        let v: f64 = match de.next().await? {
             Event::F64(f) => f,
             Event::I64(i) => i as f64,
             Event::U64(u) => u as f64,
@@ -392,7 +393,7 @@ impl<'s> Deserialize<'s> for CowStr<'s> {
     where
         D: Deserializer<'s> + ?Sized,
     {
-        Ok(de.next()?.into_str()?)
+        Ok(de.next().await?.into_str()?)
     }
 }
 
@@ -424,7 +425,7 @@ impl<'s, T: Deserialize<'s>> Deserialize<'s> for Option<T> {
     where
         D: Deserializer<'s> + ?Sized,
     {
-        match de.next()? {
+        match de.next().await? {
             Event::Null => Ok(None),
             ev => {
                 let value = de.t_starting_with(Some(ev)).await?;
@@ -446,7 +447,7 @@ impl<'s, T: Deserialize<'s>> Deserialize<'s> for Vec<T> {
     where
         D: Deserializer<'s> + ?Sized,
     {
-        let array_start = de.next()?.into_array_start()?;
+        let array_start = de.next().await?.into_array_start()?;
         let mut vec = if let Some(size) = array_start.size_hint {
             Vec::with_capacity(size)
         } else {
@@ -454,7 +455,7 @@ impl<'s, T: Deserialize<'s>> Deserialize<'s> for Vec<T> {
         };
 
         loop {
-            match de.next()? {
+            match de.next().await? {
                 Event::ArrayEnd => {
                     #[cfg(debug_assertions)]
                     {
@@ -485,11 +486,11 @@ where
     where
         D: Deserializer<'s> + ?Sized,
     {
-        de.next()?.into_map_start()?;
+        de.next().await?.into_map_start()?;
         let mut map = HashMap::<K, V, S>::default();
 
         loop {
-            match de.next()? {
+            match de.next().await? {
                 Event::MapEnd => break,
                 ev => {
                     let key: K = de.t_starting_with(Some(ev)).await?;
@@ -508,11 +509,11 @@ impl<'s> Deserialize<'s> for Map<'s> {
     where
         D: Deserializer<'s> + ?Sized,
     {
-        de.next()?.into_map_start()?;
+        de.next().await?.into_map_start()?;
         let mut map = Map::new();
 
         loop {
-            match de.next()? {
+            match de.next().await? {
                 Event::MapEnd => break,
                 Event::Str(key) => {
                     let value: Value<'s> = de.t().await?;
@@ -537,7 +538,7 @@ impl<'s> Deserialize<'s> for Array<'s> {
     where
         D: Deserializer<'s> + ?Sized,
     {
-        let array_start = de.next()?.into_array_start()?;
+        let array_start = de.next().await?.into_array_start()?;
         let mut array = if let Some(size) = array_start.size_hint {
             Array::with_capacity(size)
         } else {
@@ -545,7 +546,7 @@ impl<'s> Deserialize<'s> for Array<'s> {
         };
 
         loop {
-            match de.next()? {
+            match de.next().await? {
                 Event::ArrayEnd => break,
                 ev => {
                     let item: Value<'s> = de.t_starting_with(Some(ev)).await?;
@@ -563,7 +564,7 @@ impl<'s> Deserialize<'s> for Value<'s> {
     where
         D: Deserializer<'s> + ?Sized,
     {
-        match de.next()? {
+        match de.next().await? {
             Event::I64(i) => Ok(Value::I64(i)),
             Event::U64(u) => Ok(Value::U64(u)),
             Event::F64(f) => Ok(Value::Float(f.into())),
@@ -577,7 +578,7 @@ impl<'s> Deserialize<'s> for Value<'s> {
                     None => Map::new(),
                 };
                 loop {
-                    match de.next()? {
+                    match de.next().await? {
                         Event::MapEnd => break,
                         Event::Str(key) => {
                             let value: Value = de
@@ -600,7 +601,7 @@ impl<'s> Deserialize<'s> for Value<'s> {
             Event::ArrayStart(_) => {
                 let mut vec = Array::new();
                 loop {
-                    match de.next()? {
+                    match de.next().await? {
                         Event::ArrayEnd => break,
                         ev => {
                             let item: Value = de
@@ -640,9 +641,9 @@ where
     where
         D: Deserializer<'s> + ?Sized,
     {
-        de.next()?.into_array_start()?;
+        de.next().await?.into_array_start()?;
         let t1 = de.t().await?;
-        de.next()?.into_array_end()?;
+        de.next().await?.into_array_end()?;
         Ok((t1,))
     }
 }
@@ -656,10 +657,10 @@ where
     where
         D: Deserializer<'s> + ?Sized,
     {
-        de.next()?.into_array_start()?;
+        de.next().await?.into_array_start()?;
         let t1 = de.t().await?;
         let t2 = de.t().await?;
-        de.next()?.into_array_end()?;
+        de.next().await?.into_array_end()?;
         Ok((t1, t2))
     }
 }
@@ -674,11 +675,11 @@ where
     where
         D: Deserializer<'s> + ?Sized,
     {
-        de.next()?.into_array_start()?;
+        de.next().await?.into_array_start()?;
         let t1 = de.t().await?;
         let t2 = de.t().await?;
         let t3 = de.t().await?;
-        de.next()?.into_array_end()?;
+        de.next().await?.into_array_end()?;
         Ok((t1, t2, t3))
     }
 }
@@ -694,12 +695,12 @@ where
     where
         D: Deserializer<'s> + ?Sized,
     {
-        de.next()?.into_array_start()?;
+        de.next().await?.into_array_start()?;
         let t1 = de.t().await?;
         let t2 = de.t().await?;
         let t3 = de.t().await?;
         let t4 = de.t().await?;
-        de.next()?.into_array_end()?;
+        de.next().await?.into_array_end()?;
         Ok((t1, t2, t3, t4))
     }
 }
@@ -716,13 +717,13 @@ where
     where
         D: Deserializer<'s> + ?Sized,
     {
-        de.next()?.into_array_start()?;
+        de.next().await?.into_array_start()?;
         let t1 = de.t().await?;
         let t2 = de.t().await?;
         let t3 = de.t().await?;
         let t4 = de.t().await?;
         let t5 = de.t().await?;
-        de.next()?.into_array_end()?;
+        de.next().await?.into_array_end()?;
         Ok((t1, t2, t3, t4, t5))
     }
 }
@@ -740,14 +741,14 @@ where
     where
         D: Deserializer<'s> + ?Sized,
     {
-        de.next()?.into_array_start()?;
+        de.next().await?.into_array_start()?;
         let t1 = de.t().await?;
         let t2 = de.t().await?;
         let t3 = de.t().await?;
         let t4 = de.t().await?;
         let t5 = de.t().await?;
         let t6 = de.t().await?;
-        de.next()?.into_array_end()?;
+        de.next().await?.into_array_end()?;
         Ok((t1, t2, t3, t4, t5, t6))
     }
 }
@@ -766,7 +767,7 @@ where
     where
         D: Deserializer<'s> + ?Sized,
     {
-        de.next()?.into_array_start()?;
+        de.next().await?.into_array_start()?;
         let t1 = de.t().await?;
         let t2 = de.t().await?;
         let t3 = de.t().await?;
@@ -774,7 +775,7 @@ where
         let t5 = de.t().await?;
         let t6 = de.t().await?;
         let t7 = de.t().await?;
-        de.next()?.into_array_end()?;
+        de.next().await?.into_array_end()?;
         Ok((t1, t2, t3, t4, t5, t6, t7))
     }
 }
@@ -794,7 +795,7 @@ where
     where
         D: Deserializer<'s> + ?Sized,
     {
-        de.next()?.into_array_start()?;
+        de.next().await?.into_array_start()?;
         let t1 = de.t().await?;
         let t2 = de.t().await?;
         let t3 = de.t().await?;
@@ -803,7 +804,7 @@ where
         let t6 = de.t().await?;
         let t7 = de.t().await?;
         let t8 = de.t().await?;
-        de.next()?.into_array_end()?;
+        de.next().await?.into_array_end()?;
         Ok((t1, t2, t3, t4, t5, t6, t7, t8))
     }
 }

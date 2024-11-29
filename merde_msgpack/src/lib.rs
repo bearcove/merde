@@ -77,7 +77,7 @@ impl<'s> From<merde_core::MerdeError<'s>> for MsgpackError<'s> {
 impl<'s> merde_core::Deserializer<'s> for MsgpackDeserializer<'s> {
     type Error<'es> = MsgpackError<'es>;
 
-    fn next(&mut self) -> Result<Event<'s>, Self::Error<'s>> {
+    async fn next(&mut self) -> Result<Event<'s>, Self::Error<'s>> {
         if let Some(ev) = self.starter.take() {
             return Ok(ev);
         }

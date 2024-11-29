@@ -132,7 +132,7 @@ mod tests {
     impl<'s> Deserializer<'s> for Journal {
         type Error<'es> = MerdeError<'es>;
 
-        fn next(&mut self) -> Result<Event<'s>, Self::Error<'s>> {
+        async fn next(&mut self) -> Result<Event<'s>, Self::Error<'s>> {
             Ok(self.events.pop_front().unwrap())
         }
 

@@ -66,7 +66,7 @@ impl<'s> YamlDeserializer<'s> {
 impl<'s> Deserializer<'s> for YamlDeserializer<'s> {
     type Error<'es> = MerdeYamlError<'es>;
 
-    fn next(&mut self) -> Result<Event<'s>, Self::Error<'s>> {
+    async fn next(&mut self) -> Result<Event<'s>, Self::Error<'s>> {
         loop {
             if let Some(starter) = self.starter.take() {
                 return Ok(starter);

@@ -56,7 +56,7 @@ fn jiter_error(source: &str, err: JiterError) -> MerdeJsonError<'_> {
 impl<'s> Deserializer<'s> for JsonDeserializer<'s> {
     type Error<'es> = MerdeJsonError<'es>;
 
-    fn next(&mut self) -> Result<Event<'s>, Self::Error<'s>> {
+    async fn next(&mut self) -> Result<Event<'s>, Self::Error<'s>> {
         if let Some(ev) = self.starter.take() {
             return Ok(ev);
         }
@@ -230,10 +230,10 @@ mod tests {
             let mut height: Option<i64> = None;
             let mut kind: Option<bool> = None;
 
-            de.next()?.into_map_start()?;
+            de.next().await?.into_map_start()?;
 
             loop {
-                match de.next()? {
+                match de.next().await? {
                     // many different policies are possible here
                     Event::Str(k) => match k.as_ref() {
                         "height" => {

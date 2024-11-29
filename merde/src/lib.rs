@@ -62,14 +62,14 @@ macro_rules! impl_deserialize {
                 use $crate::DeserOpinions;
 
                 let __opinions = $opinions;
-                __de.next()?.into_map_start()?;
+                __de.next().await?.into_map_start()?;
 
                 $(
                     let mut $field = $crate::none_of(|i: $struct_name| i.$field);
                 )+
 
                 loop {
-                    match __de.next()? {
+                    match __de.next().await? {
                         $crate::Event::MapEnd => break,
                         $crate::Event::Str(__key) => {
                             let __key = __opinions.map_key_name(__key);
@@ -124,14 +124,14 @@ macro_rules! impl_deserialize {
                 use $crate::DeserOpinions;
 
                 let __opinions = $opinions;
-                __de.next()?.into_map_start()?;
+                __de.next().await?.into_map_start()?;
 
                 $(
                     let mut $field = $crate::none_of(|i: $struct_name<$s>| i.$field);
                 )+
 
                 loop {
-                    match __de.next()? {
+                    match __de.next().await? {
                         $crate::Event::MapEnd => break,
                         $crate::Event::Str(__key) => {
                             let __key = __opinions.map_key_name(__key);
@@ -182,12 +182,12 @@ macro_rules! impl_deserialize {
                 #[allow(unused_imports)]
                 use $crate::MerdeError;
 
-                de.next()?.into_map_start()?;
-                let key = de.next()?.into_str()?;
+                de.next().await?.into_map_start()?;
+                let key = de.next().await?.into_str()?;
                 match key.as_ref() {
                     $($variant_str => {
                         let value = de.t().await?;
-                        de.next()?.into_map_end()?;
+                        de.next().await?.into_map_end()?;
                         Ok($enum_name::$variant(value))
                     },)*
                     _ => Err(MerdeError::UnknownProperty(key).into()),
@@ -209,12 +209,12 @@ macro_rules! impl_deserialize {
                 #[allow(unused_imports)]
                 use $crate::MerdeError;
 
-                de.next()?.into_map_start()?;
-                let key = de.next()?.into_str()?;
+                de.next().await?.into_map_start()?;
+                let key = de.next().await?.into_str()?;
                 match key.as_ref() {
                     $($variant_str => {
                         let value = de.t().await?;
-                        de.next()?.into_map_end()?;
+                        de.next().await?.into_map_end()?;
                         Ok($enum_name::$variant(value))
                     },)*
                     _ => Err(MerdeError::UnknownProperty(key).into()),
@@ -236,7 +236,7 @@ macro_rules! impl_deserialize {
                 #[allow(unused_imports)]
                 use $crate::MerdeError;
 
-                let s = de.next()?.into_str()?;
+                let s = de.next().await?.into_str()?;
                 match s.as_ref() {
                     $($variant_str => Ok($enum_name::$variant),)*
                     _ => Err(MerdeError::UnknownProperty(s).into()),
