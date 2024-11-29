@@ -323,7 +323,6 @@ dependencies = [
  "merde_core",
  "merde_json",
  "merde_msgpack",
- "merde_time",
  "merde_yaml",
 ]
 
@@ -339,6 +338,7 @@ dependencies = [
  "rubicon",
  "rusqlite",
  "serde",
+ "time",
  "trybuild",
 ]
 
@@ -370,15 +370,6 @@ dependencies = [
  "merde_core",
  "merde_loggingserializer",
  "rmp",
-]
-
-[[package]]
-name = "merde_time"
-version = "8.0.3"
-dependencies = [
- "merde_core",
- "merde_json",
- "time",
 ]
 
 [[package]]

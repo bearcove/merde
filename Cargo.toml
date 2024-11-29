@@ -3,7 +3,6 @@ resolver = "2"
 members = [
     "merde",
     "merde_json",
-    "merde_time",
     "merde_core",
     "merde_yaml",
     "merde_msgpack",

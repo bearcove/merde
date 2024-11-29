@@ -45,6 +45,9 @@ pub use deserialize::DeserializeOwned;
 pub use deserialize::Deserializer;
 pub use deserialize::FieldSlot;
 
+mod rfc3339;
+pub use rfc3339::Rfc3339;
+
 rubicon::compatibility_check! {
     ("merde_core_pkg_version", env!("CARGO_PKG_VERSION")),
 }

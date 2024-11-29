@@ -1,13 +1,11 @@
 //! Provides [Rfc3339], a wrapper around [time::OffsetDateTime] that implements
-//! [merde_core::Serialize] and [merde_core::Deserialize] when the right
+//! [Serialize] and [Deserialize] when the right
 //! cargo features are enabled.
 
 use std::{
     fmt,
     ops::{Deref, DerefMut},
 };
-
-pub use time::OffsetDateTime;
 
 /// A wrapper around date-time types that implements `Serialize` and `Deserialize`
 /// when the right cargo features are enabled.
@@ -53,11 +51,12 @@ where
     }
 }
 
-#[cfg(feature = "merde")]
-mod merde_impls {
+#[cfg(feature = "time")]
+mod time_impls {
     use super::*;
 
-    impl merde_core::IntoStatic for Rfc3339<OffsetDateTime> {
+    use time::OffsetDateTime;
+    impl crate::IntoStatic for Rfc3339<OffsetDateTime> {
         type Output = Rfc3339<OffsetDateTime>;
 
         fn into_static(self) -> Self::Output {
@@ -65,35 +64,33 @@ mod merde_impls {
         }
     }
 
-    #[cfg(feature = "deserialize")]
-    impl<'s> merde_core::Deserialize<'s> for Rfc3339<time::OffsetDateTime> {
+    impl<'s> crate::Deserialize<'s> for Rfc3339<time::OffsetDateTime> {
         async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
         where
-            D: merde_core::Deserializer<'s> + ?Sized,
+            D: crate::Deserializer<'s> + ?Sized,
         {
-            let s = merde_core::CowStr::deserialize(de).await?;
+            let s = crate::CowStr::deserialize(de).await?;
             Ok(Rfc3339(
                 time::OffsetDateTime::parse(
                     s.as_ref(),
                     &time::format_description::well_known::Rfc3339,
                 )
-                .map_err(|_| merde_core::MerdeError::InvalidDateTimeValue)?,
+                .map_err(|_| crate::MerdeError::InvalidDateTimeValue)?,
             ))
         }
     }
 
-    #[cfg(feature = "serialize")]
-    impl merde_core::Serialize for Rfc3339<time::OffsetDateTime> {
+    impl crate::Serialize for Rfc3339<time::OffsetDateTime> {
         async fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where
-            S: merde_core::Serializer + ?Sized,
+            S: crate::Serializer + ?Sized,
         {
             let s = self
                 .0
                 .format(&time::format_description::well_known::Rfc3339)
                 .unwrap();
             serializer
-                .write(merde_core::Event::Str(merde_core::CowStr::Borrowed(&s)))
+                .write(crate::Event::Str(crate::CowStr::Borrowed(&s)))
                 .await
         }
     }

@@ -16,10 +16,8 @@ and `CowStr<'s>` (a copy-on-write string type that also leverages
 [compact_str](https://crates.io/crates/compact_str)'s small string
 optimization), and traits like `Deserialize` and `IntoStatic`.
 
-Crates that provide support for formats (like [merde_json](https://crates.io/crates/merde_json)),
-and crates that provide wrappers around other crates' types, to allow serializing/deserializing
-them (like [merde_time](https://crates.io/crates/merde_time)), depend only on the "core" crate.
+Crates that provide support for formats (like [merde_json](https://crates.io/crates/merde_json)), depend only on the "core" crate.
 
 The umbrella crate [merde](https://crates.io/crates/merde) re-exports core's types, along
-with a `derive!` macro which lets you implement `ValueDeserialize`, `IntoStatic`, and format-specific
-traits like `JsonSerialize` on structs, with or without lifetime parameters.
+with a `derive!` macro which lets you implement `Serialize`, `Deserialize`, `IntoStatic`,
+on structs, enums, etc.

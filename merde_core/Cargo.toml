@@ -19,6 +19,7 @@ rubicon = "3.4.9"
 rusqlite = { version = "0.32.1", optional = true }
 serde = { version = "1", optional = true }
 pin-project-lite = "0.2.15"
+time = { version = "0.3.36", optional = true, features = ["parsing", "formatting"] }
 
 [features]
 default = []
@@ -26,8 +27,13 @@ full = [
     # (1 per line)
     "serde",
     "rusqlite",
+    "time",
 ]
+# Add `serde` implementations for merde_core types
 serde = ["dep:serde", "compact_str/serde"]
+# Add `merde` implementations for types of the `time` crate
+time = ["dep:time"]
+# Add `merde` implementations for types of the `rusqlite` crate
 rusqlite = ["dep:rusqlite"]
 
 [dev-dependencies]
