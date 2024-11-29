@@ -141,7 +141,7 @@ impl From<CowStr<'_>> for Box<str> {
     }
 }
 
-impl<'a, 'b> PartialEq<CowStr<'a>> for CowStr<'b> {
+impl<'a> PartialEq<CowStr<'a>> for CowStr<'_> {
     #[inline]
     fn eq(&self, other: &CowStr<'a>) -> bool {
         crate::compatibility_check_once();

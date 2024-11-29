@@ -45,7 +45,7 @@ impl<'s> IntoIterator for Array<'s> {
     }
 }
 
-impl<'s> Default for Array<'s> {
+impl Default for Array<'_> {
     fn default() -> Self {
         Self::new()
     }
@@ -65,7 +65,7 @@ impl<'s> Deref for Array<'s> {
     }
 }
 
-impl<'s> DerefMut for Array<'s> {
+impl DerefMut for Array<'_> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }

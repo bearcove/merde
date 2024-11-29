@@ -71,7 +71,7 @@ impl<'s> From<&'s str> for Event<'s> {
     }
 }
 
-impl<'s> From<String> for Event<'s> {
+impl From<String> for Event<'_> {
     fn from(v: String) -> Self {
         Event::Str(v.into())
     }
@@ -89,7 +89,7 @@ impl<'s> From<&'s [u8]> for Event<'s> {
     }
 }
 
-impl<'s> From<Vec<u8>> for Event<'s> {
+impl From<Vec<u8>> for Event<'_> {
     fn from(v: Vec<u8>) -> Self {
         Event::Bytes(v.into())
     }

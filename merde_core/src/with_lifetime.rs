@@ -36,11 +36,11 @@ macro_rules! impl_with_lifetime {
     };
 }
 
-impl<'a, 's, B: ToOwned + ?Sized + 's> WithLifetime<'s> for Cow<'a, B> {
+impl<'s, B: ToOwned + ?Sized + 's> WithLifetime<'s> for Cow<'_, B> {
     type Lifetimed = Cow<'s, B>;
 }
 
-impl<'a, 's> WithLifetime<'s> for &'a str {
+impl<'s> WithLifetime<'s> for &str {
     type Lifetimed = &'s str;
 }
 
@@ -66,7 +66,7 @@ impl_with_lifetime!(
     f64,
 );
 
-impl<'s> WithLifetime<'s> for () {
+impl WithLifetime<'_> for () {
     type Lifetimed = ();
 }
 

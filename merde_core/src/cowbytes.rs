@@ -52,7 +52,7 @@ impl<'a> From<&'a [u8]> for CowBytes<'a> {
     }
 }
 
-impl<'a> From<Vec<u8>> for CowBytes<'a> {
+impl From<Vec<u8>> for CowBytes<'_> {
     fn from(v: Vec<u8>) -> Self {
         CowBytes::Owned(CompactBytes::from(v))
     }
@@ -67,7 +67,7 @@ impl<'a> From<Cow<'a, [u8]>> for CowBytes<'a> {
     }
 }
 
-impl<'a, 'b> PartialEq<CowBytes<'a>> for CowBytes<'b> {
+impl<'a> PartialEq<CowBytes<'a>> for CowBytes<'_> {
     fn eq(&self, other: &CowBytes<'a>) -> bool {
         self.deref() == other.deref()
     }

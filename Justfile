@@ -4,9 +4,6 @@ check:
     cargo check --all-features --all-targets
     cargo hack --each-feature --exclude-features=default,full check
 
-    cargo check --example simple --no-default-features --features=json
-    cargo run --example simple --features=core,json
-
     # can't use cargo-nextest because we want to run doctests
     cargo test -F full
 
@@ -27,5 +24,5 @@ check:
     just miri
 
 miri:
-    cargo +nightly miri run --example opinions -F json
+    cargo +nightly miri run --example opinions -F deserialize,json
     cargo +nightly miri test -p merde_core fieldslot

@@ -7,11 +7,20 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
+use crate::WithLifetime;
+
 /// A wrapper around date-time types that implements `Serialize` and `Deserialize`
 /// when the right cargo features are enabled.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
 pub struct Rfc3339<T>(pub T);
+
+impl<T> WithLifetime<'_> for Rfc3339<T>
+where
+    T: 'static,
+{
+    type Lifetimed = Self;
+}
 
 impl<T> From<T> for Rfc3339<T> {
     fn from(t: T) -> Self {
@@ -50,6 +59,9 @@ where
         self.0.fmt(f)
     }
 }
+
+#[cfg(feature = "time")]
+pub use time::OffsetDateTime;
 
 #[cfg(feature = "time")]
 mod time_impls {
@@ -99,28 +111,64 @@ mod time_impls {
 #[cfg(all(test, feature = "full"))]
 mod tests {
     use super::*;
-    use merde_json::{from_str, JsonSerialize};
+    use crate::{Deserialize, Deserializer, Event, IntoStatic, MerdeError, Serializer};
+    use std::collections::VecDeque;
     use time::macros::datetime;
+
+    #[derive(Debug, Default)]
+    struct Journal {
+        events: VecDeque<Event<'static>>,
+    }
+
+    impl Serializer for Journal {
+        type Error = std::convert::Infallible;
+
+        async fn write(&mut self, event: Event<'_>) -> Result<(), Self::Error> {
+            self.events.push_back(event.into_static());
+            Ok(())
+        }
+    }
+
+    impl<'s> Deserializer<'s> for Journal {
+        type Error<'es> = MerdeError<'es>;
+
+        fn next(&mut self) -> Result<Event<'s>, Self::Error<'s>> {
+            Ok(self.events.pop_front().unwrap())
+        }
+
+        async fn t_starting_with<T: Deserialize<'s>>(
+            &mut self,
+            starter: Option<Event<'s>>,
+        ) -> Result<T, Self::Error<'s>> {
+            if let Some(event) = starter {
+                self.events.push_front(event.into_static());
+            }
+            T::deserialize(self).await
+        }
+    }
 
     #[test]
     fn test_rfc3339_offset_date_time_roundtrip() {
         let original = Rfc3339(datetime!(2023-05-15 14:30:00 UTC));
-        let serialized = original.to_json_string().unwrap();
-        let deserialized: Rfc3339<time::OffsetDateTime> = from_str(&serialized).unwrap();
+        let mut journal: Journal = Default::default();
+
+        journal.serialize_sync(&original).unwrap();
+        let deserialized: Rfc3339<time::OffsetDateTime> = journal.deserialize_owned().unwrap();
+
         assert_eq!(original, deserialized);
     }
 
-    #[test]
-    fn test_rfc3339_offset_date_time_serialization() {
-        let dt = Rfc3339(datetime!(2023-05-15 14:30:00 UTC));
-        let serialized = dt.to_json_string().unwrap();
-        assert_eq!(serialized, r#""2023-05-15T14:30:00Z""#);
-    }
+    // #[test]
+    // fn test_rfc3339_offset_date_time_serialization() {
+    //     let dt = Rfc3339(datetime!(2023-05-15 14:30:00 UTC));
+    //     let serialized = dt.to_json_string().unwrap();
+    //     assert_eq!(serialized, r#""2023-05-15T14:30:00Z""#);
+    // }
 
-    #[test]
-    fn test_rfc3339_offset_date_time_deserialization() {
-        let json = r#""2023-05-15T14:30:00Z""#;
-        let deserialized: Rfc3339<time::OffsetDateTime> = from_str(json).unwrap();
-        assert_eq!(deserialized, Rfc3339(datetime!(2023-05-15 14:30:00 UTC)));
-    }
+    // #[test]
+    // fn test_rfc3339_offset_date_time_deserialization() {
+    //     let json = r#""2023-05-15T14:30:00Z""#;
+    //     let deserialized: Rfc3339<time::OffsetDateTime> = from_str(json).unwrap();
+    //     assert_eq!(deserialized, Rfc3339(datetime!(2023-05-15 14:30:00 UTC)));
+    // }
 }

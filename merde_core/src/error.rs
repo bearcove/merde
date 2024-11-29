@@ -171,7 +171,7 @@ impl std::fmt::Display for MerdeError<'_> {
     }
 }
 
-impl<'s> std::error::Error for MerdeError<'s> {}
+impl std::error::Error for MerdeError<'_> {}
 
 impl Value<'_> {
     /// Returns the [ValueType] for a given [Value].

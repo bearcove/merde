@@ -52,7 +52,7 @@ impl<'t, 'j> From<StringOutput<'t, 'j>> for Cow<'j, str> {
     }
 }
 
-impl<'t, 'j> StringOutput<'t, 'j> {
+impl<'t> StringOutput<'t, '_> {
     pub fn as_str(&self) -> &'t str {
         match self {
             Self::Tape(s, _) => s,

@@ -36,7 +36,7 @@ where
     }
 }
 
-impl<'a, T> IntoStatic for Cow<'a, T>
+impl<T> IntoStatic for Cow<'_, T>
 where
     T: ToOwned + ?Sized + 'static,
 {
@@ -51,7 +51,7 @@ where
     }
 }
 
-impl<'s> IntoStatic for Event<'s> {
+impl IntoStatic for Event<'_> {
     type Output = Event<'static>;
 
     fn into_static(self) -> Self::Output {

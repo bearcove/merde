@@ -463,9 +463,8 @@ Which solves two problems at once:
 `merde` solves both of these with wrapper types:
 
 ```rust
-use merde::time::OffsetDateTime; // re-export from the time crate
 use merde::CowStr;
-use merde::time::Rfc3339;
+use merde::time::{Rfc3339, OffsetDateTime};
 
 #[derive(Debug)]
 struct Person<'s> {
@@ -477,17 +476,15 @@ merde::derive! {
     impl (Deserialize, Serialize) for struct Person<'s> { name, birth }
 }
 
-fn main() {
-    let input = r#"
-        {
-            "name": "Jane Smith",
-            "birth": "1990-01-01T00:00:00Z"
-        }
-    "#;
+let input = r#"
+    {
+        "name": "Jane Smith",
+        "birth": "1990-01-01T00:00:00Z"
+    }
+"#;
 
-    let person: Person = merde::json::from_str(input).unwrap();
-    println!("person = {:?}", person);
-}
+let person: Person = merde::json::from_str(input).unwrap();
+println!("person = {:?}", person);
 ```
 
 You can of course make your own newtype wrappers to control how a field gets deserialized.

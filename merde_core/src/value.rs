@@ -72,13 +72,13 @@ impl_from_for_value! {
     CowBytes<'s> => Bytes,
 }
 
-impl<'s> From<f32> for Value<'s> {
+impl From<f32> for Value<'_> {
     fn from(v: f32) -> Self {
         Value::Float((v as f64).into())
     }
 }
 
-impl<'s> From<f64> for Value<'s> {
+impl From<f64> for Value<'_> {
     fn from(v: f64) -> Self {
         Value::Float(v.into())
     }
@@ -90,7 +90,7 @@ impl<'s> From<&'s str> for Value<'s> {
     }
 }
 
-impl<'s> From<String> for Value<'s> {
+impl From<String> for Value<'_> {
     fn from(v: String) -> Self {
         Value::Str(v.into())
     }
@@ -102,13 +102,13 @@ impl<'s> From<&'s String> for Value<'s> {
     }
 }
 
-impl<'s> From<()> for Value<'s> {
+impl From<()> for Value<'_> {
     fn from(_: ()) -> Self {
         Value::Null
     }
 }
 
-impl<'s> From<bool> for Value<'s> {
+impl From<bool> for Value<'_> {
     fn from(v: bool) -> Self {
         Value::Bool(v)
     }

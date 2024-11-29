@@ -269,7 +269,7 @@ impl From<std::io::Error> for MerdeJsonError<'static> {
     }
 }
 
-impl<'s> MerdeJsonError<'s> {
+impl MerdeJsonError<'_> {
     /// Strip the 'source' field from the error, making it `'static`
     pub fn without_source(self) -> MerdeJsonError<'static> {
         match self {
@@ -312,7 +312,7 @@ impl From<std::str::Utf8Error> for MerdeJsonError<'_> {
     }
 }
 
-impl<'s> std::fmt::Display for MerdeJsonError<'s> {
+impl std::fmt::Display for MerdeJsonError<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             MerdeJsonError::MerdeError(me) => write!(f, "Merde Error: {}", me),
@@ -351,9 +351,9 @@ impl<'s> std::fmt::Display for MerdeJsonError<'s> {
     }
 }
 
-impl<'s> std::error::Error for MerdeJsonError<'s> {}
+impl std::error::Error for MerdeJsonError<'_> {}
 
-impl<'s> std::fmt::Debug for MerdeJsonError<'s> {
+impl std::fmt::Debug for MerdeJsonError<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         std::fmt::Display::fmt(self, f)
     }

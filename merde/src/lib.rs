@@ -12,9 +12,6 @@ pub use merde_yaml as yaml;
 #[allow(unused_imports)]
 use json::JsonSerialize;
 
-#[cfg(feature = "time")]
-pub use merde_time as time;
-
 #[cfg(feature = "core")]
 pub use merde_core::*;
 

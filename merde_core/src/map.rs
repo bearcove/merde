@@ -66,7 +66,7 @@ impl<'s> IntoIterator for Map<'s> {
     }
 }
 
-impl<'s> Default for Map<'s> {
+impl Default for Map<'_> {
     fn default() -> Self {
         Self::new()
     }
