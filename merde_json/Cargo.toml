@@ -27,3 +27,4 @@ tokio = ["dep:tokio"]
 
 [dev-dependencies]
 merde_loggingserializer = { path = "../merde_loggingserializer" }
+tokio = { version = "1", features = ["macros", "rt", "net"] }

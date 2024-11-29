@@ -158,6 +158,25 @@ where
     T::deserialize_owned(&mut deser)
 }
 
+/// Deserialize an instance of type `T` from a byte slice of JSON text.
+pub fn from_bytes<'s, T>(b: &'s [u8]) -> Result<T, MerdeJsonError<'s>>
+where
+    T: Deserialize<'s>,
+{
+    let s = std::str::from_utf8(b)?;
+    from_str(s)
+}
+
+/// Deserialize an instance of type `T` from a byte slice of JSON text,
+/// and return its static variant e.g. (CowStr<'static>, etc.)
+pub fn from_bytes_owned<T>(b: &[u8]) -> Result<T, MerdeJsonError<'_>>
+where
+    T: DeserializeOwned,
+{
+    let s = std::str::from_utf8(b)?;
+    from_str_owned(s)
+}
+
 /// Serialize the given data structure as a String of JSON.
 pub fn to_string<T: Serialize>(value: &T) -> Result<String, MerdeJsonError<'static>> {
     // SAFETY: This is safe because we know that the JSON serialization
@@ -186,5 +205,19 @@ where
 {
     let mut s = JsonSerializer::from_writer(&mut writer);
     s.serialize_sync(value)?;
+    Ok(())
+}
+
+#[cfg(feature = "tokio")]
+/// Serialize the given data structure as JSON into the Tokio I/O stream.
+pub async fn to_tokio_writer<W, T>(writer: &mut W, value: &T) -> Result<(), MerdeJsonError<'static>>
+where
+    W: tokio::io::AsyncWrite + Unpin,
+    T: Serialize,
+{
+    use std::pin::Pin;
+
+    let mut s = JsonSerializer::from_tokio_writer(Pin::new(writer));
+    s.serialize(value).await?;
     Ok(())
 }

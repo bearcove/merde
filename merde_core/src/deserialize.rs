@@ -2,6 +2,7 @@ use std::{
     any::TypeId,
     borrow::Cow,
     collections::HashMap,
+    future::Future,
     hash::{BuildHasher, Hash},
     marker::PhantomData,
 };
@@ -16,23 +17,20 @@ pub trait Deserializer<'s>: std::fmt::Debug {
 
     /// Get the next event from the deserializer.
     #[doc(hidden)]
-    #[allow(async_fn_in_trait)]
-    async fn next(&mut self) -> Result<Event<'s>, Self::Error<'s>>;
+    fn next(&mut self) -> impl Future<Output = Result<Event<'s>, Self::Error<'s>>>;
 
     /// Deserialize a value of type `T`.
     #[doc(hidden)]
-    #[allow(async_fn_in_trait)]
-    async fn t<T: Deserialize<'s>>(&mut self) -> Result<T, Self::Error<'s>> {
-        self.t_starting_with(None).await
+    fn t<T: Deserialize<'s>>(&mut self) -> impl Future<Output = Result<T, Self::Error<'s>>> {
+        self.t_starting_with(None)
     }
 
     /// Deserialize a value of type `T`, using the given event as the first event.
     #[doc(hidden)]
-    #[allow(async_fn_in_trait)]
-    async fn t_starting_with<T: Deserialize<'s>>(
+    fn t_starting_with<T: Deserialize<'s>>(
         &mut self,
         starter: Option<Event<'s>>,
-    ) -> Result<T, Self::Error<'s>>;
+    ) -> impl Future<Output = Result<T, Self::Error<'s>>>;
 
     /// Deserialize a value of type `T`, with infinite stack support.
     fn deserialize_sync<T: Deserialize<'s>>(&mut self) -> Result<T, Self::Error<'s>> {
@@ -205,8 +203,7 @@ impl DeserOpinions for DefaultDeserOpinions {
 }
 
 pub trait Deserialize<'s>: Sized {
-    #[allow(async_fn_in_trait)]
-    async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
+    fn deserialize<D>(de: &mut D) -> impl Future<Output = Result<Self, D::Error<'s>>>
     where
         D: Deserializer<'s> + ?Sized;
 
