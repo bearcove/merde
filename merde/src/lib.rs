@@ -661,9 +661,8 @@ macro_rules! impl_trait {
 ///     impl (Serialize, Deserialize) for struct MyStruct transparent
 /// }
 ///
-/// use merde::json::JsonSerialize;
 /// assert_eq!(
-///   MyStruct("foobar".into()).to_json_string().unwrap(),
+///   merde::json::to_string(&MyStruct("foobar".into())).unwrap(),
 ///   r#""foobar""#
 /// );
 /// ```
