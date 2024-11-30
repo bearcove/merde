@@ -10,8 +10,8 @@ pub use serialize::{JsonSerializer, JsonSerializerWriter};
 mod jiter_lite;
 
 use merde_core::{
-    Deserialize, DeserializeOwned, DynDeserializerExt, DynSerializerExt, MerdeError, MetastackExt,
-    Serialize,
+    Deserialize, DeserializeOwned, DynDeserializerExt, DynSerialize, DynSerializerExt, MerdeError,
+    MetastackExt, Serialize,
 };
 
 /// Deserialize an instance of type `T` from a string of JSON text.
@@ -71,14 +71,11 @@ pub fn to_vec<T: Serialize>(value: &T) -> Result<Vec<u8>, MerdeError<'static>> {
 }
 
 /// Serialize the given data structure as JSON into the I/O stream.
-pub fn to_writer<W, T>(
-    mut writer: impl std::io::Write,
-    value: &T,
-) -> Result<(), MerdeError<'static>>
-where
-    T: Serialize,
-{
-    let mut s = JsonSerializer::from_writer(&mut writer);
-    s.serialize(value)?;
+pub fn to_writer(
+    writer: &mut dyn std::io::Write,
+    value: &mut dyn DynSerialize,
+) -> Result<(), MerdeError<'static>> {
+    let mut s = JsonSerializer::from_writer(writer);
+    s.dyn_serialize(value)?;
     Ok(())
 }

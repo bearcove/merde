@@ -193,9 +193,7 @@ where
 
 impl<'w> JsonSerializer<SyncWriteWrapper<'w>> {
     /// Makes a json serializer that writes to a std::io::Write
-    pub fn from_writer<SW: std::io::Write + 'w>(
-        w: &'w mut SW,
-    ) -> JsonSerializer<SyncWriteWrapper<'w>> {
+    pub fn from_writer(w: &'w mut dyn std::io::Write) -> JsonSerializer<SyncWriteWrapper<'w>> {
         JsonSerializer::new(SyncWriteWrapper(w))
     }
 }
