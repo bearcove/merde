@@ -19,9 +19,6 @@ pub enum JsonFieldType {
     /// The JSON value fits in an `i64`.
     Int,
 
-    /// The JSON value no longer fits in an `i64`.
-    BigInt,
-
     /// The JSON value has decimal places.
     Float,
 
@@ -144,7 +141,6 @@ impl JsonFieldType {
             JsonValue::Null => JsonFieldType::Null,
             JsonValue::Bool(_) => JsonFieldType::Bool,
             JsonValue::Int(_) => JsonFieldType::Int,
-            JsonValue::BigInt(_) => JsonFieldType::BigInt,
             JsonValue::Float(_) => JsonFieldType::Float,
             JsonValue::Str(_) => JsonFieldType::String,
             JsonValue::Array(_) => JsonFieldType::Array,

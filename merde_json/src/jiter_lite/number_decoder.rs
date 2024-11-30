@@ -1,8 +1,3 @@
-#[cfg(feature = "num-bigint")]
-use num_bigint::BigInt;
-#[cfg(feature = "num-bigint")]
-use num_traits::cast::ToPrimitive;
-
 use std::ops::Range;
 
 use lexical_parse_float::{
@@ -26,16 +21,12 @@ pub trait AbstractNumberDecoder {
 #[derive(Debug, Clone, PartialEq)]
 pub enum NumberInt {
     Int(i64),
-    #[cfg(feature = "num-bigint")]
-    BigInt(BigInt),
 }
 
 impl From<NumberInt> for f64 {
     fn from(num: NumberInt) -> Self {
         match num {
             NumberInt::Int(int) => int as f64,
-            #[cfg(feature = "num-bigint")]
-            NumberInt::BigInt(big_int) => big_int.to_f64().unwrap_or(f64::NAN),
         }
     }
 }
@@ -220,7 +211,6 @@ pub(crate) enum IntParse {
 
 impl IntParse {
     pub(crate) fn parse(data: &[u8], mut index: usize, first: u8) -> JsonResult<(Self, usize)> {
-        let start = index;
         let positive = match first {
             b'N' => return Ok((Self::FloatNaN, index)),
             b'-' => false,
@@ -254,7 +244,7 @@ impl IntParse {
         index += 1;
         let (chunk, new_index) = IntChunk::parse_small(data, index, first_value);
 
-        let ongoing: u64 = match chunk {
+        match chunk {
             IntChunk::Ongoing(value) => value,
             IntChunk::Done(value) => {
                 let mut value_i64 = value as i64;
@@ -266,72 +256,8 @@ impl IntParse {
             IntChunk::Float => return Ok((Self::Float, new_index)),
         };
 
-        // number is too big for i64, we need to use a BigInt,
-        // or error out if num-bigint is not enabled
-
-        #[cfg(not(feature = "num-bigint"))]
-        {
-            // silence unused variable warning
-            let _ = (ongoing, start);
-            json_err!(NumberOutOfRange, index)
-        }
-
-        #[cfg(feature = "num-bigint")]
-        {
-            #[cfg(target_arch = "aarch64")]
-            // in aarch64 we use a 128 bit registers - 16 bytes
-            const ONGOING_CHUNK_MULTIPLIER: u64 = 10u64.pow(16);
-            #[cfg(not(target_arch = "aarch64"))]
-            // decode_int_chunk_fallback - we parse 18 bytes when the number is ongoing
-            const ONGOING_CHUNK_MULTIPLIER: u64 = 10u64.pow(18);
-
-            const POW_10: [u64; 18] = [
-                10u64.pow(0),
-                10u64.pow(1),
-                10u64.pow(2),
-                10u64.pow(3),
-                10u64.pow(4),
-                10u64.pow(5),
-                10u64.pow(6),
-                10u64.pow(7),
-                10u64.pow(8),
-                10u64.pow(9),
-                10u64.pow(10),
-                10u64.pow(11),
-                10u64.pow(12),
-                10u64.pow(13),
-                10u64.pow(14),
-                10u64.pow(15),
-                10u64.pow(16),
-                10u64.pow(17),
-            ];
-
-            let mut big_value: BigInt = ongoing.into();
-            index = new_index;
-
-            loop {
-                let (chunk, new_index) = IntChunk::parse_big(data, index);
-                if (new_index - start) > 4300 {
-                    return json_err!(NumberOutOfRange, start + 4301);
-                }
-                match chunk {
-                    IntChunk::Ongoing(value) => {
-                        big_value *= ONGOING_CHUNK_MULTIPLIER;
-                        big_value += value;
-                        index = new_index;
-                    }
-                    IntChunk::Done(value) => {
-                        big_value *= POW_10[new_index - index];
-                        big_value += value;
-                        if !positive {
-                            big_value = -big_value;
-                        }
-                        return Ok((Self::Int(NumberInt::BigInt(big_value)), new_index));
-                    }
-                    IntChunk::Float => return Ok((Self::Float, new_index)),
-                }
-            }
-        }
+        // number is too big for i64
+        json_err!(NumberOutOfRange, index)
     }
 }
 
@@ -412,10 +338,10 @@ pub(crate) static INT_CHAR_MAP: [bool; 256] = {
     ]
 };
 
+// in some cfg configurations, fields are never read
+#[allow(dead_code)]
 pub struct NumberRange {
     pub range: Range<usize>,
-    // in some cfg configurations, this field is never read.
-    #[allow(dead_code)]
     pub is_int: bool,
 }
 

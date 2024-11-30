@@ -14,15 +14,12 @@ categories = ["encoding", "parser-implementations"]
 itoa = "1.0.11"
 lexical-parse-float = { version = "0.8.5", features = ["format"] }
 merde_core = { version = "8.1.1", path = "../merde_core" }
-num-bigint = { version = "0.4.6", optional = true }
-num-traits = { version = "0.2.19", optional = true }
 ryu = "1.0.18"
 tokio = { version = "1", optional = true, features = ["io-util"] }
 
 [features]
 default = []
-full = ["num-bigint", "tokio"]
-num-bigint = ["dep:num-bigint", "dep:num-traits"]
+full = ["tokio"]
 tokio = ["dep:tokio"]
 
 [dev-dependencies]
