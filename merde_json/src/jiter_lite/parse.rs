@@ -3,7 +3,7 @@ use std::ops::Range;
 
 use crate::jiter_lite as jiter;
 
-use jiter::errors::{json_err, JsonResult, LinePosition};
+use jiter::errors::{json_err, JsonResult};
 use jiter::number_decoder::AbstractNumberDecoder;
 use jiter::string_decoder::{AbstractStringDecoder, Tape};
 
@@ -74,10 +74,6 @@ impl<'j> Parser<'j> {
     #[allow(dead_code)]
     pub fn slice(&self, range: Range<usize>) -> Option<&[u8]> {
         self.data.get(range)
-    }
-
-    pub fn current_position(&self) -> LinePosition {
-        LinePosition::find(self.data, self.index)
     }
 
     pub fn peek(&mut self) -> JsonResult<Peek> {
@@ -175,14 +171,6 @@ impl<'j> Parser<'j> {
             }
         } else {
             json_err!(EofWhileParsingObject, self.index)
-        }
-    }
-
-    pub fn finish(&mut self) -> JsonResult<()> {
-        if self.eat_whitespace().is_none() {
-            Ok(())
-        } else {
-            json_err!(TrailingCharacters, self.index)
         }
     }
 

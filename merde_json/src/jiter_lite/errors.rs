@@ -164,7 +164,6 @@ macro_rules! json_err {
     };
 }
 
-use crate::jiter_lite::jiter::Jiter;
 pub(crate) use json_err;
 
 /// Enum representing all JSON types.
@@ -230,15 +229,6 @@ impl std::fmt::Display for JiterError {
 impl JiterError {
     pub(crate) fn new(error_type: JiterErrorType, index: usize) -> Self {
         Self { error_type, index }
-    }
-
-    pub fn get_position(&self, jiter: &Jiter) -> LinePosition {
-        jiter.error_position(self.index)
-    }
-
-    pub fn description(&self, jiter: &Jiter) -> String {
-        let position = self.get_position(jiter);
-        format!("{} at {}", self.error_type, position)
     }
 
     pub(crate) fn wrong_type(expected: JsonType, actual: JsonType, index: usize) -> Self {
