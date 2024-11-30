@@ -1,3 +1,6 @@
+// cf. <https://github.com/rust-lang/rust/issues/133676>
+#![allow(clippy::manual_async_fn)]
+
 mod cowstr;
 
 pub use cowstr::CowStr;
@@ -36,6 +39,8 @@ pub use event::EventType;
 pub use event::MapStart;
 
 mod serialize;
+pub use serialize::DynSerializer;
+pub use serialize::DynSerializerExt;
 pub use serialize::Serialize;
 pub use serialize::Serializer;
 

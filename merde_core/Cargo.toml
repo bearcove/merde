@@ -9,7 +9,7 @@ readme = "README.md"
 repository = "https://github.com/bearcove/merde"
 keywords = ["merde", "serialization", "deserialization"]
 categories = ["encoding", "parser-implementations"]
-rust-version = "1.80"
+rust-version = "1.83"
 
 [dependencies]
 compact_str = { version = "0.8.0" }

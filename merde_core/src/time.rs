@@ -65,6 +65,8 @@ pub use time::OffsetDateTime;
 
 #[cfg(feature = "time")]
 mod time_impls {
+    use std::future::Future;
+
     use super::*;
 
     use time::OffsetDateTime;
@@ -92,17 +94,20 @@ mod time_impls {
     }
 
     impl crate::Serialize for Rfc3339<time::OffsetDateTime> {
-        async fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-        where
-            S: crate::Serializer + ?Sized,
-        {
-            let s = self
-                .0
-                .format(&time::format_description::well_known::Rfc3339)
-                .unwrap();
-            serializer
-                .write(crate::Event::Str(crate::CowStr::Borrowed(&s)))
-                .await
+        #[allow(clippy::manual_async_fn)]
+        fn serialize<'fut>(
+            &'fut self,
+            serializer: &'fut mut dyn crate::DynSerializer,
+        ) -> impl Future<Output = Result<(), crate::MerdeError<'static>>> + 'fut {
+            async move {
+                let s = self
+                    .0
+                    .format(&time::format_description::well_known::Rfc3339)
+                    .unwrap();
+                serializer
+                    .write(crate::Event::Str(crate::CowStr::Borrowed(&s)))
+                    .await
+            }
         }
     }
 }
@@ -110,7 +115,7 @@ mod time_impls {
 #[cfg(all(test, feature = "full"))]
 mod tests {
     use super::*;
-    use crate::{Deserializer, Event, IntoStatic, MerdeError, Serializer};
+    use crate::{Deserializer, DynSerializerExt, Event, IntoStatic, MerdeError, Serializer};
     use std::{collections::VecDeque, future::Future};
     use time::macros::datetime;
 
@@ -120,11 +125,14 @@ mod tests {
     }
 
     impl Serializer for Journal {
-        type Error = std::convert::Infallible;
-
-        async fn write(&mut self, event: Event<'_>) -> Result<(), Self::Error> {
-            self.events.push_back(event.into_static());
-            Ok(())
+        fn write<'fut>(
+            &'fut mut self,
+            event: Event<'fut>,
+        ) -> impl Future<Output = Result<(), MerdeError<'static>>> + 'fut {
+            async move {
+                self.events.push_back(event.into_static());
+                Ok(())
+            }
         }
     }
 

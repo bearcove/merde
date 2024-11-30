@@ -37,15 +37,13 @@ struct Point {
     y: i32,
 }
 
-fn main() {
-    let point = Point { x: 1, y: 2 };
+let point = Point { x: 1, y: 2 };
 
-    let serialized = serde_json::to_string(&point).unwrap();
-    println!("serialized = {}", serialized);
+let serialized = serde_json::to_string(&point).unwrap();
+println!("serialized = {}", serialized);
 
-    let deserialized: Point = serde_json::from_str(&serialized).unwrap();
-    println!("deserialized = {:?}", deserialized);
-}
+let deserialized: Point = serde_json::from_str(&serialized).unwrap();
+println!("deserialized = {:?}", deserialized);
 ```
 
 By contrast, `merde` provides declarative macros — impls for traits
@@ -62,16 +60,14 @@ merde::derive! {
     impl (Deserialize, Serialize) for struct Point { x, y }
 }
 
-fn main() {
-    let point = Point { x: 1, y: 2 };
+let point = Point { x: 1, y: 2 };
 
-    // note: `merde_json` is re-exported as `merde::json` if `merde`'s `json` feature is enabled
-    let serialized = merde::json::to_string(&point).unwrap();
-    println!("serialized = {}", serialized);
+// note: `merde_json` is re-exported as `merde::json` if `merde`'s `json` feature is enabled
+let serialized = merde::json::to_string(&point).unwrap();
+println!("serialized = {}", serialized);
 
-    let deserialized: Point = merde::json::from_str(&serialized).unwrap();
-    println!("deserialized = {:?}", deserialized);
-}
+let deserialized: Point = merde::json::from_str(&serialized).unwrap();
+println!("deserialized = {:?}", deserialized);
 ```
 
 This approach is less flexible, but because there's no proc-macro involved, or
@@ -175,11 +171,9 @@ merde::derive! {
     for struct Wrapper<'s> transparent
 }
 
-fn main() {
-    let input = r#"["Hello, World!"]"#;
-    let wrapper: Vec<Wrapper> = merde::json::from_str(input).unwrap();
-    println!("Wrapped value: {:?}", wrapper);
-}
+let input = r#"["Hello, World!"]"#;
+let wrapper: Vec<Wrapper> = merde::json::from_str(input).unwrap();
+println!("Wrapped value: {:?}", wrapper);
 ```
 
 Enums are also supported, only externally-tagged ones for now, and you need
@@ -226,11 +220,9 @@ merde::derive! {
     }
 }
 
-fn main() {
-    let input = r#"{"mouseup": {"x": 100, "y": 200}}"#;
-    let event: TestEvent = merde::json::from_str(input).unwrap();
-    println!("TestEvent: {:?}", event);
-}
+let input = r#"{"mouseup": {"x": 100, "y": 200}}"#;
+let event: TestEvent = merde::json::from_str(input).unwrap();
+println!("TestEvent: {:?}", event);
 ```
 
 "string-like" enums are also supported, like so:
@@ -254,11 +246,9 @@ merde::derive! {
     }
 }
 
-fn main() {
-    let input = r#"["cuddle", "smoothie", "playtime"]"#;
-    let emergencies: Vec<Emergency> = merde::json::from_str(input).unwrap();
-    println!("Emergencies: {:?}", emergencies);
-}
+let input = r#"["cuddle", "smoothie", "playtime"]"#;
+let emergencies: Vec<Emergency> = merde::json::from_str(input).unwrap();
+println!("Emergencies: {:?}", emergencies);
 ```
 
 ### Interlude: why not `&'s str`?
@@ -319,14 +309,12 @@ Such a string will end up being owned in a `CowStr`:
 ```rust
 use merde::{CowStr, Deserialize};
 
-fn main() {
-    let input = r#"
-        ["\"The Rock\""]
-    "#;
+let input = r#"
+    ["\"The Rock\""]
+"#;
 
-    let v: Vec<CowStr<'_>> = merde::json::from_str(input).unwrap();
-    assert!(matches!(v.first().unwrap(), CowStr::Owned(_)));
-}
+let v: Vec<CowStr<'_>> = merde::json::from_str(input).unwrap();
+assert!(matches!(v.first().unwrap(), CowStr::Owned(_)));
 ```
 
 Whereas something without escape sequences will end up being borrowed:
@@ -334,14 +322,12 @@ Whereas something without escape sequences will end up being borrowed:
 ```rust
 use merde::{CowStr, Deserialize};
 
-fn main() {
-    let input = r#"
-        ["Joever"]
-    "#;
+let input = r#"
+    ["Joever"]
+"#;
 
-    let v: Vec<CowStr<'_>> = merde::json::from_str(input).unwrap();
-    assert!(matches!(v.first().unwrap(), CowStr::Borrowed(_)));
-}
+let v: Vec<CowStr<'_>> = merde::json::from_str(input).unwrap();
+assert!(matches!(v.first().unwrap(), CowStr::Borrowed(_)));
 ```
 
 All this is pretty JSON-specific, but you get the idea.
@@ -378,9 +364,7 @@ fn recv_and_deserialize<'s>() -> Message<'s> {
     message
 }
 
-fn main() {
-    let _msg = recv_and_deserialize();
-}
+let _msg = recv_and_deserialize();
 ```
 
 This fails to build with:
@@ -423,9 +407,7 @@ fn recv_and_deserialize() -> Message<'static> {
     message.into_static()
 }
 
-fn main() {
-    let _msg = recv_and_deserialize();
-}
+let _msg = recv_and_deserialize();
 ```
 
 Et voilà! ✨

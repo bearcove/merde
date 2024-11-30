@@ -1,6 +1,6 @@
 use std::{collections::VecDeque, future::Future, io::Write};
 
-use merde_core::{MerdeError, Serializer};
+use merde_core::{Event, MerdeError, Serializer};
 
 /// Something the JSON serializer can write to
 pub trait JsonSerializerWriter {
@@ -73,104 +73,108 @@ impl<W> Serializer for JsonSerializer<W>
 where
     W: JsonSerializerWriter,
 {
-    type Error = MerdeError<'static>;
-
-    async fn write(&mut self, ev: merde_core::Event<'_>) -> Result<(), Self::Error> {
-        let stack_top = self.stack.back_mut();
-        if let Some(stack_top) = stack_top {
-            match stack_top {
-                StackFrame::Array { first } => {
-                    if matches!(ev, merde_core::Event::ArrayEnd) {
-                        self.w.extend_from_slice(b"]").await?;
-                        self.stack.pop_back();
-                        return Ok(());
-                    } else if *first {
-                        *first = false
-                    } else {
-                        self.w.extend_from_slice(b",").await?;
-                    }
-                }
-                StackFrame::MapKey { first } => {
-                    if matches!(ev, merde_core::Event::MapEnd) {
-                        self.w.extend_from_slice(b"}").await?;
-                        self.stack.pop_back();
-                        return Ok(());
-                    } else {
-                        if !*first {
+    #[allow(clippy::manual_async_fn)]
+    fn write<'fut>(
+        &'fut mut self,
+        ev: Event<'fut>,
+    ) -> impl Future<Output = Result<(), MerdeError<'static>>> + 'fut {
+        async move {
+            let stack_top = self.stack.back_mut();
+            if let Some(stack_top) = stack_top {
+                match stack_top {
+                    StackFrame::Array { first } => {
+                        if matches!(ev, merde_core::Event::ArrayEnd) {
+                            self.w.extend_from_slice(b"]").await?;
+                            self.stack.pop_back();
+                            return Ok(());
+                        } else if *first {
+                            *first = false
+                        } else {
                             self.w.extend_from_slice(b",").await?;
                         }
-                        *stack_top = StackFrame::MapValue;
-                        // and then let the value write itself
                     }
-                }
-                StackFrame::MapValue => {
-                    self.w.extend_from_slice(b":").await?;
-                    *stack_top = StackFrame::MapKey { first: false };
-                }
-            }
-        }
-
-        match ev {
-            merde_core::Event::Null => {
-                self.w.extend_from_slice(b"null").await?;
-            }
-            merde_core::Event::Bool(b) => {
-                self.w
-                    .extend_from_slice(if b { b"true" } else { b"false" })
-                    .await?;
-            }
-            merde_core::Event::I64(i) => {
-                let mut buf = itoa::Buffer::new();
-                self.w.extend_from_slice(buf.format(i).as_bytes()).await?;
-            }
-            merde_core::Event::U64(u) => {
-                let mut buf = itoa::Buffer::new();
-                self.w.extend_from_slice(buf.format(u).as_bytes()).await?;
-            }
-            merde_core::Event::F64(f) => {
-                let mut buf = ryu::Buffer::new();
-                self.w.extend_from_slice(buf.format(f).as_bytes()).await?;
-            }
-            merde_core::Event::Str(s) => {
-                // slow path
-                self.w.extend_from_slice(b"\"").await?;
-                for c in s.chars() {
-                    match c {
-                        '"' => self.w.extend_from_slice(b"\\\"").await?,
-                        '\\' => self.w.extend_from_slice(b"\\\\").await?,
-                        '\n' => self.w.extend_from_slice(b"\\n").await?,
-                        '\r' => self.w.extend_from_slice(b"\\r").await?,
-                        '\t' => self.w.extend_from_slice(b"\\t").await?,
-                        c if c.is_control() => {
-                            let mut buf = [0u8; 6];
-                            write!(&mut buf[..], "\\u{:04x}", c as u32).unwrap();
-                            self.w.extend_from_slice(&buf[..6]).await?;
+                    StackFrame::MapKey { first } => {
+                        if matches!(ev, merde_core::Event::MapEnd) {
+                            self.w.extend_from_slice(b"}").await?;
+                            self.stack.pop_back();
+                            return Ok(());
+                        } else {
+                            if !*first {
+                                self.w.extend_from_slice(b",").await?;
+                            }
+                            *stack_top = StackFrame::MapValue;
+                            // and then let the value write itself
                         }
-                        c => self.w.extend_from_slice(c.to_string().as_bytes()).await?,
+                    }
+                    StackFrame::MapValue => {
+                        self.w.extend_from_slice(b":").await?;
+                        *stack_top = StackFrame::MapKey { first: false };
                     }
                 }
-                self.w.extend_from_slice(b"\"").await?;
             }
-            merde_core::Event::MapStart(_) => {
-                self.w.extend_from_slice(b"{").await?;
-                self.stack.push_back(StackFrame::MapKey { first: true });
+
+            match ev {
+                merde_core::Event::Null => {
+                    self.w.extend_from_slice(b"null").await?;
+                }
+                merde_core::Event::Bool(b) => {
+                    self.w
+                        .extend_from_slice(if b { b"true" } else { b"false" })
+                        .await?;
+                }
+                merde_core::Event::I64(i) => {
+                    let mut buf = itoa::Buffer::new();
+                    self.w.extend_from_slice(buf.format(i).as_bytes()).await?;
+                }
+                merde_core::Event::U64(u) => {
+                    let mut buf = itoa::Buffer::new();
+                    self.w.extend_from_slice(buf.format(u).as_bytes()).await?;
+                }
+                merde_core::Event::F64(f) => {
+                    let mut buf = ryu::Buffer::new();
+                    self.w.extend_from_slice(buf.format(f).as_bytes()).await?;
+                }
+                merde_core::Event::Str(s) => {
+                    // slow path
+                    self.w.extend_from_slice(b"\"").await?;
+                    for c in s.chars() {
+                        match c {
+                            '"' => self.w.extend_from_slice(b"\\\"").await?,
+                            '\\' => self.w.extend_from_slice(b"\\\\").await?,
+                            '\n' => self.w.extend_from_slice(b"\\n").await?,
+                            '\r' => self.w.extend_from_slice(b"\\r").await?,
+                            '\t' => self.w.extend_from_slice(b"\\t").await?,
+                            c if c.is_control() => {
+                                let mut buf = [0u8; 6];
+                                write!(&mut buf[..], "\\u{:04x}", c as u32).unwrap();
+                                self.w.extend_from_slice(&buf[..6]).await?;
+                            }
+                            c => self.w.extend_from_slice(c.to_string().as_bytes()).await?,
+                        }
+                    }
+                    self.w.extend_from_slice(b"\"").await?;
+                }
+                merde_core::Event::MapStart(_) => {
+                    self.w.extend_from_slice(b"{").await?;
+                    self.stack.push_back(StackFrame::MapKey { first: true });
+                }
+                merde_core::Event::MapEnd => {
+                    self.w.extend_from_slice(b"}").await?;
+                }
+                merde_core::Event::ArrayStart(_) => {
+                    self.w.extend_from_slice(b"[").await?;
+                    self.stack.push_back(StackFrame::Array { first: true });
+                }
+                merde_core::Event::ArrayEnd => {
+                    panic!("array end without array start");
+                }
+                merde_core::Event::Bytes(_) => {
+                    // figure out what to do with those? maybe base64, maybe an array of
+                    // integers? unclear. maybe it should be a serializer setting.
+                }
             }
-            merde_core::Event::MapEnd => {
-                self.w.extend_from_slice(b"}").await?;
-            }
-            merde_core::Event::ArrayStart(_) => {
-                self.w.extend_from_slice(b"[").await?;
-                self.stack.push_back(StackFrame::Array { first: true });
-            }
-            merde_core::Event::ArrayEnd => {
-                panic!("array end without array start");
-            }
-            merde_core::Event::Bytes(_) => {
-                // figure out what to do with those? maybe base64, maybe an array of
-                // integers? unclear. maybe it should be a serializer setting.
-            }
+            Ok(())
         }
-        Ok(())
     }
 }
 

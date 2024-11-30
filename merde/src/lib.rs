@@ -443,11 +443,14 @@ macro_rules! impl_serialize {
     (struct $struct_name:ident transparent) => {
         #[automatically_derived]
         impl $crate::Serialize for $struct_name {
-            async fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-            where
-                S: $crate::Serializer + ?Sized,
-            {
-                self.0.serialize(serializer).await
+            #[allow(clippy::manual_async_fn)]
+            fn serialize<'fut>(
+                &'fut self,
+                serializer: &'fut mut dyn $crate::DynSerializer,
+            ) -> impl ::std::future::Future<Output = Result<(), $crate::MerdeError<'static>>> + 'fut {
+                async move {
+                    self.0.serialize(serializer).await
+                }
             }
         }
     };
@@ -456,11 +459,14 @@ macro_rules! impl_serialize {
     (struct $struct_name:ident <$lifetime:lifetime> transparent) => {
         #[automatically_derived]
         impl<$lifetime> $crate::Serialize for $struct_name<$lifetime> {
-            async fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-            where
-                S: $crate::Serializer + ?Sized,
-            {
-                self.0.serialize(serializer).await
+            #[allow(clippy::manual_async_fn)]
+            fn serialize<'fut>(
+                &'fut self,
+                serializer: &'fut mut dyn $crate::DynSerializer,
+            ) -> impl ::std::future::Future<Output = Result<(), $crate::MerdeError<'static>>> + 'fut {
+                async move {
+                    self.0.serialize(serializer).await
+                }
             }
         }
     };
@@ -469,20 +475,23 @@ macro_rules! impl_serialize {
     (struct $struct_name:ident < $lifetime:lifetime > { $($field:ident),* }) => {
         #[automatically_derived]
         impl<$lifetime> $crate::Serialize for $struct_name<$lifetime> {
-            async fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-            where
-                S: $crate::Serializer + ?Sized,
-            {
-                serializer
-                    .write($crate::Event::MapStart($crate::MapStart {
-                        size_hint: Some($crate::count_ident_tokens!($($field)*)),
-                    }))
-                    .await?;
-                $(
-                    serializer.write($crate::Event::Str($crate::CowStr::Borrowed(stringify!($field)))).await?;
-                    self.$field.serialize(serializer).await?;
-                )+
-                serializer.write($crate::Event::MapEnd).await
+            #[allow(clippy::manual_async_fn)]
+            fn serialize<'fut>(
+                &'fut self,
+                serializer: &'fut mut dyn $crate::DynSerializer,
+            ) -> impl ::std::future::Future<Output = Result<(), $crate::MerdeError<'static>>> + 'fut {
+                async move {
+                    serializer
+                        .write($crate::Event::MapStart($crate::MapStart {
+                            size_hint: Some($crate::count_ident_tokens!($($field)*)),
+                        }))
+                        .await?;
+                    $(
+                        serializer.write($crate::Event::Str($crate::CowStr::Borrowed(stringify!($field)))).await?;
+                        self.$field.serialize(serializer).await?;
+                    )+
+                    serializer.write($crate::Event::MapEnd).await
+                }
             }
         }
     };
@@ -491,20 +500,23 @@ macro_rules! impl_serialize {
     (struct $struct_name:ident { $($field:ident),* }) => {
         #[automatically_derived]
         impl $crate::Serialize for $struct_name {
-            async fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-            where
-                S: $crate::Serializer + ?Sized,
-            {
-                serializer
-                    .write($crate::Event::MapStart($crate::MapStart {
-                        size_hint: Some($crate::count_ident_tokens!($($field)*)),
-                    }))
-                    .await?;
-                $(
-                    serializer.write($crate::Event::Str($crate::CowStr::Borrowed(stringify!($field)))).await?;
-                    self.$field.serialize(serializer).await?;
-                )+
-                serializer.write($crate::Event::MapEnd).await
+            #[allow(clippy::manual_async_fn)]
+            fn serialize<'fut>(
+                &'fut self,
+                serializer: &'fut mut dyn $crate::DynSerializer,
+            ) -> impl ::std::future::Future<Output = Result<(), $crate::MerdeError<'static>>> + 'fut {
+                async move {
+                    serializer
+                        .write($crate::Event::MapStart($crate::MapStart {
+                            size_hint: Some($crate::count_ident_tokens!($($field)*)),
+                        }))
+                        .await?;
+                    $(
+                        serializer.write($crate::Event::Str($crate::CowStr::Borrowed(stringify!($field)))).await?;
+                        self.$field.serialize(serializer).await?;
+                    )+
+                    serializer.write($crate::Event::MapEnd).await
+                }
             }
         }
     };
@@ -515,26 +527,29 @@ macro_rules! impl_serialize {
     }) => {
         #[automatically_derived]
         impl $crate::Serialize for $enum_name {
-            async fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-            where
-                S: $crate::Serializer + ?Sized,
-            {
-                serializer
-                    .write($crate::Event::MapStart($crate::MapStart {
-                        size_hint: Some(1),
-                    }))
-                    .await?;
+            #[allow(clippy::manual_async_fn)]
+            fn serialize<'fut>(
+                &'fut self,
+                serializer: &'fut mut dyn $crate::DynSerializer,
+            ) -> impl ::std::future::Future<Output = Result<(), $crate::MerdeError<'static>>> + 'fut {
+                async move {
+                    serializer
+                        .write($crate::Event::MapStart($crate::MapStart {
+                            size_hint: Some(1),
+                        }))
+                        .await?;
 
-                match self {
-                    $(
-                        Self::$variant(value) => {
-                            serializer.write($crate::Event::Str($crate::CowStr::Borrowed($variant_str))).await?;
-                            value.serialize(serializer).await?;
-                        }
-                    )+
+                    match self {
+                        $(
+                            Self::$variant(value) => {
+                                serializer.write($crate::Event::Str($crate::CowStr::Borrowed($variant_str))).await?;
+                                value.serialize(serializer).await?;
+                            }
+                        )+
+                    }
+
+                    serializer.write($crate::Event::MapEnd).await
                 }
-
-                serializer.write($crate::Event::MapEnd).await
             }
         }
     };
@@ -545,26 +560,29 @@ macro_rules! impl_serialize {
     }) => {
         #[automatically_derived]
         impl<$lifetime> $crate::Serialize for $enum_name<$lifetime> {
-            async fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-            where
-                S: $crate::Serializer + ?Sized,
-            {
-                serializer
-                    .write($crate::Event::MapStart($crate::MapStart {
-                        size_hint: Some(1),
-                    }))
-                    .await?;
+            #[allow(clippy::manual_async_fn)]
+            fn serialize<'fut>(
+                &'fut self,
+                serializer: &'fut mut dyn $crate::DynSerializer,
+            ) -> impl ::std::future::Future<Output = Result<(), $crate::MerdeError<'static>>> + 'fut {
+                async move {
+                    serializer
+                        .write($crate::Event::MapStart($crate::MapStart {
+                            size_hint: Some(1),
+                        }))
+                        .await?;
 
-                match self {
-                    $(
-                        Self::$variant(value) => {
-                            serializer.write($crate::Event::Str($crate::CowStr::Borrowed($variant_str))).await?;
-                            value.serialize(serializer).await?;
-                        }
-                    )+
+                    match self {
+                        $(
+                            Self::$variant(value) => {
+                                serializer.write($crate::Event::Str($crate::CowStr::Borrowed($variant_str))).await?;
+                                value.serialize(serializer).await?;
+                            }
+                        )+
+                    }
+
+                    serializer.write($crate::Event::MapEnd).await
                 }
-
-                serializer.write($crate::Event::MapEnd).await
             }
         }
     };
@@ -575,16 +593,19 @@ macro_rules! impl_serialize {
     }) => {
         #[automatically_derived]
         impl $crate::Serialize for $enum_name {
-            async fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-            where
-                S: $crate::Serializer + ?Sized,
-            {
-                match self {
-                    $(
-                        Self::$variant => {
-                            serializer.write($crate::Event::Str($crate::CowStr::Borrowed($variant_str))).await
-                        }
-                    )+
+            #[allow(clippy::manual_async_fn)]
+            fn serialize<'fut>(
+                &'fut self,
+                serializer: &'fut mut dyn $crate::DynSerializer,
+            ) -> impl ::std::future::Future<Output = Result<(), $crate::MerdeError<'static>>> + 'fut {
+                async move {
+                    match self {
+                        $(
+                            Self::$variant => {
+                                serializer.write($crate::Event::Str($crate::CowStr::Borrowed($variant_str))).await
+                            }
+                        )+
+                    }
                 }
             }
         }

@@ -1,4 +1,4 @@
-use crate::{Event, IntoStatic, Map, Serializer, Value};
+use crate::{DynSerializerExt, Event, IntoStatic, Map, MerdeError, Serializer, Value};
 use insta::assert_debug_snapshot;
 
 #[test]
@@ -9,12 +9,10 @@ fn test_serialize() {
     }
 
     impl Serializer for ToySerializer {
-        type Error = ();
-
-        fn write(
-            &mut self,
-            ev: Event<'_>,
-        ) -> impl std::future::Future<Output = Result<(), Self::Error>> {
+        fn write<'fut>(
+            &'fut mut self,
+            ev: Event<'fut>,
+        ) -> impl std::future::Future<Output = Result<(), MerdeError<'static>>> + 'fut {
             self.events.push(ev.into_static());
             async { Ok(()) }
         }

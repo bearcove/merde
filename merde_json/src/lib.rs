@@ -10,8 +10,8 @@ pub use serialize::{JsonSerializer, JsonSerializerWriter};
 mod jiter_lite;
 
 use merde_core::{
-    Deserialize, DeserializeOwned, DynDeserializerExt, MerdeError, MetastackExt, Serialize,
-    Serializer,
+    Deserialize, DeserializeOwned, DynDeserializerExt, DynSerializerExt, MerdeError, MetastackExt,
+    Serialize,
 };
 
 /// Deserialize an instance of type `T` from a string of JSON text.
