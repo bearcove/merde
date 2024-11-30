@@ -125,14 +125,12 @@ mod tests {
     }
 
     impl Serializer for Journal {
-        fn write<'fut>(
+        async fn write<'fut>(
             &'fut mut self,
             event: Event<'fut>,
-        ) -> impl Future<Output = Result<(), MerdeError<'static>>> + 'fut {
-            async move {
-                self.events.push_back(event.into_static());
-                Ok(())
-            }
+        ) -> Result<(), MerdeError<'static>> {
+            self.events.push_back(event.into_static());
+            Ok(())
         }
     }
 

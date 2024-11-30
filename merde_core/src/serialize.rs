@@ -91,11 +91,11 @@ macro_rules! impl_trivial_serialize {
 
     ($ty:ty) => {
         impl Serialize for $ty {
-            fn serialize<'fut>(
+            async fn serialize<'fut>(
                 &'fut self,
                 serializer: &'fut mut dyn DynSerializer,
-            ) -> impl Future<Output = Result<(), MerdeError<'static>>> + 'fut {
-                async { serializer.write(Event::from(*self)).await }
+            ) -> Result<(), MerdeError<'static>> {
+                serializer.write(Event::from(*self)).await
             }
         }
     };
@@ -115,197 +115,177 @@ impl_trivial_serialize! {
 }
 
 impl Serialize for String {
-    fn serialize<'se>(
+    async fn serialize<'se>(
         &'se self,
         serializer: &'se mut dyn DynSerializer,
-    ) -> impl Future<Output = Result<(), MerdeError<'static>>> + 'se {
-        async { serializer.write(Event::Str(CowStr::Borrowed(self))).await }
+    ) -> Result<(), MerdeError<'static>> {
+        serializer.write(Event::Str(CowStr::Borrowed(self))).await
     }
 }
 
 impl<'s> Serialize for &'s str {
-    fn serialize<'se>(
+    async fn serialize<'se>(
         &'se self,
         serializer: &'se mut dyn DynSerializer,
-    ) -> impl Future<Output = Result<(), MerdeError<'static>>> + 'se {
-        async { serializer.write(Event::Str(CowStr::Borrowed(self))).await }
+    ) -> Result<(), MerdeError<'static>> {
+        serializer.write(Event::Str(CowStr::Borrowed(self))).await
     }
 }
 
 impl<'s> Serialize for CowStr<'s> {
-    fn serialize<'se>(
+    async fn serialize<'se>(
         &'se self,
         serializer: &'se mut dyn DynSerializer,
-    ) -> impl Future<Output = Result<(), MerdeError<'static>>> + 'se {
-        async {
-            serializer
-                .write(Event::Str(CowStr::Borrowed(self.as_ref())))
-                .await
-        }
+    ) -> Result<(), MerdeError<'static>> {
+        serializer
+            .write(Event::Str(CowStr::Borrowed(self.as_ref())))
+            .await
     }
 }
 
 impl<'s> Serialize for Cow<'s, str> {
-    fn serialize<'se>(
+    async fn serialize<'se>(
         &'se self,
         serializer: &'se mut dyn DynSerializer,
-    ) -> impl Future<Output = Result<(), MerdeError<'static>>> + 'se {
-        async {
-            serializer
-                .write(Event::Str(CowStr::Borrowed(self.as_ref())))
-                .await
-        }
+    ) -> Result<(), MerdeError<'static>> {
+        serializer
+            .write(Event::Str(CowStr::Borrowed(self.as_ref())))
+            .await
     }
 }
 
 impl<'s> Serialize for CowBytes<'s> {
-    fn serialize<'se>(
+    async fn serialize<'se>(
         &'se self,
         serializer: &'se mut dyn DynSerializer,
-    ) -> impl Future<Output = Result<(), MerdeError<'static>>> + 'se {
-        async {
-            serializer
-                .write(Event::Bytes(CowBytes::Borrowed(self.as_ref())))
-                .await
-        }
+    ) -> Result<(), MerdeError<'static>> {
+        serializer
+            .write(Event::Bytes(CowBytes::Borrowed(self.as_ref())))
+            .await
     }
 }
 
 impl<T: Serialize> Serialize for Option<T> {
-    fn serialize<'se>(
+    async fn serialize<'se>(
         &'se self,
         serializer: &'se mut dyn DynSerializer,
-    ) -> impl Future<Output = Result<(), MerdeError<'static>>> + 'se {
-        async move {
-            match self {
-                Some(value) => value.serialize(serializer).await,
-                None => serializer.write(Event::Null).await,
-            }
+    ) -> Result<(), MerdeError<'static>> {
+        match self {
+            Some(value) => value.serialize(serializer).await,
+            None => serializer.write(Event::Null).await,
         }
     }
 }
 
 impl<T: Serialize> Serialize for &[T] {
-    fn serialize<'se>(
+    async fn serialize<'se>(
         &'se self,
         serializer: &'se mut dyn DynSerializer,
-    ) -> impl Future<Output = Result<(), MerdeError<'static>>> + 'se {
-        async {
-            serializer
-                .write(Event::ArrayStart(ArrayStart {
-                    size_hint: Some(self.len()),
-                }))
-                .await?;
-            for item in *self {
-                item.serialize(serializer).await?;
-            }
-            serializer.write(Event::ArrayEnd).await
+    ) -> Result<(), MerdeError<'static>> {
+        serializer
+            .write(Event::ArrayStart(ArrayStart {
+                size_hint: Some(self.len()),
+            }))
+            .await?;
+        for item in *self {
+            item.serialize(serializer).await?;
         }
+        serializer.write(Event::ArrayEnd).await
     }
 }
 
 impl<T: Serialize> Serialize for Vec<T> {
-    fn serialize<'se>(
+    async fn serialize<'se>(
         &'se self,
         serializer: &'se mut dyn DynSerializer,
-    ) -> impl Future<Output = Result<(), MerdeError<'static>>> + 'se {
-        async move {
-            serializer
-                .write(Event::ArrayStart(ArrayStart {
-                    size_hint: Some(self.len()),
-                }))
-                .await?;
-            for item in self {
-                item.serialize(serializer).await?;
-            }
-            serializer.write(Event::ArrayEnd).await
+    ) -> Result<(), MerdeError<'static>> {
+        serializer
+            .write(Event::ArrayStart(ArrayStart {
+                size_hint: Some(self.len()),
+            }))
+            .await?;
+        for item in self {
+            item.serialize(serializer).await?;
         }
+        serializer.write(Event::ArrayEnd).await
     }
 }
 
 impl<K: Serialize, V: Serialize, BH: BuildHasher> Serialize for HashMap<K, V, BH> {
-    fn serialize<'fut>(
+    async fn serialize<'fut>(
         &'fut self,
         serializer: &'fut mut dyn DynSerializer,
-    ) -> impl Future<Output = Result<(), MerdeError<'static>>> + 'fut {
-        async move {
-            serializer
-                .write(Event::MapStart(MapStart {
-                    size_hint: Some(self.len()),
-                }))
-                .await?;
-            for (key, value) in self {
-                key.serialize(serializer).await?;
-                value.serialize(serializer).await?;
-            }
-            serializer.write(Event::MapEnd).await
+    ) -> Result<(), MerdeError<'static>> {
+        serializer
+            .write(Event::MapStart(MapStart {
+                size_hint: Some(self.len()),
+            }))
+            .await?;
+        for (key, value) in self {
+            key.serialize(serializer).await?;
+            value.serialize(serializer).await?;
         }
+        serializer.write(Event::MapEnd).await
     }
 }
 
 impl Serialize for Map<'_> {
-    fn serialize<'se>(
+    async fn serialize<'se>(
         &'se self,
         serializer: &'se mut dyn DynSerializer,
-    ) -> impl Future<Output = Result<(), MerdeError<'static>>> + 'se {
-        async {
-            serializer
-                .write(Event::MapStart(MapStart {
-                    size_hint: Some(self.len()),
-                }))
-                .await?;
-            for (key, value) in self.iter() {
-                serializer.write(Event::Str(CowStr::Borrowed(key))).await?;
-                value.serialize(serializer).await?;
-            }
-            serializer.write(Event::MapEnd).await
+    ) -> Result<(), MerdeError<'static>> {
+        serializer
+            .write(Event::MapStart(MapStart {
+                size_hint: Some(self.len()),
+            }))
+            .await?;
+        for (key, value) in self.iter() {
+            serializer.write(Event::Str(CowStr::Borrowed(key))).await?;
+            value.serialize(serializer).await?;
         }
+        serializer.write(Event::MapEnd).await
     }
 }
 
 impl Serialize for Array<'_> {
-    fn serialize<'se>(
+    async fn serialize<'se>(
         &'se self,
         serializer: &'se mut dyn DynSerializer,
-    ) -> impl Future<Output = Result<(), MerdeError<'static>>> + 'se {
-        async {
-            serializer
-                .write(Event::ArrayStart(ArrayStart {
-                    size_hint: Some(self.len()),
-                }))
-                .await?;
-            for item in self.iter() {
-                item.serialize(serializer).await?;
-            }
-            serializer.write(Event::ArrayEnd).await
+    ) -> Result<(), MerdeError<'static>> {
+        serializer
+            .write(Event::ArrayStart(ArrayStart {
+                size_hint: Some(self.len()),
+            }))
+            .await?;
+        for item in self.iter() {
+            item.serialize(serializer).await?;
         }
+        serializer.write(Event::ArrayEnd).await
     }
 }
 
 impl Serialize for Value<'_> {
-    fn serialize<'se>(
+    async fn serialize<'se>(
         &'se self,
         serializer: &'se mut dyn DynSerializer,
-    ) -> impl Future<Output = Result<(), MerdeError<'static>>> + 'se {
-        async move {
-            match self {
-                Value::I64(i) => serializer.write(Event::I64(*i)).await,
-                Value::U64(u) => serializer.write(Event::U64(*u)).await,
-                Value::Float(f) => serializer.write(Event::F64(f.into_inner())).await,
-                Value::Str(s) => serializer.write(Event::Str(s.clone())).await,
-                Value::Bytes(b) => serializer.write(Event::Bytes(b.clone())).await,
-                Value::Null => serializer.write(Event::Null).await,
-                Value::Bool(b) => serializer.write(Event::Bool(*b)).await,
-                Value::Array(arr) => {
-                    arr.serialize(serializer)
-                        .with_metastack_resume_point()
-                        .await
-                }
-                Value::Map(map) => {
-                    map.serialize(serializer)
-                        .with_metastack_resume_point()
-                        .await
-                }
+    ) -> Result<(), MerdeError<'static>> {
+        match self {
+            Value::I64(i) => serializer.write(Event::I64(*i)).await,
+            Value::U64(u) => serializer.write(Event::U64(*u)).await,
+            Value::Float(f) => serializer.write(Event::F64(f.into_inner())).await,
+            Value::Str(s) => serializer.write(Event::Str(s.clone())).await,
+            Value::Bytes(b) => serializer.write(Event::Bytes(b.clone())).await,
+            Value::Null => serializer.write(Event::Null).await,
+            Value::Bool(b) => serializer.write(Event::Bool(*b)).await,
+            Value::Array(arr) => {
+                arr.serialize(serializer)
+                    .with_metastack_resume_point()
+                    .await
+            }
+            Value::Map(map) => {
+                map.serialize(serializer)
+                    .with_metastack_resume_point()
+                    .await
             }
         }
     }
@@ -314,18 +294,16 @@ impl Serialize for Value<'_> {
 macro_rules! impl_serialize_for_tuple {
     ($($type_arg:ident),*) => {
         impl<$($type_arg: Serialize),*> Serialize for ($($type_arg),*,) {
-            fn serialize<'se>(
+            async fn serialize<'se>(
                 &'se self,
                 serializer: &'se mut dyn DynSerializer,
-            ) -> impl Future<Output = Result<(), MerdeError<'static>>> + 'se {
-                async move {
-                    serializer.write(Event::ArrayStart(ArrayStart {
-                        size_hint: Some(count_tup!($($type_arg)*))
-                    })).await?;
+            ) -> Result<(), MerdeError<'static>> {
+                serializer.write(Event::ArrayStart(ArrayStart {
+                    size_hint: Some(count_tup!($($type_arg)*))
+                })).await?;
 
-                    impl_serialize_for_tuple!(@inner self serializer _field => _field () ($($type_arg)*));
-                    serializer.write(Event::ArrayEnd).await
-                }
+                impl_serialize_for_tuple!(@inner self serializer _field => _field () ($($type_arg)*));
+                serializer.write(Event::ArrayEnd).await
             }
         }
     };

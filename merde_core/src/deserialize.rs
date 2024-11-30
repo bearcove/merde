@@ -49,7 +49,9 @@ where
 pub trait DynDeserializerExt<'s> {
     fn t<'de, T: Deserialize<'s>>(
         &'de mut self,
-    ) -> impl Future<Output = Result<T, MerdeError<'s>>> + 'de;
+    ) -> impl Future<Output = Result<T, MerdeError<'s>>> + 'de
+    where
+        's: 'de;
 
     fn deserialize<T: Deserialize<'s>>(&mut self) -> Result<T, MerdeError<'s>>;
 
@@ -60,12 +62,13 @@ impl<'s, D> DynDeserializerExt<'s> for D
 where
     D: Deserializer<'s>,
 {
-    // cf. <https://github.com/rust-lang/rust/issues/133676>
-    #[allow(clippy::manual_async_fn)]
     fn t<'de, T: Deserialize<'s>>(
         &'de mut self,
-    ) -> impl Future<Output = Result<T, MerdeError<'s>>> + 'de {
-        async move { T::deserialize(self).await }
+    ) -> impl Future<Output = Result<T, MerdeError<'s>>> + 'de
+    where
+        's: 'de,
+    {
+        T::deserialize(self)
     }
 
     fn deserialize<T: Deserialize<'s>>(&mut self) -> Result<T, MerdeError<'s>> {
@@ -80,7 +83,10 @@ where
 impl<'s> DynDeserializerExt<'s> for dyn DynDeserializer<'s> + '_ {
     fn t<'de, T: Deserialize<'s>>(
         &'de mut self,
-    ) -> impl Future<Output = Result<T, MerdeError<'s>>> + 'de {
+    ) -> impl Future<Output = Result<T, MerdeError<'s>>> + 'de
+    where
+        's: 'de,
+    {
         T::deserialize(self)
     }
 
