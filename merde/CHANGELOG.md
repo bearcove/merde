@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [8.1.4](https://github.com/bearcove/merde/compare/merde-v8.1.3...merde-v8.1.4) - 2024-11-30
+
+### Other
+
+- remove async versions of things
+- wip dyn serialize
+- Tests pass
+- no errors left?
+- Fix more warnings and errors
+- More!
+- yay other errors
+- Dwip
+- Remove JsonSerialize trait
+- Expose an async Deserializer interface
+- Make Deserializer::next async
+- Move things around re: absorbing merde_time in merde_core
+- Yus
+
 ## [8.1.3](https://github.com/bearcove/merde/compare/merde-v8.1.2...merde-v8.1.3) - 2024-11-24
 
 ### Other

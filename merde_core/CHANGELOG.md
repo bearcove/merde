@@ -6,6 +6,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [9.0.0](https://github.com/bearcove/merde/compare/merde_core-v8.1.1...merde_core-v9.0.0) - 2024-11-30
+
+### Other
+
+- Introduce DynDeserialize
+- Remove workaround for https://github.com/rust-lang/rust/issues/133676
+- Mhh
+- Use DynSerialize in merde_json
+- Introduce DynSerialize
+- Rename serialize_sync to serialize
+- remove async versions of things
+- wip dyn serialize
+- More!
+- yay other errors
+- Dwip
+- lift static requirement
+- mhh lifetimes yes
+- mh
+- well that's hard
+- Expose to_tokio_writer
+- Remove JsonSerialize trait
+- Expose an async Deserializer interface
+- Make Deserializer::next async
+- Move things around re: absorbing merde_time in merde_core
+- Yus
+
 ## [8.1.1](https://github.com/bearcove/merde/compare/merde_core-v8.1.0...merde_core-v8.1.1) - 2024-11-24
 
 ### Other

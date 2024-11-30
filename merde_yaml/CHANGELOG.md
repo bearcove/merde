@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [9.0.0](https://github.com/bearcove/merde/compare/merde_yaml-v8.0.2...merde_yaml-v9.0.0) - 2024-11-30
+
+### Other
+
+- remove async versions of things
+- More!
+- yay other errors
+- Expose an async Deserializer interface
+- Make Deserializer::next async
+
 ## [8.0.2](https://github.com/bearcove/merde/compare/merde_yaml-v8.0.1...merde_yaml-v8.0.2) - 2024-11-24
 
 ### Other

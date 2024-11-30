@@ -6,6 +6,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [9.0.0](https://github.com/bearcove/merde/compare/merde_json-v8.0.2...merde_json-v9.0.0) - 2024-11-30
+
+### Other
+
+- Mhh
+- Use DynSerialize in merde_json
+- Rename serialize_sync to serialize
+- async stuff Does Not Work for now
+- remove async versions of things
+- wip dyn serialize
+- bye bigint
+- Remove unused jiter_lite methods
+- Fix more warnings and errors
+- More!
+- yay other errors
+- Dwip
+- Expose to_tokio_writer
+- Remove JsonSerialize trait
+- Expose an async Deserializer interface
+- Make Deserializer::next async
+- Move things around re: absorbing merde_time in merde_core
+
 ## [8.0.2](https://github.com/bearcove/merde/compare/merde_json-v8.0.1...merde_json-v8.0.2) - 2024-11-24
 
 ### Other
