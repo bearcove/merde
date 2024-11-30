@@ -10,8 +10,8 @@ pub use serialize::{JsonSerializer, JsonSerializerWriter};
 mod jiter_lite;
 
 use merde_core::{
-    Deserialize, DeserializeOwned, DynDeserializerExt, DynSerializerExt, MerdeError, MetastackExt,
-    Serialize,
+    Deserialize, DeserializeOwned, DynDeserializerExt, DynSerialize, DynSerializerExt, MerdeError,
+    MetastackExt, Serialize,
 };
 
 /// Deserialize an instance of type `T` from a string of JSON text.
@@ -74,10 +74,7 @@ pub fn to_vec<T: Serialize>(value: &T) -> Result<Vec<u8>, MerdeError<'static>> {
 pub fn to_writer(
     mut writer: &mut (dyn std::io::Write + Send),
     value: &dyn DynSerialize,
-) -> Result<(), MerdeError<'static>>
-where
-    T: Serialize,
-{
+) -> Result<(), MerdeError<'static>> {
     let mut s = JsonSerializer::from_writer(&mut writer);
     s.serialize_sync(value)?;
     Ok(())
@@ -87,7 +84,7 @@ where
 /// Serialize the given data structure as JSON into the Tokio I/O stream.
 pub async fn to_tokio_writer<W, T>(writer: &mut W, value: &T) -> Result<(), MerdeError<'static>>
 where
-    W: tokio::io::AsyncWrite + Unpin,
+    W: tokio::io::AsyncWrite + Send + Unpin,
     T: Serialize,
 {
     use std::pin::Pin;

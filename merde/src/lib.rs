@@ -34,9 +34,9 @@ macro_rules! impl_deserialize {
         impl<$s> $crate::Deserialize<$s> for $struct_name<$s> {
             #[inline(always)]
             async fn deserialize(__de: &mut dyn $crate::DynDeserializer<'s>) -> Result<Self, $crate::MerdeError<'s>> {
-                use $crate::DynDeserializerExt;
+                use $crate::{DynDeserializerExt, SendFuture};
 
-                Ok(Self(__de.t().await?))
+                Ok(Self(__de.t().send().await?))
             }
         }
     };
@@ -53,23 +53,23 @@ macro_rules! impl_deserialize {
             #[inline(always)]
             async fn deserialize(__de: &mut dyn $crate::DynDeserializer<'s>) -> Result<Self, $crate::MerdeError<'s>> {
                 #![allow(unreachable_code)]
-                use $crate::{DynDeserializerExt, DeserOpinions};
+                use $crate::{DynDeserializerExt, DeserOpinions, SendFuture};
 
                 let __opinions = $opinions;
-                __de.next().await?.into_map_start()?;
+                __de.next().send().await?.into_map_start()?;
 
                 $(
                     let mut $field = $crate::none_of(|i: $struct_name| i.$field);
                 )+
 
                 loop {
-                    match __de.next().await? {
+                    match __de.next().send().await? {
                         $crate::Event::MapEnd => break,
                         $crate::Event::Str(__key) => {
                             let __key = __opinions.map_key_name(__key);
                             match __key.as_ref() {
                                 $(stringify!($field) => {
-                                    $field = Some(__de.t().await?);
+                                    $field = Some(__de.t().send().await?);
                                 })*
                                 _ => {
                                     if __opinions.deny_unknown_fields() {
@@ -114,23 +114,23 @@ macro_rules! impl_deserialize {
             #[inline(always)]
             async fn deserialize(__de: &mut dyn $crate::DynDeserializer<$s>) -> Result<Self, $crate::MerdeError<$s>> {
                 #![allow(unreachable_code)]
-                use $crate::{DeserOpinions, DynDeserializerExt};
+                use $crate::{DeserOpinions, DynDeserializerExt, SendFuture};
 
                 let __opinions = $opinions;
-                __de.next().await?.into_map_start()?;
+                __de.next().send().await?.into_map_start()?;
 
                 $(
                     let mut $field = $crate::none_of(|i: $struct_name<$s>| i.$field);
                 )+
 
                 loop {
-                    match __de.next().await? {
+                    match __de.next().send().await? {
                         $crate::Event::MapEnd => break,
                         $crate::Event::Str(__key) => {
                             let __key = __opinions.map_key_name(__key);
                             match __key.as_ref() {
                                 $(stringify!($field) => {
-                                    $field = Some(__de.t().await?);
+                                    $field = Some(__de.t().send().await?);
                                 })*
                                 _ => {
                                     if __opinions.deny_unknown_fields() {

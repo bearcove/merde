@@ -1,4 +1,4 @@
-// stolen from <https://github.com/rvolosatovs/send-future/blob/main/src/lib.rs>
+// adapted from <https://github.com/rvolosatovs/send-future/blob/main/src/lib.rs>
 
 //! This crate provides [`SendFuture::send`] workaround for compiler bug
 //! [https://github.com/rust-lang/rust/issues/96865](https://github.com/rust-lang/rust/issues/96865)
@@ -50,8 +50,8 @@
 ///     async move { x.test(["test"]).send().await }
 /// }
 /// ```
-pub trait SendFuture: core::future::Future {
-    fn send(self) -> impl core::future::Future<Output = Self::Output> + Send
+pub trait SendFuture<'s>: core::future::Future + 's {
+    fn send(self) -> impl core::future::Future<Output = Self::Output> + Send + 's
     where
         Self: Sized + Send,
     {
@@ -59,7 +59,7 @@ pub trait SendFuture: core::future::Future {
     }
 }
 
-impl<T: core::future::Future> SendFuture for T {}
+impl<'s, T: core::future::Future + 's> SendFuture<'s> for T {}
 
 #[allow(unused)]
 #[cfg(test)]

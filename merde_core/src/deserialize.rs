@@ -487,33 +487,31 @@ where
     }
 }
 
-impl<'s> Deserialize<'s> for Map<'s> {
-    async fn deserialize<'de>(
-        de: &'de mut dyn DynDeserializer<'s>,
-    ) -> Result<Self, MerdeError<'s>> {
-        de.next().await?.into_map_start()?;
-        let mut map = Map::new();
+// impl<'s> Deserialize<'s> for Map<'s> {
+//     async fn deserialize<'de>(
+//         de: &'de mut dyn DynDeserializer<'s>,
+//     ) -> Result<Self, MerdeError<'s>> {
+//         de.next().await?.into_map_start()?;
+//         let mut map = Map::new();
+//         loop {
+//             match de.next().await? {
+//                 Event::MapEnd => break,
+//                 Event::Str(key) => {
+//                     map.insert(key, de.t().await?);
+//                 }
+//                 ev => {
+//                     return Err(MerdeError::UnexpectedEvent {
+//                         got: EventType::from(&ev),
+//                         expected: &[EventType::Str, EventType::MapEnd],
+//                         help: None,
+//                     })
+//                 }
+//             }
+//         }
 
-        loop {
-            match de.next().await? {
-                Event::MapEnd => break,
-                Event::Str(key) => {
-                    let value: Value<'s> = de.t().await?;
-                    map.insert(key, value);
-                }
-                ev => {
-                    return Err(MerdeError::UnexpectedEvent {
-                        got: EventType::from(&ev),
-                        expected: &[EventType::Str, EventType::MapEnd],
-                        help: None,
-                    })
-                }
-            }
-        }
-
-        Ok(map)
-    }
-}
+//         Ok(map)
+//     }
+// }
 
 impl<'s> Deserialize<'s> for Array<'s> {
     async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {

@@ -42,6 +42,7 @@ pub use event::EventType;
 pub use event::MapStart;
 
 mod serialize;
+pub use serialize::DynSerialize;
 pub use serialize::DynSerializer;
 pub use serialize::DynSerializerExt;
 pub use serialize::Serialize;

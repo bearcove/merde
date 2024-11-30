@@ -8,7 +8,7 @@ pub trait JsonSerializerWriter: Send {
     fn extend_from_slice(
         &mut self,
         slice: &[u8],
-    ) -> impl Future<Output = Result<(), std::io::Error>>;
+    ) -> impl Future<Output = Result<(), std::io::Error>> + Send;
 }
 
 impl JsonSerializerWriter for &mut Vec<u8> {
@@ -36,7 +36,7 @@ pub mod tokio_io {
     use tokio::io::AsyncWriteExt;
 
     /// Implements `JsonSerializerWriter` for `tokio::io::AsyncWrite`
-    pub struct AsyncWriteWrapper<'s>(pub Pin<&'s mut dyn tokio::io::AsyncWrite>);
+    pub struct AsyncWriteWrapper<'s>(pub Pin<&'s mut (dyn tokio::io::AsyncWrite + Send)>);
 
     impl super::JsonSerializerWriter for AsyncWriteWrapper<'_> {
         async fn extend_from_slice(&mut self, slice: &[u8]) -> Result<(), std::io::Error> {
@@ -77,7 +77,7 @@ where
     fn write<'fut>(
         &'fut mut self,
         ev: Event<'fut>,
-    ) -> impl Future<Output = Result<(), MerdeError<'static>>> + 'fut {
+    ) -> impl Future<Output = Result<(), MerdeError<'static>>> + Send + 'fut {
         async move {
             let stack_top = self.stack.back_mut();
             if let Some(stack_top) = stack_top {
@@ -203,7 +203,7 @@ impl<'w> JsonSerializer<SyncWriteWrapper<'w>> {
 #[cfg(feature = "tokio")]
 impl<'w> JsonSerializer<tokio_io::AsyncWriteWrapper<'w>> {
     /// Makes a json serializer that writes to a tokio::io::AsyncWrite
-    pub fn from_tokio_writer<SW: tokio::io::AsyncWrite + 'w>(
+    pub fn from_tokio_writer<SW: tokio::io::AsyncWrite + Send + 'w>(
         w: std::pin::Pin<&'w mut SW>,
     ) -> JsonSerializer<tokio_io::AsyncWriteWrapper<'w>> {
         JsonSerializer::new(tokio_io::AsyncWriteWrapper(w))
