@@ -45,10 +45,16 @@ where
     }
 }
 
-trait DynDeserializerExt<'s> {
+pub trait DynDeserializerExt<'s> {
     fn t<'de, T: Deserialize<'s>>(
         &'de mut self,
     ) -> impl Future<Output = Result<T, MerdeError<'s>>> + 'de;
+
+    fn deserialize_sync<T: Deserialize<'s>>(&mut self) -> Result<T, MerdeError<'s>>;
+
+    fn deserialize_sync_owned<T: DeserializeOwned<'s>>(
+        &mut self,
+    ) -> Result<<T as IntoStatic>::Output, MerdeError<'s>>;
 }
 
 impl<'s> DynDeserializerExt<'s> for dyn DynDeserializer<'s> + '_ {
@@ -56,6 +62,16 @@ impl<'s> DynDeserializerExt<'s> for dyn DynDeserializer<'s> + '_ {
         &'de mut self,
     ) -> impl Future<Output = Result<T, MerdeError<'s>>> + 'de {
         T::deserialize(self)
+    }
+
+    fn deserialize_sync<T: Deserialize<'s>>(&mut self) -> Result<T, MerdeError<'s>> {
+        T::deserialize(self).run_sync_with_metastack()
+    }
+
+    fn deserialize_sync_owned<T: DeserializeOwned<'s>>(
+        &mut self,
+    ) -> Result<<T as IntoStatic>::Output, MerdeError<'s>> {
+        T::deserialize_owned(self).run_sync_with_metastack()
     }
 }
 
@@ -230,6 +246,7 @@ impl<'s> Deserialize<'s> for i64 {
                 return Err(MerdeError::UnexpectedEvent {
                     got: EventType::from(&ev),
                     expected: &[EventType::I64, EventType::U64, EventType::Float],
+                    help: None,
                 })
             }
         };
@@ -247,7 +264,8 @@ impl<'s> Deserialize<'s> for u64 {
                 return Err(MerdeError::UnexpectedEvent {
                     got: EventType::from(&ev),
                     expected: &[EventType::U64, EventType::I64, EventType::Float],
-                })
+                    help: None,
+                });
             }
         };
         Ok(v)
@@ -312,7 +330,7 @@ impl<'s> Deserialize<'s> for usize {
 
 impl<'s> Deserialize<'s> for bool {
     async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
-        Ok(de.next().await?.into_bool()?)
+        de.next().await?.into_bool()
     }
 }
 
@@ -326,6 +344,7 @@ impl<'s> Deserialize<'s> for f64 {
                 return Err(MerdeError::UnexpectedEvent {
                     got: EventType::from(&ev),
                     expected: &[EventType::Float, EventType::I64, EventType::U64],
+                    help: None,
                 })
             }
         };
@@ -349,7 +368,7 @@ impl<'s> Deserialize<'s> for String {
 
 impl<'s> Deserialize<'s> for CowStr<'s> {
     async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
-        Ok(de.next().await?.into_str()?)
+        de.next().await?.into_str()
     }
 }
 
@@ -411,7 +430,7 @@ impl<'s, T: Deserialize<'s>> Deserialize<'s> for Vec<T> {
                     break;
                 }
                 ev => {
-                    de.put_back(ev);
+                    de.put_back(ev)?;
                     vec.push(T::deserialize(de).await?);
                 }
             }
@@ -465,8 +484,8 @@ impl<'s> Deserialize<'s> for Map<'s> {
                     return Err(MerdeError::UnexpectedEvent {
                         got: EventType::from(&ev),
                         expected: &[EventType::Str, EventType::MapEnd],
-                    }
-                    .into())
+                        help: None,
+                    })
                 }
             }
         }
@@ -527,8 +546,8 @@ impl<'s> Deserialize<'s> for Value<'s> {
                             return Err(MerdeError::UnexpectedEvent {
                                 got: EventType::from(&ev),
                                 expected: &[EventType::Str, EventType::MapEnd],
-                            }
-                            .into())
+                                help: None,
+                            })
                         }
                     }
                 }
@@ -562,8 +581,8 @@ impl<'s> Deserialize<'s> for Value<'s> {
                     EventType::MapStart,
                     EventType::ArrayStart,
                 ],
-            }
-            .into()),
+                help: Some("(While trying to deserialize a merde Value)".to_string()),
+            }),
         }
     }
 }

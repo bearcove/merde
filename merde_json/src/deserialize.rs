@@ -1,11 +1,8 @@
 //! An experimental JSON deserializer implementation
 
-use merde_core::{ArrayStart, CowStr, Deserialize, Deserializer, Event, MapStart};
+use merde_core::{ArrayStart, CowStr, Deserializer, Event, MapStart, MerdeError};
 
-use crate::{
-    jiter_lite::{errors::JiterError, jiter::Jiter, parse::Peek},
-    MerdeJsonError,
-};
+use crate::jiter_lite::{errors::JiterError, jiter::Jiter, parse::Peek};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum StackItem<'s> {
@@ -46,17 +43,17 @@ impl<'s> JsonDeserializer<'s> {
     }
 }
 
-fn jiter_error(source: &str, err: JiterError) -> MerdeJsonError<'_> {
-    MerdeJsonError::JiterError {
-        err,
-        source: Some(source.into()),
+fn jiter_error(source: &str, err: JiterError) -> MerdeError<'_> {
+    MerdeError::StringParsingError {
+        format: "JSON",
+        index: err.index,
+        message: err.error_type.to_string(),
+        source: source.into(),
     }
 }
 
 impl<'s> Deserializer<'s> for JsonDeserializer<'s> {
-    type Error<'es> = MerdeJsonError<'es>;
-
-    async fn next(&mut self) -> Result<Event<'s>, Self::Error<'s>> {
+    async fn next(&mut self) -> Result<Event<'s>, MerdeError<'s>> {
         if let Some(ev) = self.starter.take() {
             return Ok(ev);
         }
@@ -178,23 +175,12 @@ impl<'s> Deserializer<'s> for JsonDeserializer<'s> {
         Ok(ev)
     }
 
-    async fn t_starting_with<T: Deserialize<'s>>(
-        &mut self,
-        starter: Option<Event<'s>>,
-    ) -> Result<T, Self::Error<'s>> {
-        if let Some(starter) = starter {
-            if self.starter.is_some() {
-                unreachable!("setting starter when it's already set? shouldn't happen")
-            }
-            self.starter = Some(starter);
+    fn put_back(&mut self, ev: Event<'s>) -> Result<(), MerdeError<'s>> {
+        if self.starter.is_some() {
+            return Err(MerdeError::other(String::from("Too many put_backs")));
         }
-
-        // TODO: when too much stack space is used, stash this,
-        // return Poll::Pending, to continue deserializing with
-        // a shallower stack.
-
-        // that's the whole trick — for now, we just recurse as usual
-        T::deserialize(self).await
+        self.starter = Some(ev);
+        Ok(())
     }
 }
 
@@ -253,6 +239,7 @@ mod tests {
                         return Err(MerdeError::UnexpectedEvent {
                             got: EventType::from(&ev),
                             expected: &[EventType::Str],
+                            help: None,
                         }
                         .into())
                     }

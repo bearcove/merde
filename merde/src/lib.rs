@@ -84,6 +84,7 @@ macro_rules! impl_deserialize {
                             return Err($crate::MerdeError::UnexpectedEvent {
                                 got: $crate::EventType::from(&ev),
                                 expected: &[$crate::EventType::Str, $crate::EventType::MapEnd],
+                                help: Some(format!("While deserializing {}", stringify!($struct_name))),
                             }
                             .into())
                         }
@@ -146,6 +147,7 @@ macro_rules! impl_deserialize {
                             return Err($crate::MerdeError::UnexpectedEvent {
                                 got: $crate::EventType::from(&ev),
                                 expected: &[$crate::EventType::Str, $crate::EventType::MapEnd],
+                                help: Some(format!("While deserializing {}", stringify!($struct_name))),
                             }
                             .into())
                         }

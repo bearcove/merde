@@ -2,6 +2,8 @@ mod cowstr;
 
 pub use cowstr::CowStr;
 
+mod covariance_proofs;
+
 mod cowbytes;
 pub use cowbytes::CowBytes;
 
@@ -44,6 +46,7 @@ pub use deserialize::Deserialize;
 pub use deserialize::DeserializeOwned;
 pub use deserialize::Deserializer;
 pub use deserialize::DynDeserializer;
+pub use deserialize::DynDeserializerExt;
 pub use deserialize::FieldSlot;
 
 pub mod time;

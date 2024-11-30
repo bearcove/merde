@@ -151,6 +151,7 @@ impl<'s> Event<'s> {
             _ => Err(MerdeError::UnexpectedEvent {
                 got: EventType::from(&self),
                 expected: &[EventType::I64],
+                help: None,
             }),
         }
     }
@@ -161,6 +162,7 @@ impl<'s> Event<'s> {
             _ => Err(MerdeError::UnexpectedEvent {
                 got: EventType::from(&self),
                 expected: &[EventType::U64],
+                help: None,
             }),
         }
     }
@@ -171,6 +173,7 @@ impl<'s> Event<'s> {
             _ => Err(MerdeError::UnexpectedEvent {
                 got: EventType::from(&self),
                 expected: &[EventType::Float],
+                help: None,
             }),
         }
     }
@@ -181,6 +184,7 @@ impl<'s> Event<'s> {
             _ => Err(MerdeError::UnexpectedEvent {
                 got: EventType::from(&self),
                 expected: &[EventType::Str],
+                help: None,
             }),
         }
     }
@@ -191,6 +195,7 @@ impl<'s> Event<'s> {
             _ => Err(MerdeError::UnexpectedEvent {
                 got: EventType::from(&self),
                 expected: &[EventType::Bytes],
+                help: None,
             }),
         }
     }
@@ -201,6 +206,7 @@ impl<'s> Event<'s> {
             _ => Err(MerdeError::UnexpectedEvent {
                 got: EventType::from(&self),
                 expected: &[EventType::Bool],
+                help: None,
             }),
         }
     }
@@ -211,6 +217,7 @@ impl<'s> Event<'s> {
             _ => Err(MerdeError::UnexpectedEvent {
                 got: EventType::from(&self),
                 expected: &[EventType::Null],
+                help: None,
             }),
         }
     }
@@ -221,6 +228,7 @@ impl<'s> Event<'s> {
             _ => Err(MerdeError::UnexpectedEvent {
                 got: EventType::from(&self),
                 expected: &[EventType::MapStart],
+                help: None,
             }),
         }
     }
@@ -231,6 +239,7 @@ impl<'s> Event<'s> {
             _ => Err(MerdeError::UnexpectedEvent {
                 got: EventType::from(&self),
                 expected: &[EventType::MapEnd],
+                help: None,
             }),
         }
     }
@@ -241,6 +250,7 @@ impl<'s> Event<'s> {
             _ => Err(MerdeError::UnexpectedEvent {
                 got: EventType::from(&self),
                 expected: &[EventType::ArrayStart],
+                help: None,
             }),
         }
     }
@@ -251,6 +261,7 @@ impl<'s> Event<'s> {
             _ => Err(MerdeError::UnexpectedEvent {
                 got: EventType::from(&self),
                 expected: &[EventType::ArrayEnd],
+                help: None,
             }),
         }
     }

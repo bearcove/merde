@@ -82,6 +82,7 @@ pub enum MerdeError<'s> {
     UnexpectedEvent {
         got: EventType,
         expected: &'static [EventType],
+        help: Option<String>,
     },
 
     /// An I/O error occurred.
@@ -90,12 +91,23 @@ pub enum MerdeError<'s> {
     /// An Utf8 error
     Utf8Error(std::str::Utf8Error),
 
-    /// Any other error
-    Other(Box<dyn MerdeSubError<'s>>),
+    /// Error occured while parsing a string, we can format
+    /// a nice error message with the source string, highlighted etc.
+    StringParsingError {
+        format: &'static str,
+        source: CowStr<'s>,
+        index: usize,
+        message: String,
+    },
 }
 
-trait MerdeSubError<'s>: std::fmt::Display + std::fmt::Debug {
-    fn into_static(self: Box<Self>) -> Box<dyn MerdeSubError<'static>>;
+impl MerdeError<'_> {
+    pub fn eof() -> Self {
+        MerdeError::Io(std::io::Error::new(
+            std::io::ErrorKind::UnexpectedEof,
+            "eof",
+        ))
+    }
 }
 
 impl IntoStatic for MerdeError<'_> {
@@ -119,11 +131,27 @@ impl IntoStatic for MerdeError<'_> {
             },
             MerdeError::InvalidDateTimeValue => MerdeError::InvalidDateTimeValue,
             MerdeError::Io(e) => MerdeError::Io(e),
-            MerdeError::UnexpectedEvent { got, expected } => {
-                MerdeError::UnexpectedEvent { got, expected }
-            }
+            MerdeError::UnexpectedEvent {
+                got,
+                expected,
+                help: additional,
+            } => MerdeError::UnexpectedEvent {
+                got,
+                expected,
+                help: additional,
+            },
             MerdeError::Utf8Error(e) => MerdeError::Utf8Error(e),
-            MerdeError::Other(e) => MerdeError::Other(e.into_static()),
+            MerdeError::StringParsingError {
+                format,
+                source,
+                index,
+                message,
+            } => MerdeError::StringParsingError {
+                format,
+                source: source.into_static(),
+                index,
+                message,
+            },
         }
     }
 }
@@ -178,18 +206,46 @@ impl std::fmt::Display for MerdeError<'_> {
             MerdeError::Io(e) => {
                 write!(f, "I/O error: {}", e)
             }
-            MerdeError::UnexpectedEvent { got, expected } => {
+            MerdeError::UnexpectedEvent {
+                got,
+                expected,
+                help,
+            } => {
                 write!(
                     f,
-                    "Unexpected event: got {:?}, expected one of {:?}",
-                    got, expected
-                )
+                    "Unexpected event: got {got:?}, expected one of {expected:?}"
+                )?;
+                if let Some(help) = help.as_ref() {
+                    write!(f, " {help}")?;
+                }
+                Ok(())
             }
             MerdeError::Utf8Error(e) => {
                 write!(f, "UTF-8 Error: {}", e)
             }
-            MerdeError::Other(e) => {
-                write!(f, "Other error: {}", e)
+            MerdeError::StringParsingError {
+                format,
+                source,
+                index,
+                message,
+            } => {
+                let (format, source, index) = (*format, source as &str, *index);
+
+                writeln!(f, "{format} parsing error: \x1b[31m{message}\x1b[0m",)?;
+                let context_start = index.saturating_sub(20);
+                let context_end = (index + 20).min(source.len());
+                let context = &source[context_start..context_end];
+
+                write!(f, "Source: ")?;
+                for (i, c) in context.char_indices() {
+                    if i + context_start == index {
+                        write!(f, "\x1b[48;2;255;200;200m\x1b[97m{}\x1b[0m", c)?;
+                    } else {
+                        write!(f, "\x1b[48;2;200;200;255m\x1b[97m{}\x1b[0m", c)?;
+                    }
+                }
+                writeln!(f)?;
+                Ok(())
             }
         }
     }

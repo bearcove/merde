@@ -110,8 +110,10 @@ mod time_impls {
 #[cfg(all(test, feature = "full"))]
 mod tests {
     use super::*;
-    use crate::{Deserialize, Deserializer, Event, IntoStatic, MerdeError, Serializer};
-    use std::collections::VecDeque;
+    use crate::{
+        Deserialize, Deserializer, DynDeserializerExt, Event, IntoStatic, MerdeError, Serializer,
+    };
+    use std::{collections::VecDeque, future::Future};
     use time::macros::datetime;
 
     #[derive(Debug, Default)]
@@ -129,14 +131,12 @@ mod tests {
     }
 
     impl<'s> Deserializer<'s> for Journal {
-        async fn next(&mut self) -> Result<Event<'s>, MerdeError<'s>> {
-            Ok(self
-                .events
-                .pop_front()
-                .ok_or_else(|| MerdeError::Sub(Box::new("eof".to_string())))?)
+        // FIXME: that's a workaround for <https://github.com/rust-lang/rust/issues/133676>
+        fn next(&mut self) -> impl Future<Output = Result<Event<'s>, MerdeError<'s>>> + '_ {
+            async { self.events.pop_front().ok_or_else(MerdeError::eof) }
         }
 
-        fn put_back(&mut self, ev: Event<'s>) -> Result<(), Self::Error<'s>> {
+        fn put_back(&mut self, ev: Event<'s>) -> Result<(), MerdeError<'s>> {
             self.events.push_front(ev.into_static());
             Ok(())
         }
@@ -146,6 +146,8 @@ mod tests {
     fn test_rfc3339_offset_date_time_roundtrip() {
         let original = Rfc3339(datetime!(2023-05-15 14:30:00 UTC));
         let mut journal: Journal = Default::default();
+
+        use crate::DynDeserializerExt;
 
         journal.serialize_sync(&original).unwrap();
         let deserialized: Rfc3339<time::OffsetDateTime> = journal.deserialize_sync_owned().unwrap();
