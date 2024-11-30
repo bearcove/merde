@@ -2,8 +2,8 @@
 #![doc = include_str!("../README.md")]
 
 use merde_core::{
-    Deserialize, DeserializeOwned, Deserializer, DynDeserializerExt, Event, IntoStatic, MapStart,
-    MerdeError, MetastackExt,
+    Deserialize, DeserializeOwned, Deserializer, DynDeserializerExt, Event, MapStart, MerdeError,
+    MetastackExt,
 };
 
 /// A MessagePack deserializer, that implements [`merde_core::Deserializer`].
@@ -297,7 +297,7 @@ where
 
 /// Deserialize an instance of type `T` from a byte slice of MessagePack data,
 /// and return its static variant e.g. (CowStr<'static>, etc.)
-pub fn from_slice_owned<T>(slice: &[u8]) -> Result<<T as IntoStatic>::Output, MerdeError<'_>>
+pub fn from_slice_owned<T>(slice: &[u8]) -> Result<T, MerdeError<'_>>
 where
     T: DeserializeOwned,
 {

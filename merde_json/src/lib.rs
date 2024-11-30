@@ -10,8 +10,8 @@ pub use serialize::{JsonSerializer, JsonSerializerWriter};
 mod jiter_lite;
 
 use merde_core::{
-    Deserialize, DeserializeOwned, DynDeserializerExt, IntoStatic, MerdeError, MetastackExt,
-    Serialize, Serializer,
+    Deserialize, DeserializeOwned, DynDeserializerExt, MerdeError, MetastackExt, Serialize,
+    Serializer,
 };
 
 /// Deserialize an instance of type `T` from a string of JSON text.
@@ -25,7 +25,7 @@ where
 
 /// Deserialize an instance of type `T` from a string of JSON text,
 /// and return its static variant e.g. (CowStr<'static>, etc.)
-pub fn from_str_owned<T>(s: &str) -> Result<<T as IntoStatic>::Output, MerdeError<'_>>
+pub fn from_str_owned<T>(s: &str) -> Result<T, MerdeError<'_>>
 where
     T: DeserializeOwned,
 {
@@ -44,7 +44,7 @@ where
 
 /// Deserialize an instance of type `T` from a byte slice of JSON text,
 /// and return its static variant e.g. (CowStr<'static>, etc.)
-pub fn from_bytes_owned<T>(b: &[u8]) -> Result<<T as IntoStatic>::Output, MerdeError<'_>>
+pub fn from_bytes_owned<T>(b: &[u8]) -> Result<T, MerdeError<'_>>
 where
     T: DeserializeOwned,
 {

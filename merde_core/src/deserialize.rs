@@ -10,6 +10,7 @@ use std::{
 
 use crate::{
     metastack::MetastackExt, Array, CowStr, Event, EventType, IntoStatic, Map, MerdeError, Value,
+    WithLifetime,
 };
 
 pub trait Deserializer<'s>: std::fmt::Debug {
@@ -52,9 +53,7 @@ pub trait DynDeserializerExt<'s> {
 
     fn deserialize_sync<T: Deserialize<'s>>(&mut self) -> Result<T, MerdeError<'s>>;
 
-    fn deserialize_sync_owned<T: DeserializeOwned>(
-        &mut self,
-    ) -> Result<<T as IntoStatic>::Output, MerdeError<'s>>;
+    fn deserialize_sync_owned<T: DeserializeOwned>(&mut self) -> Result<T, MerdeError<'s>>;
 }
 
 impl<'s, D> DynDeserializerExt<'s> for D
@@ -73,9 +72,7 @@ where
         T::deserialize(self).run_sync_with_metastack()
     }
 
-    fn deserialize_sync_owned<T: DeserializeOwned>(
-        &mut self,
-    ) -> Result<<T as IntoStatic>::Output, MerdeError<'s>> {
+    fn deserialize_sync_owned<T: DeserializeOwned>(&mut self) -> Result<T, MerdeError<'s>> {
         T::deserialize_owned(self).run_sync_with_metastack()
     }
 }
@@ -91,9 +88,7 @@ impl<'s> DynDeserializerExt<'s> for dyn DynDeserializer<'s> + '_ {
         T::deserialize(self).run_sync_with_metastack()
     }
 
-    fn deserialize_sync_owned<T: DeserializeOwned>(
-        &mut self,
-    ) -> Result<<T as IntoStatic>::Output, MerdeError<'s>> {
+    fn deserialize_sync_owned<T: DeserializeOwned>(&mut self) -> Result<T, MerdeError<'s>> {
         T::deserialize_owned(self).run_sync_with_metastack()
     }
 }
@@ -245,17 +240,19 @@ pub trait Deserialize<'s>: Sized + 's {
 pub trait DeserializeOwned: Sized + IntoStatic {
     fn deserialize_owned<'s>(
         de: &mut dyn DynDeserializer<'s>,
-    ) -> impl Future<Output = Result<<Self as IntoStatic>::Output, MerdeError<'s>>>;
+    ) -> impl Future<Output = Result<Self, MerdeError<'s>>>;
 }
 
 impl<T> DeserializeOwned for T
 where
-    T: IntoStatic + for<'s> Deserialize<'s>,
+    T: IntoStatic,
+    T: for<'s> WithLifetime<'s> + 'static,
+    for<'s> <T as WithLifetime<'s>>::Lifetimed: Deserialize<'s> + IntoStatic<Output = T>,
 {
-    async fn deserialize_owned<'s>(
-        de: &mut dyn DynDeserializer<'s>,
-    ) -> Result<<Self as IntoStatic>::Output, MerdeError<'s>> {
-        T::deserialize(de).await.map(|v| v.into_static())
+    async fn deserialize_owned<'s>(de: &mut dyn DynDeserializer<'s>) -> Result<T, MerdeError<'s>> {
+        <T as WithLifetime<'s>>::Lifetimed::deserialize(de)
+            .await
+            .map(|v| v.into_static())
     }
 }
 

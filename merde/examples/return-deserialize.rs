@@ -1,6 +1,6 @@
-use merde::{CowStr, DeserializeOwned};
+use merde::{CowStr, DeserializeOwned, IntoStatic, MerdeError, MetastackExt};
 
-fn deser_and_return<T>(s: String) -> Result<T, merde_json::MerdeError<'static>>
+fn deser_and_return<T>(s: String) -> Result<T, MerdeError<'static>>
 where
     T: DeserializeOwned,
 {
@@ -8,7 +8,9 @@ where
     // a network request instead — the point is is that we
     // need to borrow from a local from the function body.
     let mut deser = merde_json::JsonDeserializer::new(&s);
-    T::deserialize_owned(&mut deser).map_err(|e| e.to_static())
+    T::deserialize_owned(&mut deser)
+        .run_sync_with_metastack()
+        .map_err(|e| e.into_static())
 }
 
 fn main() {

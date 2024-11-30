@@ -4,8 +4,8 @@
 use std::str::Chars;
 
 use merde_core::{
-    ArrayStart, Deserialize, DeserializeOwned, Deserializer, DynDeserializerExt, Event, IntoStatic,
-    MapStart, MerdeError,
+    ArrayStart, Deserialize, DeserializeOwned, Deserializer, DynDeserializerExt, Event, MapStart,
+    MerdeError,
 };
 use yaml_rust2::{parser::Parser, scanner::TScalarStyle};
 
@@ -162,7 +162,7 @@ where
 
 /// Deserialize an instance of type `T` from a string of YAML text,
 /// and return its static variant e.g. (CowStr<'static>, etc.)
-pub fn from_str_owned<T>(s: &str) -> Result<<T as IntoStatic>::Output, MerdeError<'_>>
+pub fn from_str_owned<T>(s: &str) -> Result<T, MerdeError<'_>>
 where
     T: DeserializeOwned,
 {

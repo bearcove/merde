@@ -184,12 +184,12 @@ impl<'s> Deserializer<'s> for JsonDeserializer<'s> {
     }
 }
 
-fn assert_dyn_deser<'s>() {
+fn _assert_dyn_deser() {
     fn assert_impl<'s, T: merde_core::DynDeserializer<'s>>() {}
     assert_impl::<JsonDeserializer>();
 }
 
-fn assert_dyn_deser_ext<'s>() {
+fn _assert_dyn_deser_ext() {
     fn assert_impl<'s, T: merde_core::DynDeserializerExt<'s>>() {}
     assert_impl::<JsonDeserializer>();
 }
