@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use merde::{DynDeserializerExt, Value};
-use merde_core::Deserializer;
 use merde_yaml::YamlDeserializer;
 
 #[derive(Debug, PartialEq)]

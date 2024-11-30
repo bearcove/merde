@@ -169,19 +169,16 @@ macro_rules! impl_deserialize {
     }) => {
         #[automatically_derived]
         impl<'s> $crate::Deserialize<'s> for $enum_name {
-            async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
-            where
-                D: $crate::Deserializer<'s> + ?Sized,
-            {
+            async fn deserialize(__de: &mut dyn $crate::DynDeserializer<'s>) -> Result<Self, $crate::MerdeError<'s>> {
                 #[allow(unused_imports)]
-                use $crate::MerdeError;
+                use $crate::{MerdeError, DynDeserializerExt};
 
-                de.next().await?.into_map_start()?;
-                let key = de.next().await?.into_str()?;
+                __de.next().await?.into_map_start()?;
+                let key = __de.next().await?.into_str()?;
                 match key.as_ref() {
                     $($variant_str => {
-                        let value = de.t().await?;
-                        de.next().await?.into_map_end()?;
+                        let value = __de.t().await?;
+                        __de.next().await?.into_map_end()?;
                         Ok($enum_name::$variant(value))
                     },)*
                     _ => Err(MerdeError::UnknownProperty(key).into()),
@@ -196,19 +193,17 @@ macro_rules! impl_deserialize {
     }) => {
         #[automatically_derived]
         impl<$lifetime> $crate::Deserialize<$lifetime> for $enum_name<$lifetime> {
-            async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<$lifetime>>
-            where
-                D: $crate::Deserializer<$lifetime> + ?Sized,
-            {
+            #[inline(always)]
+            async fn deserialize(__de: &mut dyn $crate::DynDeserializer<$lifetime>) -> Result<Self, $crate::MerdeError<$lifetime>> {
                 #[allow(unused_imports)]
-                use $crate::MerdeError;
+                use $crate::{MerdeError, DynDeserializerExt};
 
-                de.next().await?.into_map_start()?;
-                let key = de.next().await?.into_str()?;
+                __de.next().await?.into_map_start()?;
+                let key = __de.next().await?.into_str()?;
                 match key.as_ref() {
                     $($variant_str => {
-                        let value = de.t().await?;
-                        de.next().await?.into_map_end()?;
+                        let value = __de.t().await?;
+                        __de.next().await?.into_map_end()?;
                         Ok($enum_name::$variant(value))
                     },)*
                     _ => Err(MerdeError::UnknownProperty(key).into()),
@@ -223,14 +218,12 @@ macro_rules! impl_deserialize {
     }) => {
         #[automatically_derived]
         impl<'s> $crate::Deserialize<'s> for $enum_name {
-            async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
-            where
-                D: $crate::Deserializer<'s> + ?Sized,
-            {
+            async fn deserialize(__de: &mut dyn $crate::DynDeserializer<'s>) -> Result<Self, $crate::MerdeError<'s>> {
                 #[allow(unused_imports)]
                 use $crate::MerdeError;
+                use $crate::DynDeserializerExt;
 
-                let s = de.next().await?.into_str()?;
+                let s = __de.next().await?.into_str()?;
                 match s.as_ref() {
                     $($variant_str => Ok($enum_name::$variant),)*
                     _ => Err(MerdeError::UnknownProperty(s).into()),
