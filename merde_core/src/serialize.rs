@@ -38,14 +38,14 @@ where
 }
 
 pub trait DynSerializerExt {
-    fn serialize_sync<'s, T: Serialize>(&'s mut self, t: &'s T) -> Result<(), MerdeError<'static>>;
+    fn serialize<'s, T: Serialize>(&'s mut self, t: &'s T) -> Result<(), MerdeError<'static>>;
 }
 
 impl<S> DynSerializerExt for S
 where
     S: DynSerializer,
 {
-    fn serialize_sync<'fut, T: Serialize>(
+    fn serialize<'fut, T: Serialize>(
         &'fut mut self,
         t: &'fut T,
     ) -> Result<(), MerdeError<'static>> {

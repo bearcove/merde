@@ -65,7 +65,7 @@ pub fn to_vec<T: Serialize>(value: &T) -> Result<Vec<u8>, MerdeError<'static>> {
     let mut v: Vec<u8> = vec![];
     {
         let mut s = JsonSerializer::new(&mut v);
-        s.serialize_sync(value)?;
+        s.serialize(value)?;
     }
     Ok(v)
 }
@@ -79,6 +79,6 @@ where
     T: Serialize,
 {
     let mut s = JsonSerializer::from_writer(&mut writer);
-    s.serialize_sync(value)?;
+    s.serialize(value)?;
     Ok(())
 }

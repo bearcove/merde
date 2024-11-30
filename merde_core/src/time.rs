@@ -156,7 +156,7 @@ mod tests {
 
         use crate::DynDeserializerExt;
 
-        journal.serialize_sync(&original).unwrap();
+        journal.serialize(&original).unwrap();
         let deserialized = journal
             .deserialize_owned::<Rfc3339<time::OffsetDateTime>>()
             .unwrap();

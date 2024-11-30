@@ -20,7 +20,7 @@ fn test_serialize() {
 
     let mut s = ToySerializer::default();
     let value: Value = Map::new().with("foo", Value::from(42)).into();
-    s.serialize_sync(&value).unwrap();
+    s.serialize(&value).unwrap();
 
     assert_debug_snapshot!(s.events);
 }
