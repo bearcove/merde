@@ -1,8 +1,6 @@
 use std::{collections::VecDeque, future::Future, io::Write};
 
-use merde_core::Serializer;
-
-use crate::MerdeJsonError;
+use merde_core::{MerdeError, Serializer};
 
 /// Something the JSON serializer can write to
 pub trait JsonSerializerWriter {
@@ -75,7 +73,7 @@ impl<W> Serializer for JsonSerializer<W>
 where
     W: JsonSerializerWriter,
 {
-    type Error = MerdeJsonError<'static>;
+    type Error = MerdeError<'static>;
 
     async fn write(&mut self, ev: merde_core::Event<'_>) -> Result<(), Self::Error> {
         let stack_top = self.stack.back_mut();

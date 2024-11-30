@@ -11,7 +11,7 @@ use crate::Event;
 /// returned, moved, etc.
 ///
 /// This usually involves allocating buffers for `Cow<'a, str>`, etc.
-pub trait IntoStatic {
+pub trait IntoStatic: Sized {
     /// The "owned" variant of the type. For `Cow<'a, str>`, this is `Cow<'static, str>`, for example.
     type Output: 'static;
 

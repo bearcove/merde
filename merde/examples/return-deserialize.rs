@@ -1,6 +1,6 @@
 use merde::{CowStr, DeserializeOwned};
 
-fn deser_and_return<T>(s: String) -> Result<T, merde_json::MerdeJsonError<'static>>
+fn deser_and_return<T>(s: String) -> Result<T, merde_json::MerdeError<'static>>
 where
     T: DeserializeOwned,
 {

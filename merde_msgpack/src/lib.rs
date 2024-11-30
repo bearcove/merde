@@ -1,7 +1,10 @@
 #![deny(missing_docs)]
 #![doc = include_str!("../README.md")]
 
-use merde_core::{Deserialize, DeserializeOwned, Deserializer, Event, MapStart};
+use merde_core::{
+    Deserialize, DeserializeOwned, Deserializer, DynDeserializerExt, Event, IntoStatic, MapStart,
+    MerdeError, MetastackExt,
+};
 
 /// A MessagePack deserializer, that implements [`merde_core::Deserializer`].
 pub struct MsgpackDeserializer<'s> {
@@ -38,46 +41,8 @@ impl std::fmt::Debug for MsgpackDeserializer<'_> {
     }
 }
 
-/// Unifies [`merde_core::MerdeError`], and our own parsing errors.
-pub enum MsgpackError<'s> {
-    /// Most likely an error encountered when "deserializing" the MessagePack data.
-    MerdeError(merde_core::MerdeError<'s>),
-
-    /// An error encountered when reading the MessagePack data.
-    DecodeError(&'static str),
-
-    /// Unsupported MessagePack type encountered
-    UnsupportedType(u8),
-
-    /// EOF encountered while expecting a value
-    Eof,
-
-    /// Unsupported fixext or ext type encountered
-    UnsupportedExtType(u8),
-}
-
-impl std::fmt::Debug for MsgpackError<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            MsgpackError::MerdeError(e) => write!(f, "MerdeError({:?})", e),
-            MsgpackError::DecodeError(msg) => write!(f, "DecodeError({})", msg),
-            MsgpackError::UnsupportedType(t) => write!(f, "UnsupportedType(0x{:02x})", t),
-            MsgpackError::Eof => write!(f, "Eof"),
-            MsgpackError::UnsupportedExtType(t) => write!(f, "UnsupportedExtType(0x{:02x})", t),
-        }
-    }
-}
-
-impl<'s> From<merde_core::MerdeError<'s>> for MsgpackError<'s> {
-    fn from(e: merde_core::MerdeError<'s>) -> MsgpackError<'s> {
-        MsgpackError::MerdeError(e)
-    }
-}
-
-impl<'s> merde_core::Deserializer<'s> for MsgpackDeserializer<'s> {
-    type Error<'es> = MsgpackError<'es>;
-
-    async fn next(&mut self) -> Result<Event<'s>, Self::Error<'s>> {
+impl<'s> Deserializer<'s> for MsgpackDeserializer<'s> {
+    async fn next(&mut self) -> Result<Event<'s>, MerdeError<'s>> {
         if let Some(ev) = self.starter.take() {
             return Ok(ev);
         }
@@ -102,7 +67,7 @@ impl<'s> merde_core::Deserializer<'s> for MsgpackDeserializer<'s> {
         }
 
         if self.offset >= self.source.len() {
-            return Err(MsgpackError::Eof);
+            return Err(MerdeError::eof());
         }
 
         let byte = self.source[self.offset];
@@ -164,53 +129,45 @@ impl<'s> merde_core::Deserializer<'s> for MsgpackDeserializer<'s> {
             }
             0x00..=0x7f => Ok(Event::U64(byte as u64)),
             0xe0..=0xff => Ok(Event::I64((byte as i8) as i64)),
-            0xd4..=0xd8 | 0xc7..=0xc9 => Err(MsgpackError::UnsupportedExtType(byte)),
-            _ => Err(MsgpackError::UnsupportedType(byte)),
+            0xd4..=0xd8 | 0xc7..=0xc9 => Err(MerdeError::BinaryParsingError {
+                format: "msgpack",
+                message: format!("unsupported extension type 0x{byte:02x}"),
+            }),
+            _ => Err(MerdeError::BinaryParsingError {
+                format: "msgpack",
+                message: format!("unsupported type 0x{byte:02x}"),
+            }),
         }
     }
 
-    async fn t_starting_with<T: Deserialize<'s>>(
-        &mut self,
-        starter: Option<Event<'s>>,
-    ) -> Result<T, Self::Error<'s>> {
-        if let Some(starter) = starter {
-            if self.starter.is_some() {
-                unreachable!("setting starter when it's already set? shouldn't happen")
-            }
-            self.starter = Some(starter);
-        }
-
-        // TODO: when too much stack space is used, stash this,
-        // return Poll::Pending, to continue deserializing with
-        // a shallower stack.
-
-        // that's the whole trick — for now, we just recurse as usual
-        T::deserialize(self).await
+    fn put_back(&mut self, event: Event<'s>) -> Result<(), MerdeError<'s>> {
+        self.starter = Some(event);
+        Ok(())
     }
 }
 
 impl<'s> MsgpackDeserializer<'s> {
-    fn read_u8(&mut self) -> Result<u8, MsgpackError<'s>> {
+    fn read_u8(&mut self) -> Result<u8, MerdeError<'s>> {
         if self.offset + 1 > self.source.len() {
-            return Err(MsgpackError::Eof);
+            return Err(MerdeError::eof());
         }
         let value = self.source[self.offset];
         self.offset += 1;
         Ok(value)
     }
 
-    fn read_u16(&mut self) -> Result<u16, MsgpackError<'s>> {
+    fn read_u16(&mut self) -> Result<u16, MerdeError<'s>> {
         if self.offset + 2 > self.source.len() {
-            return Err(MsgpackError::Eof);
+            return Err(MerdeError::eof());
         }
         let value = u16::from_be_bytes([self.source[self.offset], self.source[self.offset + 1]]);
         self.offset += 2;
         Ok(value)
     }
 
-    fn read_u32(&mut self) -> Result<u32, MsgpackError<'s>> {
+    fn read_u32(&mut self) -> Result<u32, MerdeError<'s>> {
         if self.offset + 4 > self.source.len() {
-            return Err(MsgpackError::Eof);
+            return Err(MerdeError::eof());
         }
         let value = u32::from_be_bytes([
             self.source[self.offset],
@@ -222,9 +179,9 @@ impl<'s> MsgpackDeserializer<'s> {
         Ok(value)
     }
 
-    fn read_u64(&mut self) -> Result<u64, MsgpackError<'s>> {
+    fn read_u64(&mut self) -> Result<u64, MerdeError<'s>> {
         if self.offset + 8 > self.source.len() {
-            return Err(MsgpackError::Eof);
+            return Err(MerdeError::eof());
         }
         let value = u64::from_be_bytes([
             self.source[self.offset],
@@ -240,80 +197,79 @@ impl<'s> MsgpackDeserializer<'s> {
         Ok(value)
     }
 
-    fn read_i8(&mut self) -> Result<i8, MsgpackError<'s>> {
+    fn read_i8(&mut self) -> Result<i8, MerdeError<'s>> {
         self.read_u8().map(|v| v as i8)
     }
 
-    fn read_i16(&mut self) -> Result<i16, MsgpackError<'s>> {
+    fn read_i16(&mut self) -> Result<i16, MerdeError<'s>> {
         self.read_u16().map(|v| v as i16)
     }
 
-    fn read_i32(&mut self) -> Result<i32, MsgpackError<'s>> {
+    fn read_i32(&mut self) -> Result<i32, MerdeError<'s>> {
         self.read_u32().map(|v| v as i32)
     }
 
-    fn read_i64(&mut self) -> Result<i64, MsgpackError<'s>> {
+    fn read_i64(&mut self) -> Result<i64, MerdeError<'s>> {
         self.read_u64().map(|v| v as i64)
     }
 
-    fn read_f32(&mut self) -> Result<f32, MsgpackError<'s>> {
+    fn read_f32(&mut self) -> Result<f32, MerdeError<'s>> {
         self.read_u32().map(f32::from_bits)
     }
 
-    fn read_f64(&mut self) -> Result<f64, MsgpackError<'s>> {
+    fn read_f64(&mut self) -> Result<f64, MerdeError<'s>> {
         self.read_u64().map(f64::from_bits)
     }
 
-    fn read_str(&mut self, len: usize) -> Result<Event<'s>, MsgpackError<'s>> {
+    fn read_str(&mut self, len: usize) -> Result<Event<'s>, MerdeError<'s>> {
         if self.offset + len > self.source.len() {
-            return Err(MsgpackError::Eof);
+            return Err(MerdeError::eof());
         }
-        let s = std::str::from_utf8(&self.source[self.offset..self.offset + len])
-            .map_err(|_| MsgpackError::DecodeError("Invalid UTF-8 string"))?;
+        let s = std::str::from_utf8(&self.source[self.offset..self.offset + len])?;
         self.offset += len;
         Ok(Event::Str(s.into()))
     }
 
-    fn read_str_8(&mut self) -> Result<Event<'s>, MsgpackError<'s>> {
+    fn read_str_8(&mut self) -> Result<Event<'s>, MerdeError<'s>> {
         let len = self.read_u8()? as usize;
         self.read_str(len)
     }
 
-    fn read_str_16(&mut self) -> Result<Event<'s>, MsgpackError<'s>> {
+    fn read_str_16(&mut self) -> Result<Event<'s>, MerdeError<'s>> {
         let len = self.read_u16()? as usize;
         self.read_str(len)
     }
 
-    fn read_str_32(&mut self) -> Result<Event<'s>, MsgpackError<'s>> {
+    fn read_str_32(&mut self) -> Result<Event<'s>, MerdeError<'s>> {
         let len = self.read_u32()? as usize;
         self.read_str(len)
     }
 
-    fn read_bytes(&mut self, len: usize) -> Result<Event<'s>, MsgpackError<'s>> {
+    fn read_bytes(&mut self, len: usize) -> Result<Event<'s>, MerdeError<'s>> {
         if self.offset + len > self.source.len() {
-            return Err(MsgpackError::Eof);
+            return Err(MerdeError::eof());
         }
         let bytes = &self.source[self.offset..self.offset + len];
         self.offset += len;
         Ok(Event::Bytes(bytes.into()))
     }
 
-    fn read_bytes_8(&mut self) -> Result<Event<'s>, MsgpackError<'s>> {
+    fn read_bytes_8(&mut self) -> Result<Event<'s>, MerdeError<'s>> {
         let len = self.read_u8()? as usize;
         self.read_bytes(len)
     }
 
-    fn read_bytes_16(&mut self) -> Result<Event<'s>, MsgpackError<'s>> {
+    fn read_bytes_16(&mut self) -> Result<Event<'s>, MerdeError<'s>> {
         let len = self.read_u16()? as usize;
         self.read_bytes(len)
     }
 
-    fn read_bytes_32(&mut self) -> Result<Event<'s>, MsgpackError<'s>> {
+    fn read_bytes_32(&mut self) -> Result<Event<'s>, MerdeError<'s>> {
         let len = self.read_u32()? as usize;
         self.read_bytes(len)
     }
 
-    fn read_array_16(&mut self) -> Result<Event<'s>, MsgpackError<'s>> {
+    fn read_array_16(&mut self) -> Result<Event<'s>, MerdeError<'s>> {
         let len = self.read_u16()? as usize;
         self.stack.push(StackItem::Array(len));
         Ok(Event::ArrayStart(merde_core::ArrayStart {
@@ -321,7 +277,7 @@ impl<'s> MsgpackDeserializer<'s> {
         }))
     }
 
-    fn read_array_32(&mut self) -> Result<Event<'s>, MsgpackError<'s>> {
+    fn read_array_32(&mut self) -> Result<Event<'s>, MerdeError<'s>> {
         let len = self.read_u32()? as usize;
         self.stack.push(StackItem::Array(len));
         Ok(Event::ArrayStart(merde_core::ArrayStart {
@@ -331,7 +287,7 @@ impl<'s> MsgpackDeserializer<'s> {
 }
 
 /// Deserialize an instance of type `T` from a byte slice of MessagePack data.
-pub fn from_slice<'s, T>(slice: &'s [u8]) -> Result<T, MsgpackError<'s>>
+pub fn from_slice<'s, T>(slice: &'s [u8]) -> Result<T, MerdeError<'s>>
 where
     T: Deserialize<'s>,
 {
@@ -341,18 +297,18 @@ where
 
 /// Deserialize an instance of type `T` from a byte slice of MessagePack data,
 /// and return its static variant e.g. (CowStr<'static>, etc.)
-pub fn from_slice_owned<T>(slice: &[u8]) -> Result<T, MsgpackError<'_>>
+pub fn from_slice_owned<T>(slice: &[u8]) -> Result<<T as IntoStatic>::Output, MerdeError<'_>>
 where
     T: DeserializeOwned,
 {
     let mut deser = MsgpackDeserializer::new(slice);
-    T::deserialize_owned(&mut deser)
+    T::deserialize_owned(&mut deser).run_sync_with_metastack()
 }
 
 #[cfg(test)]
 mod tests {
     use merde_core::Array;
-    use merde_core::Deserializer;
+    use merde_core::DynDeserializerExt;
     use merde_core::Value;
     use merde_loggingserializer::LoggingDeserializer;
 

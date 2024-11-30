@@ -110,9 +110,7 @@ mod time_impls {
 #[cfg(all(test, feature = "full"))]
 mod tests {
     use super::*;
-    use crate::{
-        Deserialize, Deserializer, DynDeserializerExt, Event, IntoStatic, MerdeError, Serializer,
-    };
+    use crate::{Deserializer, Event, IntoStatic, MerdeError, Serializer};
     use std::{collections::VecDeque, future::Future};
     use time::macros::datetime;
 
@@ -132,6 +130,7 @@ mod tests {
 
     impl<'s> Deserializer<'s> for Journal {
         // FIXME: that's a workaround for <https://github.com/rust-lang/rust/issues/133676>
+        #[allow(clippy::manual_async_fn)]
         fn next(&mut self) -> impl Future<Output = Result<Event<'s>, MerdeError<'s>>> + '_ {
             async { self.events.pop_front().ok_or_else(MerdeError::eof) }
         }
@@ -150,7 +149,9 @@ mod tests {
         use crate::DynDeserializerExt;
 
         journal.serialize_sync(&original).unwrap();
-        let deserialized: Rfc3339<time::OffsetDateTime> = journal.deserialize_sync_owned().unwrap();
+        let deserialized = journal
+            .deserialize_sync_owned::<Rfc3339<time::OffsetDateTime>>()
+            .unwrap();
 
         assert_eq!(original, deserialized);
     }

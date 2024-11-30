@@ -1,4 +1,4 @@
-use merde_core::{Deserialize, Deserializer, Event};
+use merde_core::{Deserializer, Event, MerdeError};
 
 pub struct LoggingDeserializer<'s, I>
 where
@@ -35,9 +35,7 @@ impl<'s, I> Deserializer<'s> for LoggingDeserializer<'s, I>
 where
     I: Deserializer<'s>,
 {
-    type Error<'es> = I::Error<'es>;
-
-    async fn next(&mut self) -> Result<Event<'s>, Self::Error<'s>> {
+    async fn next(&mut self) -> Result<Event<'s>, MerdeError<'s>> {
         if let Some(ev) = self.starter.take() {
             eprintln!("> (from starter) {:?}", ev);
             return Ok(ev);
@@ -48,17 +46,11 @@ where
         Ok(ev)
     }
 
-    async fn t_starting_with<T: Deserialize<'s>>(
-        &mut self,
-        starter: Option<Event<'s>>,
-    ) -> Result<T, Self::Error<'s>> {
-        if let Some(starter) = starter {
-            if self.starter.is_some() {
-                unreachable!("setting starter when it's already set? shouldn't happen")
-            }
-            self.starter = Some(starter);
+    fn put_back(&mut self, ev: Event<'s>) -> Result<(), MerdeError<'s>> {
+        if self.starter.is_some() {
+            return Err(MerdeError::PutBackCalledTwice);
         }
-
-        T::deserialize(self).await
+        self.starter = Some(ev);
+        Ok(())
     }
 }

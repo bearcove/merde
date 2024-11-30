@@ -52,9 +52,32 @@ pub trait DynDeserializerExt<'s> {
 
     fn deserialize_sync<T: Deserialize<'s>>(&mut self) -> Result<T, MerdeError<'s>>;
 
-    fn deserialize_sync_owned<T: DeserializeOwned<'s>>(
+    fn deserialize_sync_owned<T: DeserializeOwned>(
         &mut self,
     ) -> Result<<T as IntoStatic>::Output, MerdeError<'s>>;
+}
+
+impl<'s, D> DynDeserializerExt<'s> for D
+where
+    D: Deserializer<'s>,
+{
+    // cf. <https://github.com/rust-lang/rust/issues/133676>
+    #[allow(clippy::manual_async_fn)]
+    fn t<'de, T: Deserialize<'s>>(
+        &'de mut self,
+    ) -> impl Future<Output = Result<T, MerdeError<'s>>> + 'de {
+        async move { T::deserialize(self).await }
+    }
+
+    fn deserialize_sync<T: Deserialize<'s>>(&mut self) -> Result<T, MerdeError<'s>> {
+        T::deserialize(self).run_sync_with_metastack()
+    }
+
+    fn deserialize_sync_owned<T: DeserializeOwned>(
+        &mut self,
+    ) -> Result<<T as IntoStatic>::Output, MerdeError<'s>> {
+        T::deserialize_owned(self).run_sync_with_metastack()
+    }
 }
 
 impl<'s> DynDeserializerExt<'s> for dyn DynDeserializer<'s> + '_ {
@@ -68,7 +91,7 @@ impl<'s> DynDeserializerExt<'s> for dyn DynDeserializer<'s> + '_ {
         T::deserialize(self).run_sync_with_metastack()
     }
 
-    fn deserialize_sync_owned<T: DeserializeOwned<'s>>(
+    fn deserialize_sync_owned<T: DeserializeOwned>(
         &mut self,
     ) -> Result<<T as IntoStatic>::Output, MerdeError<'s>> {
         T::deserialize_owned(self).run_sync_with_metastack()
@@ -219,17 +242,17 @@ pub trait Deserialize<'s>: Sized + 's {
     }
 }
 
-pub trait DeserializeOwned<'s>: Sized + IntoStatic {
-    fn deserialize_owned(
+pub trait DeserializeOwned: Sized + IntoStatic {
+    fn deserialize_owned<'s>(
         de: &mut dyn DynDeserializer<'s>,
     ) -> impl Future<Output = Result<<Self as IntoStatic>::Output, MerdeError<'s>>>;
 }
 
-impl<'s, T> DeserializeOwned<'s> for T
+impl<T> DeserializeOwned for T
 where
-    T: IntoStatic + Deserialize<'s>,
+    T: IntoStatic + for<'s> Deserialize<'s>,
 {
-    async fn deserialize_owned(
+    async fn deserialize_owned<'s>(
         de: &mut dyn DynDeserializer<'s>,
     ) -> Result<<Self as IntoStatic>::Output, MerdeError<'s>> {
         T::deserialize(de).await.map(|v| v.into_static())

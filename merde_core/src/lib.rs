@@ -27,7 +27,7 @@ mod value;
 pub use value::Value;
 
 mod metastack;
-pub use metastack::with_metastack_resume_point;
+pub use metastack::{with_metastack_resume_point, MetastackExt};
 
 mod event;
 pub use event::ArrayStart;

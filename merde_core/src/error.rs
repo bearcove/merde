@@ -99,6 +99,16 @@ pub enum MerdeError<'s> {
         index: usize,
         message: String,
     },
+
+    /// Error occured while parsing binary input, let's not show source
+    /// for now.
+    BinaryParsingError {
+        format: &'static str,
+        message: String,
+    },
+
+    /// `.put_back()` was called more than once
+    PutBackCalledTwice,
 }
 
 impl MerdeError<'_> {
@@ -152,6 +162,10 @@ impl IntoStatic for MerdeError<'_> {
                 index,
                 message,
             },
+            MerdeError::PutBackCalledTwice => MerdeError::PutBackCalledTwice,
+            MerdeError::BinaryParsingError { format, message } => {
+                MerdeError::BinaryParsingError { format, message }
+            }
         }
     }
 }
@@ -246,6 +260,12 @@ impl std::fmt::Display for MerdeError<'_> {
                 }
                 writeln!(f)?;
                 Ok(())
+            }
+            MerdeError::PutBackCalledTwice => {
+                write!(f, "put_back() was called twice")
+            }
+            MerdeError::BinaryParsingError { format, message } => {
+                write!(f, "{format} parsing error: {message}")
             }
         }
     }

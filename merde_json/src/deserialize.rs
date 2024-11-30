@@ -177,11 +177,21 @@ impl<'s> Deserializer<'s> for JsonDeserializer<'s> {
 
     fn put_back(&mut self, ev: Event<'s>) -> Result<(), MerdeError<'s>> {
         if self.starter.is_some() {
-            return Err(MerdeError::other(String::from("Too many put_backs")));
+            return Err(MerdeError::PutBackCalledTwice);
         }
         self.starter = Some(ev);
         Ok(())
     }
+}
+
+fn assert_dyn_deser<'s>() {
+    fn assert_impl<'s, T: merde_core::DynDeserializer<'s>>() {}
+    assert_impl::<JsonDeserializer>();
+}
+
+fn assert_dyn_deser_ext<'s>() {
+    fn assert_impl<'s, T: merde_core::DynDeserializerExt<'s>>() {}
+    assert_impl::<JsonDeserializer>();
 }
 
 pub(crate) fn cowify<'j>(src: &'j [u8], s: &str) -> CowStr<'j> {
@@ -199,7 +209,10 @@ mod tests {
     use crate::deserialize::cowify;
 
     use super::JsonDeserializer;
-    use merde_core::{Array, CowStr, Deserialize, Deserializer, Event, EventType, Map, MerdeError};
+    use merde_core::{
+        Array, CowStr, Deserialize, DynDeserializer, DynDeserializerExt as _, Event, EventType,
+        Map, MerdeError,
+    };
     use merde_loggingserializer::LoggingDeserializer;
 
     #[derive(Debug, PartialEq)]
@@ -209,47 +222,46 @@ mod tests {
     }
 
     impl<'s> Deserialize<'s> for Sample {
-        async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
-        where
-            D: Deserializer<'s> + ?Sized,
-        {
-            let mut height: Option<i64> = None;
-            let mut kind: Option<bool> = None;
+        async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
+            {
+                let mut height: Option<i64> = None;
+                let mut kind: Option<bool> = None;
 
-            de.next().await?.into_map_start()?;
+                de.next().await?.into_map_start()?;
 
-            loop {
-                match de.next().await? {
-                    // many different policies are possible here
-                    Event::Str(k) => match k.as_ref() {
-                        "height" => {
-                            height = Some(i64::deserialize(de).await?);
+                loop {
+                    match de.next().await? {
+                        // many different policies are possible here
+                        Event::Str(k) => match k.as_ref() {
+                            "height" => {
+                                height = Some(i64::deserialize(de).await?);
+                            }
+                            "kind" => {
+                                kind = Some(bool::deserialize(de).await?);
+                            }
+                            _ => {
+                                return Err(MerdeError::UnknownProperty(k).into());
+                            }
+                        },
+                        Event::MapEnd => {
+                            break;
                         }
-                        "kind" => {
-                            kind = Some(bool::deserialize(de).await?);
+                        ev => {
+                            return Err(MerdeError::UnexpectedEvent {
+                                got: EventType::from(&ev),
+                                expected: &[EventType::Str],
+                                help: None,
+                            }
+                            .into())
                         }
-                        _ => {
-                            return Err(MerdeError::UnknownProperty(k).into());
-                        }
-                    },
-                    Event::MapEnd => {
-                        break;
-                    }
-                    ev => {
-                        return Err(MerdeError::UnexpectedEvent {
-                            got: EventType::from(&ev),
-                            expected: &[EventType::Str],
-                            help: None,
-                        }
-                        .into())
                     }
                 }
-            }
 
-            Ok(Sample {
-                height: height.ok_or_else(|| MerdeError::MissingProperty("height".into()))?,
-                kind: kind.ok_or_else(|| MerdeError::MissingProperty("kind".into()))?,
-            })
+                Ok(Sample {
+                    height: height.ok_or_else(|| MerdeError::MissingProperty("height".into()))?,
+                    kind: kind.ok_or_else(|| MerdeError::MissingProperty("kind".into()))?,
+                })
+            }
         }
     }
 
