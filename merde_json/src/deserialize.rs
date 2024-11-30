@@ -240,7 +240,7 @@ mod tests {
                                 kind = Some(bool::deserialize(de).await?);
                             }
                             _ => {
-                                return Err(MerdeError::UnknownProperty(k).into());
+                                return Err(MerdeError::UnknownProperty(k));
                             }
                         },
                         Event::MapEnd => {
@@ -251,8 +251,7 @@ mod tests {
                                 got: EventType::from(&ev),
                                 expected: &[EventType::Str],
                                 help: None,
-                            }
-                            .into())
+                            })
                         }
                     }
                 }

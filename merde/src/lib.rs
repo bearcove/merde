@@ -20,10 +20,10 @@ macro_rules! impl_deserialize {
         #[automatically_derived]
         impl<'s> $crate::Deserialize<'s> for $struct_name {
             #[inline(always)]
-            async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
-            where
-                D: $crate::Deserializer<'s> + ?Sized {
-                Ok(Self(de.t().await?))
+            async fn deserialize(__de: &mut dyn $crate::DynDeserializer<'s>) -> Result<Self, $crate::MerdeError<'s>> {
+                use $crate::DynDeserializerExt;
+
+                Ok(Self(__de.t().await?))
             }
         }
     };
@@ -33,10 +33,10 @@ macro_rules! impl_deserialize {
         #[automatically_derived]
         impl<$s> $crate::Deserialize<$s> for $struct_name<$s> {
             #[inline(always)]
-            async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<$s>>
-            where
-                D: $crate::Deserializer<'s> + ?Sized {
-                Ok(Self(de.t().await?))
+            async fn deserialize(__de: &mut dyn $crate::DynDeserializer<'s>) -> Result<Self, $crate::MerdeError<'s>> {
+                use $crate::DynDeserializerExt;
+
+                Ok(Self(__de.t().await?))
             }
         }
     };
@@ -51,11 +51,9 @@ macro_rules! impl_deserialize {
         #[automatically_derived]
         impl<'s> $crate::Deserialize<'s> for $struct_name {
             #[inline(always)]
-            async fn deserialize<D>(__de: &mut D) -> Result<Self, D::Error<'s>>
-            where
-                D: $crate::Deserializer<'s> + ?Sized {
+            async fn deserialize(__de: &mut dyn $crate::DynDeserializer<'s>) -> Result<Self, $crate::MerdeError<'s>> {
                 #![allow(unreachable_code)]
-                use $crate::DeserOpinions;
+                use $crate::{DynDeserializerExt, DeserOpinions};
 
                 let __opinions = $opinions;
                 __de.next().await?.into_map_start()?;
@@ -114,11 +112,9 @@ macro_rules! impl_deserialize {
         #[automatically_derived]
         impl<$s> $crate::Deserialize<$s> for $struct_name<$s> {
             #[inline(always)]
-            async fn deserialize<D>(__de: &mut D) -> Result<Self, D::Error<$s>>
-            where
-                D: $crate::Deserializer<$s> + ?Sized {
+            async fn deserialize(__de: &mut dyn $crate::DynDeserializer<$s>) -> Result<Self, $crate::MerdeError<$s>> {
                 #![allow(unreachable_code)]
-                use $crate::DeserOpinions;
+                use $crate::{DeserOpinions, DynDeserializerExt};
 
                 let __opinions = $opinions;
                 __de.next().await?.into_map_start()?;
