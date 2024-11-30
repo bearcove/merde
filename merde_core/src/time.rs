@@ -158,7 +158,7 @@ mod tests {
 
         journal.serialize_sync(&original).unwrap();
         let deserialized = journal
-            .deserialize_sync_owned::<Rfc3339<time::OffsetDateTime>>()
+            .deserialize_owned::<Rfc3339<time::OffsetDateTime>>()
             .unwrap();
 
         assert_eq!(original, deserialized);

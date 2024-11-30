@@ -16,8 +16,6 @@ use std::{
     task::{Context, Poll, RawWaker, RawWakerVTable, Waker},
 };
 
-use pin_project_lite::pin_project;
-
 type NextFuture = Pin<Box<dyn Future<Output = ()>>>;
 
 // TODO: make this configurable? make this depend on the
@@ -43,11 +41,6 @@ pub trait MetastackExt<'s>: Sized {
     /// Sets up a landing pad to catch `Poll::Pending` returns and run the next
     /// scheduled future on a slightly emptier stack.
     fn run_sync_with_metastack(self) -> Self::Output;
-
-    /// Sets up a landing pad to catch `Poll::Pending` returns and run the next
-    /// scheduled future on a slightly emptier stack — but also supports yielding
-    /// to the async runtime.
-    fn run_async_with_metastack(self) -> impl Future<Output = Self::Output>;
 }
 
 impl<'s, F> MetastackExt<'s> for F
@@ -97,80 +90,6 @@ where
                     Poll::Ready(res) => res,
                     Poll::Pending => {
                         unreachable!("Like I said, you really only get to ask for more stack once")
-                    }
-                }
-            }
-        }
-    }
-
-    fn run_async_with_metastack(self) -> impl Future<Output = Self::Output> {
-        MetastackFutureAdapter {
-            future: self,
-            // perf note: empty vecs don't allocate yet, so `Option<Vec<T>>` is pointless
-            recursions: Default::default(),
-        }
-    }
-}
-
-pin_project! {
-    struct MetastackFutureAdapter<F: Future> {
-        #[pin]
-        future: F,
-        recursions: Vec<NextFuture>,
-    }
-}
-
-impl<F> Future for MetastackFutureAdapter<F>
-where
-    F: Future,
-{
-    type Output = F::Output;
-
-    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        let mut this = self.project();
-
-        // goto considered harmful? just use a loop 😎
-        loop {
-            if let Some(mut fut) = this.recursions.pop() {
-                match fut.as_mut().poll(cx) {
-                    Poll::Ready(_) => {
-                        // cool, let's keep unwinding the metastack
-                        continue;
-                    }
-                    Poll::Pending => {
-                        // are we suspending for I/O, or did we almost run out of stack space?
-                        match NEXT_FUTURE.with_borrow_mut(|next_future| next_future.take()) {
-                            Some(next_fut) => {
-                                // needs more stack space, alrighty then.
-                                this.recursions.push(fut);
-                                this.recursions.push(next_fut);
-                                continue;
-                            }
-                            None => {
-                                // just
-                            }
-                        }
-                    }
-                }
-            }
-
-            // ran out of recursions (or it's the first poll), let's poll the first future
-            match this.future.as_mut().poll(cx) {
-                Poll::Ready(res) => {
-                    // wow we did it!
-                    return Poll::Ready(res);
-                }
-                Poll::Pending => {
-                    // are we suspending for I/O, or did we almost run out of stack space?
-                    match NEXT_FUTURE.with_borrow_mut(|next_future| next_future.take()) {
-                        Some(next_fut) => {
-                            // needs more stack space, alrighty then.
-                            this.recursions.push(next_fut);
-                            continue;
-                        }
-                        None => {
-                            // just
-                        }
                     }
                 }
             }

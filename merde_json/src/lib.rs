@@ -20,7 +20,7 @@ where
     T: Deserialize<'s>,
 {
     let mut deser = JsonDeserializer::new(s);
-    deser.deserialize_sync::<T>()
+    deser.deserialize::<T>()
 }
 
 /// Deserialize an instance of type `T` from a string of JSON text,
@@ -80,19 +80,5 @@ where
 {
     let mut s = JsonSerializer::from_writer(&mut writer);
     s.serialize_sync(value)?;
-    Ok(())
-}
-
-#[cfg(feature = "tokio")]
-/// Serialize the given data structure as JSON into the Tokio I/O stream.
-pub async fn to_tokio_writer<W, T>(writer: &mut W, value: &T) -> Result<(), MerdeError<'static>>
-where
-    W: tokio::io::AsyncWrite + Unpin,
-    T: Serialize,
-{
-    use std::pin::Pin;
-
-    let mut s = JsonSerializer::from_tokio_writer(Pin::new(writer));
-    s.serialize(value).await?;
     Ok(())
 }

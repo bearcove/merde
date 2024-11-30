@@ -157,7 +157,7 @@ where
     T: Deserialize<'s>,
 {
     let mut deser = YamlDeserializer::new(s);
-    deser.deserialize_sync::<T>()
+    deser.deserialize::<T>()
 }
 
 /// Deserialize an instance of type `T` from a string of YAML text,

@@ -286,7 +286,7 @@ mod tests {
         let deser = JsonDeserializer::new(input);
         let mut deser = LoggingDeserializer::new(deser);
 
-        let samples = deser.deserialize_sync::<Vec<Sample>>().unwrap();
+        let samples = deser.deserialize::<Vec<Sample>>().unwrap();
         assert_eq!(
             samples,
             vec![
@@ -308,7 +308,7 @@ mod tests {
         let deser = JsonDeserializer::new(input);
         let mut deser = LoggingDeserializer::new(deser);
 
-        let value = deser.deserialize_sync::<merde_core::Value>().unwrap();
+        let value = deser.deserialize::<merde_core::Value>().unwrap();
 
         assert_eq!(
             value,

@@ -51,9 +51,9 @@ pub trait DynDeserializerExt<'s> {
         &'de mut self,
     ) -> impl Future<Output = Result<T, MerdeError<'s>>> + 'de;
 
-    fn deserialize_sync<T: Deserialize<'s>>(&mut self) -> Result<T, MerdeError<'s>>;
+    fn deserialize<T: Deserialize<'s>>(&mut self) -> Result<T, MerdeError<'s>>;
 
-    fn deserialize_sync_owned<T: DeserializeOwned>(&mut self) -> Result<T, MerdeError<'s>>;
+    fn deserialize_owned<T: DeserializeOwned>(&mut self) -> Result<T, MerdeError<'s>>;
 }
 
 impl<'s, D> DynDeserializerExt<'s> for D
@@ -68,11 +68,11 @@ where
         async move { T::deserialize(self).await }
     }
 
-    fn deserialize_sync<T: Deserialize<'s>>(&mut self) -> Result<T, MerdeError<'s>> {
+    fn deserialize<T: Deserialize<'s>>(&mut self) -> Result<T, MerdeError<'s>> {
         T::deserialize(self).run_sync_with_metastack()
     }
 
-    fn deserialize_sync_owned<T: DeserializeOwned>(&mut self) -> Result<T, MerdeError<'s>> {
+    fn deserialize_owned<T: DeserializeOwned>(&mut self) -> Result<T, MerdeError<'s>> {
         T::deserialize_owned(self).run_sync_with_metastack()
     }
 }
@@ -84,11 +84,11 @@ impl<'s> DynDeserializerExt<'s> for dyn DynDeserializer<'s> + '_ {
         T::deserialize(self)
     }
 
-    fn deserialize_sync<T: Deserialize<'s>>(&mut self) -> Result<T, MerdeError<'s>> {
+    fn deserialize<T: Deserialize<'s>>(&mut self) -> Result<T, MerdeError<'s>> {
         T::deserialize(self).run_sync_with_metastack()
     }
 
-    fn deserialize_sync_owned<T: DeserializeOwned>(&mut self) -> Result<T, MerdeError<'s>> {
+    fn deserialize_owned<T: DeserializeOwned>(&mut self) -> Result<T, MerdeError<'s>> {
         T::deserialize_owned(self).run_sync_with_metastack()
     }
 }

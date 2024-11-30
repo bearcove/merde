@@ -72,7 +72,7 @@ fn main() {
         "#;
 
     let mut de = YamlDeserializer::new(yaml);
-    let result: ComplexStruct = de.deserialize_sync().unwrap();
+    let result: ComplexStruct = de.deserialize().unwrap();
 
     println!("Deserialized ComplexStruct: {result:#?}");
 
@@ -84,7 +84,7 @@ fn main() {
     "#;
 
     let mut de = YamlDeserializer::new(yaml_map);
-    let result: HashMap<Value, Value> = de.deserialize_sync().unwrap();
+    let result: HashMap<Value, Value> = de.deserialize().unwrap();
 
     println!("Deserialized HashMap: {result:#?}");
 }
