@@ -60,6 +60,27 @@ pub trait Serialize {
     ) -> impl Future<Output = Result<(), MerdeError<'static>>> + 'fut;
 }
 
+/// Dynamic dispatch version of [`Serialize`].
+pub trait DynSerialize {
+    /// Dynamic dispatch version of [`Serialize::serialize`].
+    fn dyn_serialize<'fut>(
+        &'fut mut self,
+        serializer: &'fut mut dyn DynSerializer,
+    ) -> BoxFut<'fut, Result<(), MerdeError<'static>>>;
+}
+
+impl<S> DynSerialize for S
+where
+    S: Serialize,
+{
+    fn dyn_serialize<'fut>(
+        &'fut mut self,
+        serializer: &'fut mut dyn DynSerializer,
+    ) -> BoxFut<'fut, Result<(), MerdeError<'static>>> {
+        Box::pin(Serialize::serialize(self, serializer))
+    }
+}
+
 macro_rules! impl_trivial_serialize {
     ($ty:ty, $($rest:tt)*) => {
         impl_trivial_serialize!($ty);
