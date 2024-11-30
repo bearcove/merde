@@ -342,41 +342,4 @@ mod tests {
         let s = "indeed not";
         assert_eq!(cowify(src.as_bytes(), s), CowStr::Owned(s.into()));
     }
-
-    // Actually trying to use Send stuff, we run into <https://github.com/rust-lang/rust/issues/100013>
-    // so this test is a no-go for now
-
-    // #[tokio::test]
-    // async fn test_cowify_async() {
-    //     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-    //     let port = listener.local_addr().unwrap().port();
-    //     println!("Listening on: localhost:{port}");
-
-    //     let accepted = tokio::spawn(async move {
-    //         let (mut stream, _) = listener.accept().await.unwrap();
-
-    //         let mut buf = Vec::new();
-    //         stream.read_to_end(&mut buf).await.unwrap();
-    //         let json_str = String::from_utf8(buf).unwrap();
-    //         let mut deserializer = JsonDeserializer::new(&json_str);
-    //         let deserialized: Value = Value::deserialize(&mut deserializer).await.unwrap();
-    //         println!("Deserialized value: {:?}", deserialized);
-
-    //         deserialized.into_static()
-    //     });
-
-    //     let mut arr = Array::new();
-    //     for _ in 0..10 {
-    //         arr.push(Map::new().with("foo", 24).with("bar", "hiya").into());
-    //     }
-    //     let v = Value::from(arr);
-
-    //     let mut stream = tokio::net::TcpStream::connect(format!("127.0.0.1:{port}"))
-    //         .await
-    //         .unwrap();
-    //     crate::to_tokio_writer(&mut stream, &v).await.unwrap();
-
-    //     let deserialized = accepted.await.unwrap();
-    //     assert_eq!(deserialized, v);
-    // }
 }
