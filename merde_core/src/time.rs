@@ -77,10 +77,9 @@ mod time_impls {
     }
 
     impl<'s> crate::Deserialize<'s> for Rfc3339<time::OffsetDateTime> {
-        async fn deserialize<D>(de: &mut D) -> Result<Self, D::Error<'s>>
-        where
-            D: crate::Deserializer<'s> + ?Sized,
-        {
+        async fn deserialize(
+            de: &mut dyn crate::DynDeserializer<'s>,
+        ) -> Result<Self, crate::MerdeError<'s>> {
             let s = crate::CowStr::deserialize(de).await?;
             Ok(Rfc3339(
                 time::OffsetDateTime::parse(
@@ -130,20 +129,16 @@ mod tests {
     }
 
     impl<'s> Deserializer<'s> for Journal {
-        type Error<'es> = MerdeError<'es>;
-
-        async fn next(&mut self) -> Result<Event<'s>, Self::Error<'s>> {
-            Ok(self.events.pop_front().unwrap())
+        async fn next(&mut self) -> Result<Event<'s>, MerdeError<'s>> {
+            Ok(self
+                .events
+                .pop_front()
+                .ok_or_else(|| MerdeError::Sub(Box::new("eof".to_string())))?)
         }
 
-        async fn t_starting_with<T: Deserialize<'s>>(
-            &mut self,
-            starter: Option<Event<'s>>,
-        ) -> Result<T, Self::Error<'s>> {
-            if let Some(event) = starter {
-                self.events.push_front(event.into_static());
-            }
-            T::deserialize(self).await
+        fn put_back(&mut self, ev: Event<'s>) -> Result<(), Self::Error<'s>> {
+            self.events.push_front(ev.into_static());
+            Ok(())
         }
     }
 

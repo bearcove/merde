@@ -145,7 +145,7 @@ pub struct MapStart {
 }
 
 impl<'s> Event<'s> {
-    pub fn into_i64(self) -> Result<i64, MerdeError<'static>> {
+    pub fn into_i64(self) -> Result<i64, MerdeError<'s>> {
         match self {
             Event::I64(i) => Ok(i),
             _ => Err(MerdeError::UnexpectedEvent {
@@ -155,7 +155,7 @@ impl<'s> Event<'s> {
         }
     }
 
-    pub fn into_u64(self) -> Result<u64, MerdeError<'static>> {
+    pub fn into_u64(self) -> Result<u64, MerdeError<'s>> {
         match self {
             Event::U64(u) => Ok(u),
             _ => Err(MerdeError::UnexpectedEvent {
@@ -165,7 +165,7 @@ impl<'s> Event<'s> {
         }
     }
 
-    pub fn into_f64(self) -> Result<f64, MerdeError<'static>> {
+    pub fn into_f64(self) -> Result<f64, MerdeError<'s>> {
         match self {
             Event::F64(f) => Ok(f),
             _ => Err(MerdeError::UnexpectedEvent {
@@ -175,7 +175,7 @@ impl<'s> Event<'s> {
         }
     }
 
-    pub fn into_str(self) -> Result<CowStr<'s>, MerdeError<'static>> {
+    pub fn into_str(self) -> Result<CowStr<'s>, MerdeError<'s>> {
         match self {
             Event::Str(s) => Ok(s),
             _ => Err(MerdeError::UnexpectedEvent {
@@ -185,7 +185,7 @@ impl<'s> Event<'s> {
         }
     }
 
-    pub fn into_bytes(self) -> Result<CowBytes<'s>, MerdeError<'static>> {
+    pub fn into_bytes(self) -> Result<CowBytes<'s>, MerdeError<'s>> {
         match self {
             Event::Bytes(b) => Ok(b),
             _ => Err(MerdeError::UnexpectedEvent {
@@ -195,7 +195,7 @@ impl<'s> Event<'s> {
         }
     }
 
-    pub fn into_bool(self) -> Result<bool, MerdeError<'static>> {
+    pub fn into_bool(self) -> Result<bool, MerdeError<'s>> {
         match self {
             Event::Bool(b) => Ok(b),
             _ => Err(MerdeError::UnexpectedEvent {
@@ -205,7 +205,7 @@ impl<'s> Event<'s> {
         }
     }
 
-    pub fn into_null(self) -> Result<(), MerdeError<'static>> {
+    pub fn into_null(self) -> Result<(), MerdeError<'s>> {
         match self {
             Event::Null => Ok(()),
             _ => Err(MerdeError::UnexpectedEvent {
@@ -215,7 +215,7 @@ impl<'s> Event<'s> {
         }
     }
 
-    pub fn into_map_start(self) -> Result<MapStart, MerdeError<'static>> {
+    pub fn into_map_start(self) -> Result<MapStart, MerdeError<'s>> {
         match self {
             Event::MapStart(ms) => Ok(ms),
             _ => Err(MerdeError::UnexpectedEvent {
@@ -225,7 +225,7 @@ impl<'s> Event<'s> {
         }
     }
 
-    pub fn into_map_end(self) -> Result<(), MerdeError<'static>> {
+    pub fn into_map_end(self) -> Result<(), MerdeError<'s>> {
         match self {
             Event::MapEnd => Ok(()),
             _ => Err(MerdeError::UnexpectedEvent {
@@ -235,7 +235,7 @@ impl<'s> Event<'s> {
         }
     }
 
-    pub fn into_array_start(self) -> Result<ArrayStart, MerdeError<'static>> {
+    pub fn into_array_start(self) -> Result<ArrayStart, MerdeError<'s>> {
         match self {
             Event::ArrayStart(array_start) => Ok(array_start),
             _ => Err(MerdeError::UnexpectedEvent {
@@ -245,7 +245,7 @@ impl<'s> Event<'s> {
         }
     }
 
-    pub fn into_array_end(self) -> Result<(), MerdeError<'static>> {
+    pub fn into_array_end(self) -> Result<(), MerdeError<'s>> {
         match self {
             Event::ArrayEnd => Ok(()),
             _ => Err(MerdeError::UnexpectedEvent {

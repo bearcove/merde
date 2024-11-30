@@ -43,6 +43,7 @@ pub use deserialize::DeserOpinions;
 pub use deserialize::Deserialize;
 pub use deserialize::DeserializeOwned;
 pub use deserialize::Deserializer;
+pub use deserialize::DynDeserializer;
 pub use deserialize::FieldSlot;
 
 pub mod time;

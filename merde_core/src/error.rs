@@ -86,6 +86,16 @@ pub enum MerdeError<'s> {
 
     /// An I/O error occurred.
     Io(std::io::Error),
+
+    /// An Utf8 error
+    Utf8Error(std::str::Utf8Error),
+
+    /// Any other error
+    Other(Box<dyn MerdeSubError<'s>>),
+}
+
+trait MerdeSubError<'s>: std::fmt::Display + std::fmt::Debug {
+    fn into_static(self: Box<Self>) -> Box<dyn MerdeSubError<'static>>;
 }
 
 impl IntoStatic for MerdeError<'_> {
@@ -112,6 +122,8 @@ impl IntoStatic for MerdeError<'_> {
             MerdeError::UnexpectedEvent { got, expected } => {
                 MerdeError::UnexpectedEvent { got, expected }
             }
+            MerdeError::Utf8Error(e) => MerdeError::Utf8Error(e),
+            MerdeError::Other(e) => MerdeError::Other(e.into_static()),
         }
     }
 }
@@ -119,6 +131,12 @@ impl IntoStatic for MerdeError<'_> {
 impl From<std::io::Error> for MerdeError<'_> {
     fn from(e: std::io::Error) -> Self {
         MerdeError::Io(e)
+    }
+}
+
+impl From<std::str::Utf8Error> for MerdeError<'_> {
+    fn from(e: std::str::Utf8Error) -> Self {
+        MerdeError::Utf8Error(e)
     }
 }
 
@@ -166,6 +184,12 @@ impl std::fmt::Display for MerdeError<'_> {
                     "Unexpected event: got {:?}, expected one of {:?}",
                     got, expected
                 )
+            }
+            MerdeError::Utf8Error(e) => {
+                write!(f, "UTF-8 Error: {}", e)
+            }
+            MerdeError::Other(e) => {
+                write!(f, "Other error: {}", e)
             }
         }
     }
