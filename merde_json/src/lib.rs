@@ -11,7 +11,7 @@ mod jiter_lite;
 
 use merde_core::{
     Deserialize, DeserializeOwned, DynDeserializerExt, DynSerialize, DynSerializerExt, MerdeError,
-    MetastackExt, Serialize,
+    MetastackExt,
 };
 
 /// Deserialize an instance of type `T` from a string of JSON text.
@@ -53,7 +53,7 @@ where
 }
 
 /// Serialize the given data structure as a String of JSON.
-pub fn to_string<T: Serialize>(value: &T) -> Result<String, MerdeError<'static>> {
+pub fn to_string(value: &dyn DynSerialize) -> Result<String, MerdeError<'static>> {
     // SAFETY: This is safe because we know that the JSON serialization
     // produced by `to_json_bytes` will always be valid UTF-8.
     let res = unsafe { String::from_utf8_unchecked(to_vec(value)?) };
@@ -61,11 +61,11 @@ pub fn to_string<T: Serialize>(value: &T) -> Result<String, MerdeError<'static>>
 }
 
 /// Serialize as JSON to a `Vec<u8>`
-pub fn to_vec<T: Serialize>(value: &T) -> Result<Vec<u8>, MerdeError<'static>> {
+pub fn to_vec(value: &dyn DynSerialize) -> Result<Vec<u8>, MerdeError<'static>> {
     let mut v: Vec<u8> = vec![];
     {
         let mut s = JsonSerializer::new(&mut v);
-        s.serialize(value)?;
+        s.dyn_serialize(value)?;
     }
     Ok(v)
 }
@@ -73,7 +73,7 @@ pub fn to_vec<T: Serialize>(value: &T) -> Result<Vec<u8>, MerdeError<'static>> {
 /// Serialize the given data structure as JSON into the I/O stream.
 pub fn to_writer(
     writer: &mut dyn std::io::Write,
-    value: &mut dyn DynSerialize,
+    value: &dyn DynSerialize,
 ) -> Result<(), MerdeError<'static>> {
     let mut s = JsonSerializer::from_writer(writer);
     s.dyn_serialize(value)?;

@@ -39,7 +39,7 @@ where
 
 pub trait DynSerializerExt {
     fn serialize<T: Serialize>(&mut self, t: &T) -> Result<(), MerdeError<'static>>;
-    fn dyn_serialize(&mut self, t: &mut dyn DynSerialize) -> Result<(), MerdeError<'static>>;
+    fn dyn_serialize(&mut self, t: &dyn DynSerialize) -> Result<(), MerdeError<'static>>;
 }
 
 impl<S> DynSerializerExt for S
@@ -50,7 +50,7 @@ where
         T::serialize(t, self).run_sync_with_metastack()
     }
 
-    fn dyn_serialize(&mut self, t: &mut dyn DynSerialize) -> Result<(), MerdeError<'static>> {
+    fn dyn_serialize(&mut self, t: &dyn DynSerialize) -> Result<(), MerdeError<'static>> {
         DynSerialize::dyn_serialize(t, self).run_sync_with_metastack()
     }
 }
@@ -66,7 +66,7 @@ pub trait Serialize {
 pub trait DynSerialize {
     /// Dynamic dispatch version of [`Serialize::serialize`].
     fn dyn_serialize<'fut>(
-        &'fut mut self,
+        &'fut self,
         serializer: &'fut mut dyn DynSerializer,
     ) -> BoxFut<'fut, Result<(), MerdeError<'static>>>;
 }
@@ -76,7 +76,7 @@ where
     S: Serialize,
 {
     fn dyn_serialize<'fut>(
-        &'fut mut self,
+        &'fut self,
         serializer: &'fut mut dyn DynSerializer,
     ) -> BoxFut<'fut, Result<(), MerdeError<'static>>> {
         Box::pin(Serialize::serialize(self, serializer))
