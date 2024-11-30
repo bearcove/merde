@@ -2,19 +2,19 @@ use std::{borrow::Cow, collections::HashMap, future::Future, hash::BuildHasher, 
 
 use crate::{
     metastack::MetastackExt, Array, ArrayStart, CowBytes, CowStr, Event, Map, MapStart, MerdeError,
-    Value,
+    SendFuture, Value,
 };
 
-pub trait Serializer {
+pub trait Serializer: Send {
     fn write<'fut>(
         &'fut mut self,
         ev: Event<'fut>,
-    ) -> impl Future<Output = Result<(), MerdeError<'static>>> + 'fut;
+    ) -> impl Future<Output = Result<(), MerdeError<'static>>> + Send + 'fut;
 }
 
-type BoxFut<'a, T> = Pin<Box<dyn Future<Output = T> + 'a>>;
+type BoxFut<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 
-pub trait DynSerializer {
+pub trait DynSerializer: Send {
     fn write<'fut>(
         &'fut mut self,
         ev: Event<'fut>,
@@ -43,7 +43,7 @@ pub trait DynSerializerExt {
     fn serialize<'fut, T: Serialize>(
         &'fut mut self,
         t: &'fut T,
-    ) -> impl Future<Output = Result<(), MerdeError<'static>>> + 'fut;
+    ) -> impl Future<Output = Result<(), MerdeError<'static>>> + Send + 'fut;
 }
 
 impl<S> DynSerializerExt for S
@@ -60,16 +60,47 @@ where
     fn serialize<'fut, T: Serialize>(
         &'fut mut self,
         t: &'fut T,
-    ) -> impl Future<Output = Result<(), MerdeError<'static>>> + 'fut {
+    ) -> impl Future<Output = Result<(), MerdeError<'static>>> + Send + 'fut {
         T::serialize(t, self).run_async_with_metastack()
     }
 }
 
-pub trait Serialize {
+pub trait Serialize: Send + Sync {
     fn serialize<'fut>(
         &'fut self,
         serializer: &'fut mut dyn DynSerializer,
-    ) -> impl Future<Output = Result<(), MerdeError<'static>>> + 'fut;
+    ) -> impl Future<Output = Result<(), MerdeError<'static>>> + Send + 'fut;
+}
+
+pub trait DynSerialize {
+    fn dyn_serialize<'fut>(
+        &'fut self,
+        serializer: &'fut mut dyn DynSerializer,
+    ) -> BoxFut<'fut, Result<(), MerdeError<'static>>>;
+
+    fn dyn_serialize_sync(
+        &self,
+        serializer: &mut dyn DynSerializer,
+    ) -> Result<(), MerdeError<'static>>;
+}
+
+impl<T> DynSerialize for T
+where
+    T: Serialize,
+{
+    fn dyn_serialize<'fut>(
+        &'fut self,
+        serializer: &'fut mut dyn DynSerializer,
+    ) -> BoxFut<'fut, Result<(), MerdeError<'static>>> {
+        Box::pin(Serialize::serialize(self, serializer))
+    }
+
+    fn dyn_serialize_sync(
+        &self,
+        serializer: &mut dyn DynSerializer,
+    ) -> Result<(), MerdeError<'static>> {
+        Serialize::serialize(self, serializer).run_sync_with_metastack()
+    }
 }
 
 macro_rules! impl_trivial_serialize {
@@ -83,7 +114,7 @@ macro_rules! impl_trivial_serialize {
             fn serialize<'fut>(
                 &'fut self,
                 serializer: &'fut mut dyn DynSerializer,
-            ) -> impl Future<Output = Result<(), MerdeError<'static>>> + 'fut {
+            ) -> impl Future<Output = Result<(), MerdeError<'static>>> + Send + 'fut {
                 async { serializer.write(Event::from(*self)).await }
             }
         }
@@ -164,7 +195,7 @@ impl<T: Serialize> Serialize for Option<T> {
     fn serialize<'se>(
         &'se self,
         serializer: &'se mut dyn DynSerializer,
-    ) -> impl Future<Output = Result<(), MerdeError<'static>>> + 'se {
+    ) -> impl Future<Output = Result<(), MerdeError<'static>>> + Send + 'se {
         async move {
             match self {
                 Some(value) => value.serialize(serializer).await,
@@ -212,11 +243,11 @@ impl<T: Serialize> Serialize for Vec<T> {
     }
 }
 
-impl<K: Serialize, V: Serialize, BH: BuildHasher> Serialize for HashMap<K, V, BH> {
+impl<K: Serialize, V: Serialize, BH: BuildHasher + Send + Sync> Serialize for HashMap<K, V, BH> {
     fn serialize<'fut>(
         &'fut self,
         serializer: &'fut mut dyn DynSerializer,
-    ) -> impl Future<Output = Result<(), MerdeError<'static>>> + 'fut {
+    ) -> impl Future<Output = Result<(), MerdeError<'static>>> + Send + 'fut {
         async move {
             serializer
                 .write(Event::MapStart(MapStart {
@@ -236,7 +267,7 @@ impl Serialize for Map<'_> {
     fn serialize<'se>(
         &'se self,
         serializer: &'se mut dyn DynSerializer,
-    ) -> impl Future<Output = Result<(), MerdeError<'static>>> + 'se {
+    ) -> impl Future<Output = Result<(), MerdeError<'static>>> + Send + 'se {
         async {
             serializer
                 .write(Event::MapStart(MapStart {
@@ -245,7 +276,7 @@ impl Serialize for Map<'_> {
                 .await?;
             for (key, value) in self.iter() {
                 serializer.write(Event::Str(CowStr::Borrowed(key))).await?;
-                value.serialize(serializer).await?;
+                Serialize::serialize(value, serializer).await?;
             }
             serializer.write(Event::MapEnd).await
         }
@@ -256,7 +287,7 @@ impl Serialize for Array<'_> {
     fn serialize<'se>(
         &'se self,
         serializer: &'se mut dyn DynSerializer,
-    ) -> impl Future<Output = Result<(), MerdeError<'static>>> + 'se {
+    ) -> impl Future<Output = Result<(), MerdeError<'static>>> + Send + 'se {
         async {
             serializer
                 .write(Event::ArrayStart(ArrayStart {
@@ -264,7 +295,7 @@ impl Serialize for Array<'_> {
                 }))
                 .await?;
             for item in self.iter() {
-                item.serialize(serializer).await?;
+                Serialize::serialize(item, serializer).await?;
             }
             serializer.write(Event::ArrayEnd).await
         }
@@ -275,24 +306,26 @@ impl Serialize for Value<'_> {
     fn serialize<'se>(
         &'se self,
         serializer: &'se mut dyn DynSerializer,
-    ) -> impl Future<Output = Result<(), MerdeError<'static>>> + 'se {
+    ) -> impl Future<Output = Result<(), MerdeError<'static>>> + Send + 'se {
         async move {
             match self {
-                Value::I64(i) => serializer.write(Event::I64(*i)).await,
-                Value::U64(u) => serializer.write(Event::U64(*u)).await,
-                Value::Float(f) => serializer.write(Event::F64(f.into_inner())).await,
-                Value::Str(s) => serializer.write(Event::Str(s.clone())).await,
-                Value::Bytes(b) => serializer.write(Event::Bytes(b.clone())).await,
-                Value::Null => serializer.write(Event::Null).await,
-                Value::Bool(b) => serializer.write(Event::Bool(*b)).await,
+                Value::I64(i) => serializer.write(Event::I64(*i)).send().await,
+                Value::U64(u) => serializer.write(Event::U64(*u)).send().await,
+                Value::Float(f) => serializer.write(Event::F64(f.into_inner())).send().await,
+                Value::Str(s) => serializer.write(Event::Str(s.clone())).send().await,
+                Value::Bytes(b) => serializer.write(Event::Bytes(b.clone())).send().await,
+                Value::Null => serializer.write(Event::Null).send().await,
+                Value::Bool(b) => serializer.write(Event::Bool(*b)).send().await,
                 Value::Array(arr) => {
-                    arr.serialize(serializer)
+                    Serialize::serialize(arr, serializer)
                         .with_metastack_resume_point()
+                        .send()
                         .await
                 }
                 Value::Map(map) => {
-                    map.serialize(serializer)
+                    Serialize::serialize(map, serializer)
                         .with_metastack_resume_point()
+                        .send()
                         .await
                 }
             }

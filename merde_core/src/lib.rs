@@ -1,6 +1,9 @@
 // cf. <https://github.com/rust-lang/rust/issues/133676>
 #![allow(clippy::manual_async_fn)]
 
+mod send_future;
+pub use send_future::SendFuture;
+
 mod cowstr;
 
 pub use cowstr::CowStr;

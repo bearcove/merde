@@ -18,7 +18,7 @@ use std::{
 
 use pin_project_lite::pin_project;
 
-type NextFuture = Pin<Box<dyn Future<Output = ()>>>;
+type NextFuture = Pin<Box<dyn Future<Output = ()> + Send>>;
 
 // TODO: make this configurable? make this depend on the
 // future size? 8K is not one-size-fits-all
@@ -38,7 +38,8 @@ pub trait MetastackExt<'s>: Sized {
 
     /// Transforms a future into a future that will return `Poll::Pending` if there
     /// is not enough stack space to execute the future.
-    fn with_metastack_resume_point(self) -> Pin<Box<dyn Future<Output = Self::Output> + 's>>;
+    fn with_metastack_resume_point(self)
+        -> Pin<Box<dyn Future<Output = Self::Output> + Send + 's>>;
 
     /// Sets up a landing pad to catch `Poll::Pending` returns and run the next
     /// scheduled future on a slightly emptier stack.
@@ -47,16 +48,19 @@ pub trait MetastackExt<'s>: Sized {
     /// Sets up a landing pad to catch `Poll::Pending` returns and run the next
     /// scheduled future on a slightly emptier stack — but also supports yielding
     /// to the async runtime.
-    fn run_async_with_metastack(self) -> impl Future<Output = Self::Output>;
+    fn run_async_with_metastack(self) -> impl Future<Output = Self::Output> + Send;
 }
 
 impl<'s, F> MetastackExt<'s> for F
 where
-    F: Future + 's,
+    F: Future + Send + 's,
+    <F as Future>::Output: Send,
 {
     type Output = F::Output;
 
-    fn with_metastack_resume_point(self) -> Pin<Box<dyn Future<Output = Self::Output> + 's>> {
+    fn with_metastack_resume_point(
+        self,
+    ) -> Pin<Box<dyn Future<Output = Self::Output> + Send + 's>> {
         with_metastack_resume_point(self)
     }
 
@@ -103,7 +107,7 @@ where
         }
     }
 
-    fn run_async_with_metastack(self) -> impl Future<Output = Self::Output> {
+    fn run_async_with_metastack(self) -> impl Future<Output = Self::Output> + Send {
         MetastackFutureAdapter {
             future: self,
             // perf note: empty vecs don't allocate yet, so `Option<Vec<T>>` is pointless
@@ -122,7 +126,7 @@ pin_project! {
 
 impl<F> Future for MetastackFutureAdapter<F>
 where
-    F: Future,
+    F: Future + Send,
 {
     type Output = F::Output;
 
@@ -182,9 +186,12 @@ where
 /// is not enough stack space to execute the future.
 ///
 /// This relies on the current async stack being invoked via `run_with_infinite_stack`
-pub fn with_metastack_resume_point<'s, F>(fut: F) -> Pin<Box<dyn Future<Output = F::Output> + 's>>
+pub fn with_metastack_resume_point<'s, F>(
+    fut: F,
+) -> Pin<Box<dyn Future<Output = F::Output> + Send + 's>>
 where
-    F: Future + 's,
+    F: Future + Send + 's,
+    <F as Future>::Output: Send,
 {
     Box::pin(async move {
         if STACK_INFO.with(|si| si.left()) >= MINIMUM_VIABLE_FREE_STACK_SPACE {
@@ -198,7 +205,7 @@ where
         let mut result: Option<F::Output> = None;
 
         // make a future that will actually assign the result
-        let assign_fut: Pin<Box<dyn Future<Output = ()>>> = Box::pin(async {
+        let assign_fut: Pin<Box<dyn Future<Output = ()> + Send>> = Box::pin(async {
             result = Some(fut.await);
         });
 
@@ -206,7 +213,7 @@ where
         // call to deserialize".
         // todo: make sure that this is actually the case by handling panics and
         // clearing thread-locals.
-        let assign_fut: Pin<Box<dyn Future<Output = ()> + 'static>> =
+        let assign_fut: Pin<Box<dyn Future<Output = ()> + Send + 'static>> =
             unsafe { std::mem::transmute(assign_fut) };
 
         NEXT_FUTURE.with_borrow_mut(|next_future| *next_future = Some(assign_fut));

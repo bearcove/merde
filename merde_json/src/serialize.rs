@@ -3,7 +3,7 @@ use std::{collections::VecDeque, future::Future, io::Write};
 use merde_core::{Event, MerdeError, Serializer};
 
 /// Something the JSON serializer can write to
-pub trait JsonSerializerWriter {
+pub trait JsonSerializerWriter: Send {
     /// Extend the buffer with the given slice
     fn extend_from_slice(
         &mut self,
@@ -19,7 +19,7 @@ impl JsonSerializerWriter for &mut Vec<u8> {
 }
 
 /// A wrapper around a `std::io::Write` that implements `JsonSerializerWriter`
-pub struct SyncWriteWrapper<'s>(&'s mut dyn std::io::Write);
+pub struct SyncWriteWrapper<'s>(&'s mut (dyn std::io::Write + Send));
 
 impl<'s> JsonSerializerWriter for SyncWriteWrapper<'s> {
     async fn extend_from_slice(&mut self, slice: &[u8]) -> Result<(), std::io::Error> {
@@ -193,7 +193,7 @@ where
 
 impl<'w> JsonSerializer<SyncWriteWrapper<'w>> {
     /// Makes a json serializer that writes to a std::io::Write
-    pub fn from_writer<SW: std::io::Write + 'w>(
+    pub fn from_writer<SW: std::io::Write + Send + 'w>(
         w: &'w mut SW,
     ) -> JsonSerializer<SyncWriteWrapper<'w>> {
         JsonSerializer::new(SyncWriteWrapper(w))

@@ -71,9 +71,9 @@ pub fn to_vec<T: Serialize>(value: &T) -> Result<Vec<u8>, MerdeError<'static>> {
 }
 
 /// Serialize the given data structure as JSON into the I/O stream.
-pub fn to_writer<W, T>(
-    mut writer: impl std::io::Write,
-    value: &T,
+pub fn to_writer(
+    mut writer: &mut (dyn std::io::Write + Send),
+    value: &dyn DynSerialize,
 ) -> Result<(), MerdeError<'static>>
 where
     T: Serialize,

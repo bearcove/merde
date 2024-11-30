@@ -9,21 +9,21 @@ use std::{
 };
 
 use crate::{
-    metastack::MetastackExt, Array, CowStr, Event, EventType, IntoStatic, Map, MerdeError, Value,
-    WithLifetime,
+    metastack::MetastackExt, Array, CowStr, Event, EventType, IntoStatic, Map, MerdeError,
+    SendFuture, Value, WithLifetime,
 };
 
-pub trait Deserializer<'s>: std::fmt::Debug {
+pub trait Deserializer<'s>: std::fmt::Debug + Send {
     /// Get the next event from the deserializer.
-    fn next(&mut self) -> impl Future<Output = Result<Event<'s>, MerdeError<'s>>> + '_;
+    fn next(&mut self) -> impl Future<Output = Result<Event<'s>, MerdeError<'s>>> + Send + '_;
 
     /// Put back an event into the deserializer.
     fn put_back(&mut self, ev: Event<'s>) -> Result<(), MerdeError<'s>>;
 }
 
-type BoxFut<'a, T> = Pin<Box<dyn Future<Output = T> + 'a>>;
+type BoxFut<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 
-pub trait DynDeserializer<'s> {
+pub trait DynDeserializer<'s>: Send {
     fn next<'de>(&'de mut self) -> BoxFut<'de, Result<Event<'s>, MerdeError<'s>>>;
 
     fn put_back(&mut self, ev: Event<'s>) -> Result<(), MerdeError<'s>>;
@@ -224,10 +224,10 @@ impl DeserOpinions for DefaultDeserOpinions {
     }
 }
 
-pub trait Deserialize<'s>: Sized + 's {
+pub trait Deserialize<'s>: Sized + Send + 's {
     fn deserialize<'de>(
         de: &'de mut dyn DynDeserializer<'s>,
-    ) -> impl Future<Output = Result<Self, MerdeError<'s>>> + 'de;
+    ) -> impl Future<Output = Result<Self, MerdeError<'s>>> + Send + 'de;
 
     fn from_option(value: Option<Self>, field_name: CowStr<'s>) -> Result<Self, MerdeError<'s>> {
         match value {
@@ -237,20 +237,21 @@ pub trait Deserialize<'s>: Sized + 's {
     }
 }
 
-pub trait DeserializeOwned: Sized + IntoStatic {
+pub trait DeserializeOwned: Sized + Send + IntoStatic {
     fn deserialize_owned<'s>(
         de: &mut dyn DynDeserializer<'s>,
-    ) -> impl Future<Output = Result<Self, MerdeError<'s>>>;
+    ) -> impl Future<Output = Result<Self, MerdeError<'s>>> + Send;
 }
 
 impl<T> DeserializeOwned for T
 where
-    T: IntoStatic,
+    T: Send + IntoStatic,
     T: for<'s> WithLifetime<'s> + 'static,
     for<'s> <T as WithLifetime<'s>>::Lifetimed: Deserialize<'s> + IntoStatic<Output = T>,
 {
     async fn deserialize_owned<'s>(de: &mut dyn DynDeserializer<'s>) -> Result<T, MerdeError<'s>> {
         <T as WithLifetime<'s>>::Lifetimed::deserialize(de)
+            .send()
             .await
             .map(|v| v.into_static())
     }
@@ -404,7 +405,7 @@ impl<'s> Deserialize<'s> for Cow<'s, str> {
 
 impl<'s, T: Deserialize<'s>> Deserialize<'s> for Box<T> {
     async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
-        let value: T = T::deserialize(de).await?;
+        let value: T = T::deserialize(de).send().await?;
         Ok(Box::new(value))
     }
 }
@@ -415,7 +416,7 @@ impl<'s, T: Deserialize<'s>> Deserialize<'s> for Option<T> {
             Event::Null => Ok(None),
             ev => {
                 de.put_back(ev)?;
-                let value = T::deserialize(de).await?;
+                let value = T::deserialize(de).send().await?;
                 Ok(Some(value))
             }
         }
@@ -431,7 +432,7 @@ impl<'s, T: Deserialize<'s>> Deserialize<'s> for Option<T> {
 
 impl<'s, T: Deserialize<'s>> Deserialize<'s> for Vec<T> {
     async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
-        let array_start = de.next().await?.into_array_start()?;
+        let array_start = de.next().send().await?.into_array_start()?;
         let mut vec = if let Some(size) = array_start.size_hint {
             Vec::with_capacity(size)
         } else {
@@ -439,7 +440,7 @@ impl<'s, T: Deserialize<'s>> Deserialize<'s> for Vec<T> {
         };
 
         loop {
-            match de.next().await? {
+            match de.next().send().await? {
                 Event::ArrayEnd => {
                     #[cfg(debug_assertions)]
                     {
@@ -451,7 +452,7 @@ impl<'s, T: Deserialize<'s>> Deserialize<'s> for Vec<T> {
                 }
                 ev => {
                     de.put_back(ev)?;
-                    vec.push(T::deserialize(de).await?);
+                    vec.push(T::deserialize(de).send().await?);
                 }
             }
         }
@@ -464,19 +465,19 @@ impl<'s, K, V, S> Deserialize<'s> for HashMap<K, V, S>
 where
     K: Deserialize<'s> + Eq + Hash,
     V: Deserialize<'s>,
-    S: Default + BuildHasher + 's,
+    S: Default + BuildHasher + Send + 's,
 {
     async fn deserialize<'d>(de: &'d mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
-        de.next().await?.into_map_start()?;
+        de.next().send().await?.into_map_start()?;
         let mut map = HashMap::<K, V, S>::default();
 
         loop {
-            match de.next().await? {
+            match de.next().send().await? {
                 Event::MapEnd => break,
                 ev => {
                     de.put_back(ev)?;
-                    let key: K = K::deserialize(de).await?;
-                    let value: V = V::deserialize(de).await?;
+                    let key: K = K::deserialize(de).send().await?;
+                    let value: V = V::deserialize(de).send().await?;
                     map.insert(key, value);
                 }
             }
@@ -540,70 +541,72 @@ impl<'s> Deserialize<'s> for Array<'s> {
 
 impl<'s> Deserialize<'s> for Value<'s> {
     async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
-        match de.next().await? {
-            Event::I64(i) => Ok(Value::I64(i)),
-            Event::U64(u) => Ok(Value::U64(u)),
-            Event::F64(f) => Ok(Value::Float(f.into())),
-            Event::Str(s) => Ok(Value::Str(s)),
-            Event::Bytes(b) => Ok(Value::Bytes(b)),
-            Event::Bool(b) => Ok(Value::Bool(b)),
-            Event::Null => Ok(Value::Null),
-            Event::MapStart(ms) => {
-                let mut map = match ms.size_hint {
-                    Some(size) => Map::with_capacity(size),
-                    None => Map::new(),
-                };
-                loop {
-                    match de.next().await? {
-                        Event::MapEnd => break,
-                        Event::Str(key) => {
-                            let value: Value = <Value as Deserialize>::deserialize(de)
-                                .with_metastack_resume_point()
-                                .await?;
-                            map.insert(key, value);
-                        }
-                        ev => {
-                            return Err(MerdeError::UnexpectedEvent {
-                                got: EventType::from(&ev),
-                                expected: &[EventType::Str, EventType::MapEnd],
-                                help: None,
-                            })
-                        }
-                    }
-                }
-                Ok(Value::Map(map))
-            }
-            Event::ArrayStart(_) => {
-                let mut vec = Array::new();
-                loop {
-                    match de.next().await? {
-                        Event::ArrayEnd => break,
-                        ev => {
-                            de.put_back(ev)?;
-                            let item: Value =
-                                Value::deserialize(de).with_metastack_resume_point().await?;
-                            vec.push(item);
-                        }
-                    }
-                }
-                Ok(Value::Array(vec))
-            }
-            ev => Err(MerdeError::UnexpectedEvent {
-                got: EventType::from(&ev),
-                expected: &[
-                    EventType::I64,
-                    EventType::U64,
-                    EventType::Float,
-                    EventType::Str,
-                    EventType::Bytes,
-                    EventType::Bool,
-                    EventType::Null,
-                    EventType::MapStart,
-                    EventType::ArrayStart,
-                ],
-                help: Some("(While trying to deserialize a merde Value)".to_string()),
-            }),
-        }
+        todo!()
+        // match de.next().await? {
+        //     Event::I64(i) => Ok(Value::I64(i)),
+        //     Event::U64(u) => Ok(Value::U64(u)),
+        //     Event::F64(f) => Ok(Value::Float(f.into())),
+        //     Event::Str(s) => Ok(Value::Str(s)),
+        //     Event::Bytes(b) => Ok(Value::Bytes(b)),
+        //     Event::Bool(b) => Ok(Value::Bool(b)),
+        //     Event::Null => Ok(Value::Null),
+        //     Event::MapStart(ms) => {
+        //         let mut map = match ms.size_hint {
+        //             Some(size) => Map::with_capacity(size),
+        //             None => Map::new(),
+        //         };
+        //         loop {
+        //             match de.next().await? {
+        //                 Event::MapEnd => break,
+        //                 Event::Str(key) => {
+        //                     let value: Value = <Value as Deserialize>::deserialize(de)
+        //                         .with_metastack_resume_point()
+        //                         .await?;
+        //                     map.insert(key, value);
+        //                 }
+        //                 ev => {
+        //                     return Err(MerdeError::UnexpectedEvent {
+        //                         got: EventType::from(&ev),
+        //                         expected: &[EventType::Str, EventType::MapEnd],
+        //                         help: None,
+        //                     })
+        //                 }
+        //             }
+        //         }
+        //         Ok(Value::Map(map))
+        //     }
+        //     Event::ArrayStart(_) => {
+        //         let mut vec = Array::new();
+        //         loop {
+        //             match de.next().await? {
+        //                 Event::ArrayEnd => break,
+        //                 ev => {
+        //                     de.put_back(ev)?;
+        //                     let item: Value = <Value as Deserialize>::deserialize(de)
+        //                         .with_metastack_resume_point()
+        //                         .await?;
+        //                     vec.push(item);
+        //                 }
+        //             }
+        //         }
+        //         Ok(Value::Array(vec))
+        //     }
+        //     ev => Err(MerdeError::UnexpectedEvent {
+        //         got: EventType::from(&ev),
+        //         expected: &[
+        //             EventType::I64,
+        //             EventType::U64,
+        //             EventType::Float,
+        //             EventType::Str,
+        //             EventType::Bytes,
+        //             EventType::Bool,
+        //             EventType::Null,
+        //             EventType::MapStart,
+        //             EventType::ArrayStart,
+        //         ],
+        //         help: Some("(While trying to deserialize a merde Value)".to_string()),
+        //     }),
+        // }
     }
 }
 

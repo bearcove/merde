@@ -1,5 +1,6 @@
-use merde_core::{Deserializer, Event, MerdeError};
+use merde_core::{Deserializer, Event, MerdeError, SendFuture};
 
+// FIXME: take a `&mut dyn DynDeserializer` instead of `I: Deserializer<'s>`
 pub struct LoggingDeserializer<'s, I>
 where
     I: Deserializer<'s>,
@@ -37,12 +38,12 @@ where
 {
     async fn next(&mut self) -> Result<Event<'s>, MerdeError<'s>> {
         if let Some(ev) = self.starter.take() {
-            eprintln!("> (from starter) {:?}", ev);
+            eprintln!("> (from starter) {ev:?}");
             return Ok(ev);
         }
 
-        let ev = self.inner.next().await?;
-        eprintln!("> (from inner.next) {:?}", ev);
+        let ev = self.inner.next().send().await?;
+        eprintln!("> (from inner.next) {ev:?}");
         Ok(ev)
     }
 
