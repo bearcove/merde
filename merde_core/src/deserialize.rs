@@ -45,14 +45,14 @@ where
     }
 }
 
-trait DynDeserializerExt {
-    fn t<'de, 's, T: Deserialize<'s>>(
+trait DynDeserializerExt<'s> {
+    fn t<'de, T: Deserialize<'s>>(
         &'de mut self,
     ) -> impl Future<Output = Result<T, MerdeError<'s>>> + 'de;
 }
 
-impl DynDeserializerExt for dyn DynDeserializer<'_> {
-    fn t<'de, 's, T: Deserialize<'s>>(
+impl<'s> DynDeserializerExt<'s> for dyn DynDeserializer<'s> + '_ {
+    fn t<'de, T: Deserialize<'s>>(
         &'de mut self,
     ) -> impl Future<Output = Result<T, MerdeError<'s>>> + 'de {
         T::deserialize(self)
@@ -448,9 +448,9 @@ where
 }
 
 impl<'s> Deserialize<'s> for Map<'s> {
-    fn deserialize<'de>(
+    async fn deserialize<'de>(
         de: &'de mut dyn DynDeserializer<'s>,
-    ) -> impl Future<Output = Result<Self, MerdeError<'s>>> + 'de {
+    ) -> Result<Self, MerdeError<'s>> {
         de.next().await?.into_map_start()?;
         let mut map = Map::new();
 
