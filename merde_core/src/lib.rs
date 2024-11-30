@@ -48,6 +48,7 @@ pub use deserialize::DeserOpinions;
 pub use deserialize::Deserialize;
 pub use deserialize::DeserializeOwned;
 pub use deserialize::Deserializer;
+pub use deserialize::DynDeserialize;
 pub use deserialize::DynDeserializer;
 pub use deserialize::DynDeserializerExt;
 pub use deserialize::FieldSlot;

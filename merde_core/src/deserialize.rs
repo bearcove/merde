@@ -249,6 +249,32 @@ pub trait DeserializeOwned: Sized + IntoStatic {
     ) -> impl Future<Output = Result<Self, MerdeError<'s>>>;
 }
 
+pub trait DynDeserialize {
+    fn dyn_deserialize<'de>(
+        de: &'de mut dyn DynDeserializer<'de>,
+    ) -> Result<Box<Self>, MerdeError<'static>>
+    where
+        Self: Sized;
+}
+
+impl dyn DynDeserialize {
+    fn _assert_dyn_safe(_: Box<dyn DynDeserialize>) {}
+}
+
+impl<T> DynDeserialize for T
+where
+    T: DeserializeOwned,
+{
+    fn dyn_deserialize<'de>(
+        de: &'de mut dyn DynDeserializer<'de>,
+    ) -> Result<Box<Self>, MerdeError<'static>> {
+        match T::deserialize_owned(de).run_sync_with_metastack() {
+            Ok(value) => Ok(Box::new(value)),
+            Err(e) => Err(e.into_static()),
+        }
+    }
+}
+
 impl<T> DeserializeOwned for T
 where
     T: IntoStatic,
