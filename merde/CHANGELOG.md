@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [8.1.4](https://github.com/bearcove/merde/compare/merde-v8.1.3...merde-v8.1.4) - 2024-11-30
+## [9.0.0](https://github.com/bearcove/merde/compare/merde-v8.1.3...merde-v9.0.0) - 2024-11-30
 
 ### Other
 
