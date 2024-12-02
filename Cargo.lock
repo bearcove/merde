@@ -317,7 +317,7 @@ checksum = "78ca9ab1a0babb1e7d5695e3530886289c18cf2f87ec19a575a0abdce112e3a3"
 
 [[package]]
 name = "merde"
-version = "9.0.0"
+version = "9.0.1"
 dependencies = [
  "ahash",
  "merde_core",
@@ -328,7 +328,7 @@ dependencies = [
 
 [[package]]
 name = "merde_core"
-version = "9.0.0"
+version = "9.0.1"
 dependencies = [
  "compact_bytes",
  "compact_str",
@@ -343,7 +343,7 @@ dependencies = [
 
 [[package]]
 name = "merde_json"
-version = "9.0.0"
+version = "9.0.1"
 dependencies = [
  "itoa",
  "lexical-parse-float",
@@ -362,7 +362,7 @@ dependencies = [
 
 [[package]]
 name = "merde_msgpack"
-version = "9.0.0"
+version = "9.0.1"
 dependencies = [
  "merde_core",
  "merde_loggingserializer",
@@ -371,7 +371,7 @@ dependencies = [
 
 [[package]]
 name = "merde_yaml"
-version = "9.0.0"
+version = "9.0.1"
 dependencies = [
  "merde_core",
  "yaml-rust2",
