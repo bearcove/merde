@@ -473,12 +473,6 @@ impl<'s, T: Deserialize<'s>> Deserialize<'s> for Vec<T> {
         loop {
             match de.next().await? {
                 Event::ArrayEnd => {
-                    #[cfg(debug_assertions)]
-                    {
-                        println!("Stack trace:");
-                        let backtrace = std::backtrace::Backtrace::capture();
-                        println!("{}", backtrace);
-                    }
                     break;
                 }
                 ev => {
