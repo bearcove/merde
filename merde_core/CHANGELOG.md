@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [10.0.0](https://github.com/bearcove/merde/compare/merde_core-v9.0.1...merde_core-v10.0.0) - 2024-12-04
+
+### Other
+
+- [**breaking**] Force a major version bump
+- remove rubicon (merde has a single ABI now anyway)
+
 ## [9.0.1](https://github.com/bearcove/merde/compare/merde_core-v9.0.0...merde_core-v9.0.1) - 2024-12-02
 
 ### Other
