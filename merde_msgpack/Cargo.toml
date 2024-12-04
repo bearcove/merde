@@ -16,3 +16,4 @@ rmp = "0.8.14"
 
 [dev-dependencies]
 merde_loggingserializer = { path = "../merde_loggingserializer" }
+

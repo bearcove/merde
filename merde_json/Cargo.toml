@@ -23,3 +23,4 @@ full = []
 
 [dev-dependencies]
 merde_loggingserializer = { path = "../merde_loggingserializer" }
+

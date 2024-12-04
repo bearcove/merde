@@ -38,3 +38,4 @@ rusqlite = ["dep:rusqlite"]
 insta = "1.40.0"
 trybuild = "1.0.101"
 time = { version = "0.3.36", features = ["macros"] }
+

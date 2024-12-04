@@ -6,3 +6,4 @@ publish = false
 
 [dependencies]
 merde_core = { version = "9.0.1", path = "../merde_core" }
+

@@ -10,3 +10,4 @@ merde = { path = "../merde", default-features = false }
 [features]
 default = []
 merde = ["merde/core"]
+

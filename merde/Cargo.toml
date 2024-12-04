@@ -90,3 +90,4 @@ msgpack = ["dep:merde_msgpack"]
 
 # others
 ahash = ["dep:ahash"]
+
