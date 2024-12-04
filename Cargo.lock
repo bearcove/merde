@@ -334,7 +334,6 @@ dependencies = [
  "compact_str",
  "insta",
  "ordered-float",
- "rubicon",
  "rusqlite",
  "serde",
  "time",
@@ -477,12 +476,6 @@ dependencies = [
  "num-traits",
  "paste",
 ]
-
-[[package]]
-name = "rubicon"
-version = "3.4.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df530fafa5c66f7f964f24310867c75ad19d3869bcc86f5befdcc41eafa3ac9d"
 
 [[package]]
 name = "rusqlite"

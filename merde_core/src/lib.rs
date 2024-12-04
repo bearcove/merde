@@ -54,7 +54,3 @@ pub use deserialize::DynDeserializerExt;
 pub use deserialize::FieldSlot;
 
 pub mod time;
-
-rubicon::compatibility_check! {
-    ("merde_core_pkg_version", env!("CARGO_PKG_VERSION")),
-}

@@ -57,8 +57,6 @@ impl<'s> CowStr<'s> {
 impl AsRef<str> for CowStr<'_> {
     #[inline]
     fn as_ref(&self) -> &str {
-        crate::compatibility_check_once();
-
         match self {
             CowStr::Borrowed(s) => s,
             CowStr::Owned(s) => s.as_str(),
@@ -71,8 +69,6 @@ impl Deref for CowStr<'_> {
 
     #[inline]
     fn deref(&self) -> &Self::Target {
-        crate::compatibility_check_once();
-
         match self {
             CowStr::Borrowed(s) => s,
             CowStr::Owned(s) => s.as_str(),
@@ -144,7 +140,6 @@ impl From<CowStr<'_>> for Box<str> {
 impl<'a> PartialEq<CowStr<'a>> for CowStr<'_> {
     #[inline]
     fn eq(&self, other: &CowStr<'a>) -> bool {
-        crate::compatibility_check_once();
         self.deref() == other.deref()
     }
 }
@@ -152,7 +147,6 @@ impl<'a> PartialEq<CowStr<'a>> for CowStr<'_> {
 impl PartialEq<&str> for CowStr<'_> {
     #[inline]
     fn eq(&self, other: &&str) -> bool {
-        crate::compatibility_check_once();
         self.deref() == *other
     }
 }
@@ -160,7 +154,6 @@ impl PartialEq<&str> for CowStr<'_> {
 impl PartialEq<CowStr<'_>> for &str {
     #[inline]
     fn eq(&self, other: &CowStr<'_>) -> bool {
-        crate::compatibility_check_once();
         *self == other.deref()
     }
 }
@@ -168,7 +161,6 @@ impl PartialEq<CowStr<'_>> for &str {
 impl PartialEq<String> for CowStr<'_> {
     #[inline]
     fn eq(&self, other: &String) -> bool {
-        crate::compatibility_check_once();
         self.deref() == other.as_str()
     }
 }
@@ -176,7 +168,6 @@ impl PartialEq<String> for CowStr<'_> {
 impl PartialEq<CowStr<'_>> for String {
     #[inline]
     fn eq(&self, other: &CowStr<'_>) -> bool {
-        crate::compatibility_check_once();
         self.as_str() == other.deref()
     }
 }
@@ -186,7 +177,6 @@ impl Eq for CowStr<'_> {}
 impl Hash for CowStr<'_> {
     #[inline]
     fn hash<H: Hasher>(&self, state: &mut H) {
-        crate::compatibility_check_once();
         self.deref().hash(state)
     }
 }
@@ -194,7 +184,6 @@ impl Hash for CowStr<'_> {
 impl fmt::Debug for CowStr<'_> {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        crate::compatibility_check_once();
         self.deref().fmt(f)
     }
 }
@@ -202,7 +191,6 @@ impl fmt::Debug for CowStr<'_> {
 impl fmt::Display for CowStr<'_> {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        crate::compatibility_check_once();
         self.deref().fmt(f)
     }
 }
@@ -212,7 +200,6 @@ impl IntoStatic for CowStr<'_> {
 
     #[inline]
     fn into_static(self) -> Self::Output {
-        crate::compatibility_check_once();
         match self {
             CowStr::Borrowed(s) => CowStr::Owned((*s).into()),
             CowStr::Owned(s) => CowStr::Owned(s),
@@ -232,7 +219,6 @@ mod serde_impls {
         where
             S: serde::Serializer,
         {
-            crate::compatibility_check_once();
             serializer.serialize_str(self)
         }
     }
@@ -243,8 +229,6 @@ mod serde_impls {
         where
             D: serde::Deserializer<'de>,
         {
-            crate::compatibility_check_once();
-
             struct CowStrVisitor;
 
             impl<'de> serde::de::Visitor<'de> for CowStrVisitor {
@@ -293,7 +277,6 @@ mod rusqlite_impls {
     impl ToSql for CowStr<'_> {
         #[inline]
         fn to_sql(&self) -> RusqliteResult<rusqlite::types::ToSqlOutput<'_>> {
-            crate::compatibility_check_once();
             Ok(rusqlite::types::ToSqlOutput::Borrowed(self.as_ref().into()))
         }
     }
@@ -301,7 +284,6 @@ mod rusqlite_impls {
     impl FromSql for CowStr<'_> {
         #[inline]
         fn column_result(value: rusqlite::types::ValueRef<'_>) -> Result<Self, FromSqlError> {
-            crate::compatibility_check_once();
             match value {
                 rusqlite::types::ValueRef::Text(s) => Ok(CowStr::from_utf8(s)
                     .map_err(|e| FromSqlError::Other(Box::new(e)))?
