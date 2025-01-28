@@ -60,7 +60,7 @@ macro_rules! impl_deserialize {
 
                 $(
                     let mut $field = $crate::none_of(|i: $struct_name| i.$field);
-                )+
+                )*
 
                 loop {
                     match __de.next().await? {
@@ -96,7 +96,7 @@ macro_rules! impl_deserialize {
                             __opinions.default_field_value(stringify!($field), __slot);
                         }
                         $crate::Deserialize::from_option($field, stringify!($field).into())?
-                    },)+
+                    },)*
                 })
             }
         }
@@ -514,7 +514,7 @@ macro_rules! impl_serialize {
                     $(
                         serializer.write($crate::Event::Str($crate::CowStr::Borrowed(stringify!($field)))).await?;
                         self.$field.serialize(serializer).await?;
-                    )+
+                    )*
                     serializer.write($crate::Event::MapEnd).await
                 }
             }
@@ -545,7 +545,7 @@ macro_rules! impl_serialize {
                                 serializer.write($crate::Event::Str($crate::CowStr::Borrowed($variant_str))).await?;
                                 value.serialize(serializer).await?;
                             }
-                        )+
+                        )*
                     }
 
                     serializer.write($crate::Event::MapEnd).await

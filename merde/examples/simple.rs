@@ -60,3 +60,9 @@ struct Person<'s> {
 merde::derive! {
     impl (Serialize, Deserialize) for struct Person<'s> { name, age, address }
 }
+
+struct Empty {}
+
+merde::derive! {
+    impl (Serialize, Deserialize) for struct Empty {}
+}
