@@ -4,6 +4,7 @@ use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::hash::BuildHasher;
 use std::hash::Hash;
+use std::sync::Arc;
 
 use crate::Event;
 
@@ -111,6 +112,15 @@ impl<T: IntoStatic> IntoStatic for Vec<T> {
 
     fn into_static(self) -> Self::Output {
         self.into_iter().map(|v| v.into_static()).collect()
+    }
+}
+
+impl<T: IntoStatic + Clone> IntoStatic for Arc<T> {
+    type Output = Arc<T::Output>;
+
+    fn into_static(self) -> Self::Output {
+        let t: T = (*self).clone();
+        Arc::new(t.into_static())
     }
 }
 

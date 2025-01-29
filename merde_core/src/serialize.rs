@@ -1,4 +1,6 @@
-use std::{borrow::Cow, collections::HashMap, future::Future, hash::BuildHasher, pin::Pin};
+use std::{
+    borrow::Cow, collections::HashMap, future::Future, hash::BuildHasher, pin::Pin, sync::Arc,
+};
 
 use crate::{
     metastack::MetastackExt, Array, ArrayStart, CowBytes, CowStr, Event, Map, MapStart, MerdeError,
@@ -208,6 +210,15 @@ impl<T: Serialize> Serialize for Vec<T> {
             item.serialize(serializer).await?;
         }
         serializer.write(Event::ArrayEnd).await
+    }
+}
+
+impl<T: Serialize> Serialize for Arc<T> {
+    async fn serialize<'se>(
+        &'se self,
+        serializer: &'se mut dyn DynSerializer,
+    ) -> Result<(), MerdeError<'static>> {
+        (**self).serialize(serializer).await
     }
 }
 

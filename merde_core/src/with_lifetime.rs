@@ -1,6 +1,7 @@
 use std::{
     borrow::Cow,
     collections::{HashMap, HashSet, VecDeque},
+    sync::Arc,
 };
 
 use crate::{CowStr, Value};
@@ -82,6 +83,13 @@ where
     T: WithLifetime<'s>,
 {
     type Lifetimed = Vec<T::Lifetimed>;
+}
+
+impl<'s, T> WithLifetime<'s> for Arc<T>
+where
+    T: WithLifetime<'s>,
+{
+    type Lifetimed = Arc<T::Lifetimed>;
 }
 
 impl<'s, T> WithLifetime<'s> for VecDeque<T>

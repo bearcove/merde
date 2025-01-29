@@ -6,6 +6,7 @@ use std::{
     hash::{BuildHasher, Hash},
     marker::PhantomData,
     pin::Pin,
+    sync::Arc,
 };
 
 use crate::{
@@ -483,6 +484,13 @@ impl<'s, T: Deserialize<'s>> Deserialize<'s> for Vec<T> {
         }
 
         Ok(vec)
+    }
+}
+
+impl<'s, T: Deserialize<'s>> Deserialize<'s> for Arc<T> {
+    async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
+        let value: T = T::deserialize(de).await?;
+        Ok(Arc::new(value))
     }
 }
 
