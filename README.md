@@ -21,6 +21,7 @@ Then head over to the crate documentations:
   * [merde](./merde/README.md)
   * [merde_json](./merde_json/README.md)
   * [merde_yaml](./merde_yaml/README.md)
+  * [merde_msgpack](./merde_msgpack/README.md)
 
 ## FAQ
 
