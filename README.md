@@ -34,7 +34,7 @@ for things to build, just before "j'en ai marre!!"
 
 ### Why?
 
-I value iteration times (re builds, etc.) more than I value microseconds saved deserializing
+I value iteration times (re: builds, etc.) more than I value microseconds saved deserializing
 JSON payloads — I got tired of proc macros getting compiled, parsing all my code, generating
 a ton of generic code of their own, etc.
 
