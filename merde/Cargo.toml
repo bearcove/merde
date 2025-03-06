@@ -55,6 +55,11 @@ name = "opinions"
 path = "examples/opinions.rs"
 required-features = ["json"]
 
+[[example]]
+name = "mousedown"
+path = "examples/mousedown.rs"
+required-features = ["json"]
+
 [dependencies]
 merde_core = { version = "10.0.1", path = "../merde_core", optional = true }
 merde_json = { version = "10.0.1", path = "../merde_json", optional = true }
@@ -65,14 +70,14 @@ ahash = { version = "0.8.11", optional = true }
 [features]
 default = ["core"]
 full = [
-    "core",
-    "serialize",
-    "deserialize",
-    "json",
-    "yaml",
-    "msgpack",
-    "time",
-    "rusqlite",
+  "core",
+  "serialize",
+  "deserialize",
+  "json",
+  "yaml",
+  "msgpack",
+  "time",
+  "rusqlite",
 ]
 core = ["dep:merde_core"]
 serialize = ["core"]
@@ -90,4 +95,3 @@ msgpack = ["dep:merde_msgpack"]
 
 # others
 ahash = ["dep:ahash"]
-

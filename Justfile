@@ -15,7 +15,12 @@ check:
     popd
 
     pushd merde
-    EXAMPLES=($(cd examples && for i in *; do echo "${i%.rs}"; done))
+    EXAMPLES=()
+    for file in examples/*.rs; do
+        EXAMPLES+=("$(basename "${file%.rs}")")
+    done
+    echo "EXAMPLES: ${EXAMPLES[@]}"
+
     for example in "${EXAMPLES[@]}"; do
       cargo run --features full,ahash --example "$example"
     done
