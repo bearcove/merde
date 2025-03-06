@@ -23,7 +23,7 @@ macro_rules! impl_deserialize {
             async fn deserialize(__de: &mut dyn $crate::DynDeserializer<'s>) -> Result<Self, $crate::MerdeError<'s>> {
                 use $crate::DynDeserializerExt;
 
-                Ok(Self($crate::Deserialize::deserialize(__de).await?))
+                Ok(Self($crate::DynDeserializerExt::t(__de).await?))
             }
         }
     };
@@ -169,13 +169,13 @@ macro_rules! impl_deserialize {
         impl<'s> $crate::Deserialize<'s> for $enum_name {
             async fn deserialize(__de: &mut dyn $crate::DynDeserializer<'s>) -> Result<Self, $crate::MerdeError<'s>> {
                 #[allow(unused_imports)]
-                use $crate::{MerdeError, DynDeserializerExt};
+                use $crate::MerdeError;
 
                 __de.next().await?.into_map_start()?;
                 let key = __de.next().await?.into_str()?;
                 match key.as_ref() {
                     $($variant_str => {
-                        let value = $crate::Deserialize::deserialize(__de).await?;
+                        let value = $crate::DynDeserializerExt::t(__de).await?;
                         __de.next().await?.into_map_end()?;
                         Ok($enum_name::$variant(value))
                     },)*
@@ -531,10 +531,11 @@ macro_rules! impl_serialize {
                 serializer: &'fut mut dyn $crate::DynSerializer,
             ) -> impl ::std::future::Future<Output = Result<(), $crate::MerdeError<'static>>> + 'fut {
                 async move {
-                    $crate::Serialize::serialize(&$crate::Event::MapStart($crate::MapStart {
-                        size_hint: Some(1),
-                    }), serializer)
-                    .await?;
+                    serializer
+                        .write($crate::Event::MapStart($crate::MapStart {
+                            size_hint: Some(1),
+                        }))
+                        .await?;
 
                     match self {
                         $(
