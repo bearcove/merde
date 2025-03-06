@@ -23,7 +23,7 @@ macro_rules! impl_deserialize {
             async fn deserialize(__de: &mut dyn $crate::DynDeserializer<'s>) -> Result<Self, $crate::MerdeError<'s>> {
                 use $crate::DynDeserializerExt;
 
-                Ok(Self(__de.t().await?))
+                Ok(Self($crate::Deserialize::deserialize(__de).await?))
             }
         }
     };
@@ -34,9 +34,7 @@ macro_rules! impl_deserialize {
         impl<$s> $crate::Deserialize<$s> for $struct_name<$s> {
             #[inline(always)]
             async fn deserialize(__de: &mut dyn $crate::DynDeserializer<'s>) -> Result<Self, $crate::MerdeError<'s>> {
-                use $crate::DynDeserializerExt;
-
-                Ok(Self(__de.t().await?))
+                Ok(Self($crate::DynDeserializerExt::t(__de).await?))
             }
         }
     };
@@ -69,7 +67,7 @@ macro_rules! impl_deserialize {
                             let __key = __opinions.map_key_name(__key);
                             match __key.as_ref() {
                                 $(stringify!($field) => {
-                                    $field = Some(__de.t().await?);
+                                    $field = Some($crate::DynDeserializerExt::t(__de).await?);
                                 })*
                                 _ => {
                                     if __opinions.deny_unknown_fields() {
@@ -114,7 +112,7 @@ macro_rules! impl_deserialize {
             #[inline(always)]
             async fn deserialize(__de: &mut dyn $crate::DynDeserializer<$s>) -> Result<Self, $crate::MerdeError<$s>> {
                 #![allow(unreachable_code)]
-                use $crate::{DeserOpinions, DynDeserializerExt};
+                use $crate::DeserOpinions;
 
                 let __opinions = $opinions;
                 __de.next().await?.into_map_start()?;
@@ -130,7 +128,7 @@ macro_rules! impl_deserialize {
                             let __key = __opinions.map_key_name(__key);
                             match __key.as_ref() {
                                 $(stringify!($field) => {
-                                    $field = Some(__de.t().await?);
+                                    $field = Some($crate::DynDeserializerExt::t(__de).await?);
                                 })*
                                 _ => {
                                     if __opinions.deny_unknown_fields() {
@@ -177,7 +175,7 @@ macro_rules! impl_deserialize {
                 let key = __de.next().await?.into_str()?;
                 match key.as_ref() {
                     $($variant_str => {
-                        let value = __de.t().await?;
+                        let value = $crate::Deserialize::deserialize(__de).await?;
                         __de.next().await?.into_map_end()?;
                         Ok($enum_name::$variant(value))
                     },)*
@@ -202,7 +200,7 @@ macro_rules! impl_deserialize {
                 let key = __de.next().await?.into_str()?;
                 match key.as_ref() {
                     $($variant_str => {
-                        let value = __de.t().await?;
+                        let value = $crate::DynDeserializerExt::t(__de).await?;
                         __de.next().await?.into_map_end()?;
                         Ok($enum_name::$variant(value))
                     },)*
@@ -265,7 +263,7 @@ macro_rules! impl_into_static {
 
             #[inline(always)]
             fn into_static(self) -> Self::Output {
-                $struct_name(self.0.into_static())
+                $struct_name($crate::IntoStatic::into_static(self.0))
             }
         }
     };
@@ -294,7 +292,7 @@ macro_rules! impl_into_static {
                 use $crate::IntoStatic;
 
                 $struct_name {
-                    $($field: self.$field.into_static(),)+
+                    $($field: $crate::IntoStatic::into_static(self.$field),)+
                 }
             }
         }
@@ -449,7 +447,7 @@ macro_rules! impl_serialize {
                 serializer: &'fut mut dyn $crate::DynSerializer,
             ) -> impl ::std::future::Future<Output = Result<(), $crate::MerdeError<'static>>> + 'fut {
                 async move {
-                    self.0.serialize(serializer).await
+                    $crate::Serialize::serialize(&self.0, serializer).await
                 }
             }
         }
@@ -465,7 +463,7 @@ macro_rules! impl_serialize {
                 serializer: &'fut mut dyn $crate::DynSerializer,
             ) -> impl ::std::future::Future<Output = Result<(), $crate::MerdeError<'static>>> + 'fut {
                 async move {
-                    self.0.serialize(serializer).await
+                    $crate::Serialize::serialize(&self.0, serializer).await
                 }
             }
         }
@@ -488,7 +486,7 @@ macro_rules! impl_serialize {
                         .await?;
                     $(
                         serializer.write($crate::Event::Str($crate::CowStr::Borrowed(stringify!($field)))).await?;
-                        self.$field.serialize(serializer).await?;
+                        $crate::Serialize::serialize(&self.$field, serializer).await?;
                     )+
                     serializer.write($crate::Event::MapEnd).await
                 }
@@ -513,7 +511,7 @@ macro_rules! impl_serialize {
                         .await?;
                     $(
                         serializer.write($crate::Event::Str($crate::CowStr::Borrowed(stringify!($field)))).await?;
-                        self.$field.serialize(serializer).await?;
+                        $crate::Serialize::serialize(&self.$field, serializer).await?;
                     )*
                     serializer.write($crate::Event::MapEnd).await
                 }
@@ -533,17 +531,16 @@ macro_rules! impl_serialize {
                 serializer: &'fut mut dyn $crate::DynSerializer,
             ) -> impl ::std::future::Future<Output = Result<(), $crate::MerdeError<'static>>> + 'fut {
                 async move {
-                    serializer
-                        .write($crate::Event::MapStart($crate::MapStart {
-                            size_hint: Some(1),
-                        }))
-                        .await?;
+                    $crate::Serialize::serialize(&$crate::Event::MapStart($crate::MapStart {
+                        size_hint: Some(1),
+                    }), serializer)
+                    .await?;
 
                     match self {
                         $(
                             Self::$variant(value) => {
                                 serializer.write($crate::Event::Str($crate::CowStr::Borrowed($variant_str))).await?;
-                                value.serialize(serializer).await?;
+                                $crate::Serialize::serialize(value, serializer).await?;
                             }
                         )*
                     }
@@ -576,7 +573,7 @@ macro_rules! impl_serialize {
                         $(
                             Self::$variant(value) => {
                                 serializer.write($crate::Event::Str($crate::CowStr::Borrowed($variant_str))).await?;
-                                value.serialize(serializer).await?;
+                                $crate::Serialize::serialize(value, serializer).await?;
                             }
                         )+
                     }
