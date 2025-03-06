@@ -213,6 +213,15 @@ impl<T: Serialize> Serialize for Vec<T> {
     }
 }
 
+impl<T: Serialize> Serialize for Box<T> {
+    async fn serialize<'se>(
+        &'se self,
+        serializer: &'se mut dyn DynSerializer,
+    ) -> Result<(), MerdeError<'static>> {
+        (**self).serialize(serializer).await
+    }
+}
+
 impl<T: Serialize> Serialize for Arc<T> {
     async fn serialize<'se>(
         &'se self,
