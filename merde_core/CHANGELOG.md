@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [10.0.2](https://github.com/bearcove/merde/compare/merde_core-v10.0.1...merde_core-v10.0.2) - 2025-03-06
+
+### Fixed
+
+- make more calls to trait functions, or trait methods, fully qualified to avoid clenches with serde
+
 ## [10.0.1](https://github.com/bearcove/merde/compare/merde_core-v10.0.0...merde_core-v10.0.1) - 2025-01-29
 
 ### Other
