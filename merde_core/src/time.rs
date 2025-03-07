@@ -91,6 +91,10 @@ mod time_impls {
                 .map_err(|_| crate::MerdeError::InvalidDateTimeValue)?,
             ))
         }
+
+        fn hints() -> crate::deserialize::TypeHints {
+            crate::CowStr::hints()
+        }
     }
 
     impl crate::Serialize for Rfc3339<time::OffsetDateTime> {
@@ -115,7 +119,10 @@ mod time_impls {
 #[cfg(all(test, feature = "full"))]
 mod tests {
     use super::*;
-    use crate::{Deserializer, DynSerializerExt, Event, IntoStatic, MerdeError, Serializer};
+    use crate::{
+        deserialize::TypeHints, Deserializer, DynSerializerExt, Event, IntoStatic, MerdeError,
+        Serializer,
+    };
     use std::{collections::VecDeque, future::Future};
     use time::macros::datetime;
 
@@ -137,7 +144,10 @@ mod tests {
     impl<'s> Deserializer<'s> for Journal {
         // FIXME: that's a workaround for <https://github.com/rust-lang/rust/issues/133676>
         #[allow(clippy::manual_async_fn)]
-        fn next(&mut self) -> impl Future<Output = Result<Event<'s>, MerdeError<'s>>> + '_ {
+        fn next(
+            &mut self,
+            _hints: TypeHints,
+        ) -> impl Future<Output = Result<Event<'s>, MerdeError<'s>>> + '_ {
             async { self.events.pop_front().ok_or_else(MerdeError::eof) }
         }
 

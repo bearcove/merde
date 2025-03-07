@@ -14,9 +14,45 @@ use crate::{
     WithLifetime,
 };
 
+/// Hints for the deserializer about what kind of event the deserializee expects.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TypeHints {
+    /// The deserializee will be happy with null, too
+    pub optional: bool,
+
+    /// In order of preference, the event types the deserializee will accept.
+    pub types: &'static [EventType],
+}
+
+impl TypeHints {
+    pub fn any_of(types: &'static [EventType]) -> Self {
+        Self {
+            optional: false,
+            types,
+        }
+    }
+
+    pub fn any() -> Self {
+        Self {
+            optional: false,
+            types: &[],
+        }
+    }
+
+    pub fn optional(self) -> Self {
+        Self {
+            optional: true,
+            ..self
+        }
+    }
+}
+
 pub trait Deserializer<'s>: std::fmt::Debug {
     /// Get the next event from the deserializer.
-    fn next(&mut self) -> impl Future<Output = Result<Event<'s>, MerdeError<'s>>> + '_;
+    fn next(
+        &mut self,
+        type_hints: TypeHints,
+    ) -> impl Future<Output = Result<Event<'s>, MerdeError<'s>>> + '_;
 
     /// Put back an event into the deserializer.
     fn put_back(&mut self, ev: Event<'s>) -> Result<(), MerdeError<'s>>;
@@ -25,7 +61,10 @@ pub trait Deserializer<'s>: std::fmt::Debug {
 type BoxFut<'a, T> = Pin<Box<dyn Future<Output = T> + 'a>>;
 
 pub trait DynDeserializer<'s> {
-    fn next<'de>(&'de mut self) -> BoxFut<'de, Result<Event<'s>, MerdeError<'s>>>;
+    fn next<'de>(
+        &'de mut self,
+        type_hints: TypeHints,
+    ) -> BoxFut<'de, Result<Event<'s>, MerdeError<'s>>>;
 
     fn put_back(&mut self, ev: Event<'s>) -> Result<(), MerdeError<'s>>;
 }
@@ -38,8 +77,11 @@ impl<'s, D> DynDeserializer<'s> for D
 where
     D: Deserializer<'s>,
 {
-    fn next(&mut self) -> BoxFut<'_, Result<Event<'s>, MerdeError<'s>>> {
-        Box::pin(Deserializer::next(self))
+    fn next<'de>(
+        &'de mut self,
+        type_hints: TypeHints,
+    ) -> BoxFut<'de, Result<Event<'s>, MerdeError<'s>>> {
+        Box::pin(Deserializer::next(self, type_hints))
     }
 
     fn put_back(&mut self, ev: Event<'s>) -> Result<(), MerdeError<'s>> {
@@ -242,6 +284,8 @@ pub trait Deserialize<'s>: Sized + 's {
             None => Err(MerdeError::MissingProperty(field_name)),
         }
     }
+
+    fn hints() -> TypeHints;
 }
 
 pub trait DeserializeOwned: Sized + IntoStatic {
@@ -291,37 +335,45 @@ where
 
 impl<'s> Deserialize<'s> for i64 {
     async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
-        let v: i64 = match de.next().await? {
+        let v: i64 = match de.next(Self::hints()).await? {
             Event::I64(i) => i,
             Event::U64(u) => u.try_into().map_err(|_| MerdeError::OutOfRange)?,
             Event::F64(f) => f as _,
             ev => {
                 return Err(MerdeError::UnexpectedEvent {
                     got: EventType::from(&ev),
-                    expected: &[EventType::I64, EventType::U64, EventType::Float],
+                    expected: Self::hints(),
                     help: None,
                 })
             }
         };
         Ok(v)
     }
+
+    fn hints() -> TypeHints {
+        TypeHints::any_of(&[EventType::I64, EventType::U64, EventType::Float])
+    }
 }
 
 impl<'s> Deserialize<'s> for u64 {
     async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
-        let v: u64 = match de.next().await? {
+        let v: u64 = match de.next(Self::hints()).await? {
             Event::U64(u) => u,
             Event::I64(i) => i.try_into().map_err(|_| MerdeError::OutOfRange)?,
             Event::F64(f) => f as u64,
             ev => {
                 return Err(MerdeError::UnexpectedEvent {
                     got: EventType::from(&ev),
-                    expected: &[EventType::U64, EventType::I64, EventType::Float],
+                    expected: Self::hints(),
                     help: None,
                 });
             }
         };
         Ok(v)
+    }
+
+    fn hints() -> TypeHints {
+        TypeHints::any_of(&[EventType::U64, EventType::I64, EventType::Float])
     }
 }
 
@@ -330,12 +382,20 @@ impl<'s> Deserialize<'s> for i32 {
         let v: i64 = i64::deserialize(de).await?;
         v.try_into().map_err(|_| MerdeError::OutOfRange)
     }
+
+    fn hints() -> TypeHints {
+        TypeHints::any_of(i64::hints().types)
+    }
 }
 
 impl<'s> Deserialize<'s> for u32 {
     async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
         let v: u64 = u64::deserialize(de).await?;
         v.try_into().map_err(|_| MerdeError::OutOfRange)
+    }
+
+    fn hints() -> TypeHints {
+        TypeHints::any_of(u64::hints().types)
     }
 }
 
@@ -344,12 +404,20 @@ impl<'s> Deserialize<'s> for i16 {
         let v: i64 = i64::deserialize(de).await?;
         v.try_into().map_err(|_| MerdeError::OutOfRange)
     }
+
+    fn hints() -> TypeHints {
+        TypeHints::any_of(i64::hints().types)
+    }
 }
 
 impl<'s> Deserialize<'s> for u16 {
     async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
         let v: u64 = u64::deserialize(de).await?;
         v.try_into().map_err(|_| MerdeError::OutOfRange)
+    }
+
+    fn hints() -> TypeHints {
+        TypeHints::any_of(u64::hints().types)
     }
 }
 
@@ -358,12 +426,20 @@ impl<'s> Deserialize<'s> for i8 {
         let v: i64 = i64::deserialize(de).await?;
         v.try_into().map_err(|_| MerdeError::OutOfRange)
     }
+
+    fn hints() -> TypeHints {
+        TypeHints::any_of(i64::hints().types)
+    }
 }
 
 impl<'s> Deserialize<'s> for u8 {
     async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
         let v: u64 = u64::deserialize(de).await?;
         v.try_into().map_err(|_| MerdeError::OutOfRange)
+    }
+
+    fn hints() -> TypeHints {
+        TypeHints::any_of(u64::hints().types)
     }
 }
 
@@ -372,6 +448,10 @@ impl<'s> Deserialize<'s> for isize {
         let v: i64 = i64::deserialize(de).await?;
         v.try_into().map_err(|_| MerdeError::OutOfRange)
     }
+
+    fn hints() -> TypeHints {
+        TypeHints::any_of(i64::hints().types)
+    }
 }
 
 impl<'s> Deserialize<'s> for usize {
@@ -379,29 +459,41 @@ impl<'s> Deserialize<'s> for usize {
         let v: u64 = u64::deserialize(de).await?;
         v.try_into().map_err(|_| MerdeError::OutOfRange)
     }
+
+    fn hints() -> TypeHints {
+        TypeHints::any_of(u64::hints().types)
+    }
 }
 
 impl<'s> Deserialize<'s> for bool {
     async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
-        de.next().await?.into_bool()
+        de.next(Self::hints()).await?.into_bool()
+    }
+
+    fn hints() -> TypeHints {
+        TypeHints::any_of(&[EventType::Bool])
     }
 }
 
 impl<'s> Deserialize<'s> for f64 {
     async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
-        let v: f64 = match de.next().await? {
+        let v: f64 = match de.next(Self::hints()).await? {
             Event::F64(f) => f,
             Event::I64(i) => i as f64,
             Event::U64(u) => u as f64,
             ev => {
                 return Err(MerdeError::UnexpectedEvent {
                     got: EventType::from(&ev),
-                    expected: &[EventType::Float, EventType::I64, EventType::U64],
+                    expected: Self::hints(),
                     help: None,
                 })
             }
         };
         Ok(v)
+    }
+
+    fn hints() -> TypeHints {
+        TypeHints::any_of(&[EventType::Float, EventType::I64, EventType::U64])
     }
 }
 
@@ -410,6 +502,10 @@ impl<'s> Deserialize<'s> for f32 {
         let v: f64 = f64::deserialize(de).await?;
         Ok(v as f32)
     }
+
+    fn hints() -> TypeHints {
+        f64::hints()
+    }
 }
 
 impl<'s> Deserialize<'s> for String {
@@ -417,11 +513,19 @@ impl<'s> Deserialize<'s> for String {
         let cow: CowStr<'s> = CowStr::deserialize(de).await?;
         Ok(cow.to_string())
     }
+
+    fn hints() -> TypeHints {
+        TypeHints::any_of(&[EventType::Str])
+    }
 }
 
 impl<'s> Deserialize<'s> for CowStr<'s> {
     async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
-        de.next().await?.into_str()
+        de.next(Self::hints()).await?.into_str()
+    }
+
+    fn hints() -> TypeHints {
+        TypeHints::any_of(&[EventType::Str])
     }
 }
 
@@ -433,6 +537,10 @@ impl<'s> Deserialize<'s> for Cow<'s, str> {
             CowStr::Owned(s) => Cow::Owned(s.to_string()),
         })
     }
+
+    fn hints() -> TypeHints {
+        TypeHints::any_of(&[EventType::Str])
+    }
 }
 
 impl<'s, T: Deserialize<'s>> Deserialize<'s> for Box<T> {
@@ -440,11 +548,15 @@ impl<'s, T: Deserialize<'s>> Deserialize<'s> for Box<T> {
         let value: T = T::deserialize(de).await?;
         Ok(Box::new(value))
     }
+
+    fn hints() -> TypeHints {
+        T::hints()
+    }
 }
 
 impl<'s, T: Deserialize<'s>> Deserialize<'s> for Option<T> {
     async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
-        match de.next().await? {
+        match de.next(Self::hints()).await? {
             Event::Null => Ok(None),
             ev => {
                 de.put_back(ev)?;
@@ -460,11 +572,15 @@ impl<'s, T: Deserialize<'s>> Deserialize<'s> for Option<T> {
             None => Ok(None),
         }
     }
+
+    fn hints() -> TypeHints {
+        T::hints().optional()
+    }
 }
 
 impl<'s, T: Deserialize<'s>> Deserialize<'s> for Vec<T> {
     async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
-        let array_start = de.next().await?.into_array_start()?;
+        let array_start = de.next(Self::hints()).await?.into_array_start()?;
         let mut vec = if let Some(size) = array_start.size_hint {
             Vec::with_capacity(size)
         } else {
@@ -472,7 +588,7 @@ impl<'s, T: Deserialize<'s>> Deserialize<'s> for Vec<T> {
         };
 
         loop {
-            match de.next().await? {
+            match de.next(T::hints()).await? {
                 Event::ArrayEnd => {
                     break;
                 }
@@ -485,12 +601,20 @@ impl<'s, T: Deserialize<'s>> Deserialize<'s> for Vec<T> {
 
         Ok(vec)
     }
+
+    fn hints() -> TypeHints {
+        TypeHints::any_of(&[EventType::ArrayStart])
+    }
 }
 
 impl<'s, T: Deserialize<'s>> Deserialize<'s> for Arc<T> {
     async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
         let value: T = T::deserialize(de).await?;
         Ok(Arc::new(value))
+    }
+
+    fn hints() -> TypeHints {
+        TypeHints::any_of(T::hints().types)
     }
 }
 
@@ -500,12 +624,13 @@ where
     V: Deserialize<'s>,
     S: Default + BuildHasher + 's,
 {
-    async fn deserialize<'d>(de: &'d mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
-        de.next().await?.into_map_start()?;
+    async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
+        de.next(Self::hints()).await?.into_map_start()?;
         let mut map = HashMap::<K, V, S>::default();
 
         loop {
-            match de.next().await? {
+            // no hints — could be anything
+            match de.next(TypeHints::any_of(&[])).await? {
                 Event::MapEnd => break,
                 ev => {
                     de.put_back(ev)?;
@@ -518,17 +643,22 @@ where
 
         Ok(map)
     }
+
+    fn hints() -> TypeHints {
+        TypeHints::any_of(&[EventType::MapStart])
+    }
 }
 
 impl<'s> Deserialize<'s> for Map<'s> {
-    async fn deserialize<'de>(
-        de: &'de mut dyn DynDeserializer<'s>,
-    ) -> Result<Self, MerdeError<'s>> {
-        de.next().await?.into_map_start()?;
+    async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
+        de.next(Self::hints()).await?.into_map_start()?;
         let mut map = Map::new();
 
         loop {
-            match de.next().await? {
+            match de
+                .next(TypeHints::any_of(&[EventType::MapEnd, EventType::Str]))
+                .await?
+            {
                 Event::MapEnd => break,
                 Event::Str(key) => {
                     let value: Value<'s> = de.t().await?;
@@ -537,7 +667,7 @@ impl<'s> Deserialize<'s> for Map<'s> {
                 ev => {
                     return Err(MerdeError::UnexpectedEvent {
                         got: EventType::from(&ev),
-                        expected: &[EventType::Str, EventType::MapEnd],
+                        expected: TypeHints::any_of(&[EventType::Str, EventType::MapEnd]),
                         help: None,
                     })
                 }
@@ -546,11 +676,15 @@ impl<'s> Deserialize<'s> for Map<'s> {
 
         Ok(map)
     }
+
+    fn hints() -> TypeHints {
+        TypeHints::any_of(&[EventType::MapStart])
+    }
 }
 
 impl<'s> Deserialize<'s> for Array<'s> {
     async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
-        let array_start = de.next().await?.into_array_start()?;
+        let array_start = de.next(Self::hints()).await?.into_array_start()?;
         let mut array = if let Some(size) = array_start.size_hint {
             Array::with_capacity(size)
         } else {
@@ -558,7 +692,7 @@ impl<'s> Deserialize<'s> for Array<'s> {
         };
 
         loop {
-            match de.next().await? {
+            match de.next(TypeHints::any_of(&[])).await? {
                 Event::ArrayEnd => break,
                 ev => {
                     de.put_back(ev)?;
@@ -570,11 +704,15 @@ impl<'s> Deserialize<'s> for Array<'s> {
 
         Ok(array)
     }
+
+    fn hints() -> TypeHints {
+        TypeHints::any_of(&[EventType::ArrayStart])
+    }
 }
 
 impl<'s> Deserialize<'s> for Value<'s> {
     async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
-        match de.next().await? {
+        match de.next(TypeHints::any()).await? {
             Event::I64(i) => Ok(Value::I64(i)),
             Event::U64(u) => Ok(Value::U64(u)),
             Event::F64(f) => Ok(Value::Float(f.into())),
@@ -588,18 +726,20 @@ impl<'s> Deserialize<'s> for Value<'s> {
                     None => Map::new(),
                 };
                 loop {
-                    match de.next().await? {
+                    match de
+                        .next(TypeHints::any_of(&[EventType::MapEnd, EventType::Str]))
+                        .await?
+                    {
                         Event::MapEnd => break,
                         Event::Str(key) => {
-                            let value: Value = <Value as Deserialize>::deserialize(de)
-                                .with_metastack_resume_point()
-                                .await?;
+                            let value: Value =
+                                Value::deserialize(de).with_metastack_resume_point().await?;
                             map.insert(key, value);
                         }
                         ev => {
                             return Err(MerdeError::UnexpectedEvent {
                                 got: EventType::from(&ev),
-                                expected: &[EventType::Str, EventType::MapEnd],
+                                expected: TypeHints::any_of(&[EventType::Str, EventType::MapEnd]),
                                 help: None,
                             })
                         }
@@ -610,7 +750,7 @@ impl<'s> Deserialize<'s> for Value<'s> {
             Event::ArrayStart(_) => {
                 let mut vec = Array::new();
                 loop {
-                    match de.next().await? {
+                    match de.next(TypeHints::any()).await? {
                         Event::ArrayEnd => break,
                         ev => {
                             de.put_back(ev)?;
@@ -624,7 +764,7 @@ impl<'s> Deserialize<'s> for Value<'s> {
             }
             ev => Err(MerdeError::UnexpectedEvent {
                 got: EventType::from(&ev),
-                expected: &[
+                expected: TypeHints::any_of(&[
                     EventType::I64,
                     EventType::U64,
                     EventType::Float,
@@ -634,10 +774,15 @@ impl<'s> Deserialize<'s> for Value<'s> {
                     EventType::Null,
                     EventType::MapStart,
                     EventType::ArrayStart,
-                ],
+                ]),
                 help: Some("(While trying to deserialize a merde Value)".to_string()),
             }),
         }
+    }
+
+    fn hints() -> TypeHints {
+        // no hints, anything is good (and we have no preference)
+        TypeHints::any()
     }
 }
 
@@ -646,10 +791,16 @@ where
     T1: Deserialize<'s>,
 {
     async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
-        de.next().await?.into_array_start()?;
+        de.next(Self::hints()).await?.into_array_start()?;
         let t1 = de.t().await?;
-        de.next().await?.into_array_end()?;
+        de.next(TypeHints::any_of(&[EventType::ArrayEnd]))
+            .await?
+            .into_array_end()?;
         Ok((t1,))
+    }
+
+    fn hints() -> TypeHints {
+        TypeHints::any_of(&[EventType::ArrayStart])
     }
 }
 
@@ -659,11 +810,17 @@ where
     T2: Deserialize<'s>,
 {
     async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
-        de.next().await?.into_array_start()?;
+        de.next(Self::hints()).await?.into_array_start()?;
         let t1 = de.t().await?;
         let t2 = de.t().await?;
-        de.next().await?.into_array_end()?;
+        de.next(TypeHints::any_of(&[EventType::ArrayEnd]))
+            .await?
+            .into_array_end()?;
         Ok((t1, t2))
+    }
+
+    fn hints() -> TypeHints {
+        TypeHints::any_of(&[EventType::ArrayStart])
     }
 }
 
@@ -674,12 +831,18 @@ where
     T3: Deserialize<'s>,
 {
     async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
-        de.next().await?.into_array_start()?;
+        de.next(Self::hints()).await?.into_array_start()?;
         let t1 = de.t().await?;
         let t2 = de.t().await?;
         let t3 = de.t().await?;
-        de.next().await?.into_array_end()?;
+        de.next(TypeHints::any_of(&[EventType::ArrayEnd]))
+            .await?
+            .into_array_end()?;
         Ok((t1, t2, t3))
+    }
+
+    fn hints() -> TypeHints {
+        TypeHints::any_of(&[EventType::ArrayStart])
     }
 }
 
@@ -691,13 +854,19 @@ where
     T4: Deserialize<'s>,
 {
     async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
-        de.next().await?.into_array_start()?;
+        de.next(Self::hints()).await?.into_array_start()?;
         let t1 = de.t().await?;
         let t2 = de.t().await?;
         let t3 = de.t().await?;
         let t4 = de.t().await?;
-        de.next().await?.into_array_end()?;
+        de.next(TypeHints::any_of(&[EventType::ArrayEnd]))
+            .await?
+            .into_array_end()?;
         Ok((t1, t2, t3, t4))
+    }
+
+    fn hints() -> TypeHints {
+        TypeHints::any_of(&[EventType::ArrayStart])
     }
 }
 
@@ -710,14 +879,20 @@ where
     T5: Deserialize<'s>,
 {
     async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
-        de.next().await?.into_array_start()?;
+        de.next(Self::hints()).await?.into_array_start()?;
         let t1 = de.t().await?;
         let t2 = de.t().await?;
         let t3 = de.t().await?;
         let t4 = de.t().await?;
         let t5 = de.t().await?;
-        de.next().await?.into_array_end()?;
+        de.next(TypeHints::any_of(&[EventType::ArrayEnd]))
+            .await?
+            .into_array_end()?;
         Ok((t1, t2, t3, t4, t5))
+    }
+
+    fn hints() -> TypeHints {
+        TypeHints::any_of(&[EventType::ArrayStart])
     }
 }
 
@@ -731,15 +906,21 @@ where
     T6: Deserialize<'s>,
 {
     async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
-        de.next().await?.into_array_start()?;
+        de.next(Self::hints()).await?.into_array_start()?;
         let t1 = de.t().await?;
         let t2 = de.t().await?;
         let t3 = de.t().await?;
         let t4 = de.t().await?;
         let t5 = de.t().await?;
         let t6 = de.t().await?;
-        de.next().await?.into_array_end()?;
+        de.next(TypeHints::any_of(&[EventType::ArrayEnd]))
+            .await?
+            .into_array_end()?;
         Ok((t1, t2, t3, t4, t5, t6))
+    }
+
+    fn hints() -> TypeHints {
+        TypeHints::any_of(&[EventType::ArrayStart])
     }
 }
 
@@ -754,7 +935,7 @@ where
     T7: Deserialize<'s>,
 {
     async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
-        de.next().await?.into_array_start()?;
+        de.next(Self::hints()).await?.into_array_start()?;
         let t1 = de.t().await?;
         let t2 = de.t().await?;
         let t3 = de.t().await?;
@@ -762,8 +943,14 @@ where
         let t5 = de.t().await?;
         let t6 = de.t().await?;
         let t7 = de.t().await?;
-        de.next().await?.into_array_end()?;
+        de.next(TypeHints::any_of(&[EventType::ArrayEnd]))
+            .await?
+            .into_array_end()?;
         Ok((t1, t2, t3, t4, t5, t6, t7))
+    }
+
+    fn hints() -> TypeHints {
+        TypeHints::any_of(&[EventType::ArrayStart])
     }
 }
 
@@ -779,7 +966,7 @@ where
     T8: Deserialize<'s>,
 {
     async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
-        de.next().await?.into_array_start()?;
+        de.next(Self::hints()).await?.into_array_start()?;
         let t1 = de.t().await?;
         let t2 = de.t().await?;
         let t3 = de.t().await?;
@@ -788,8 +975,14 @@ where
         let t6 = de.t().await?;
         let t7 = de.t().await?;
         let t8 = de.t().await?;
-        de.next().await?.into_array_end()?;
+        de.next(TypeHints::any_of(&[EventType::ArrayEnd]))
+            .await?
+            .into_array_end()?;
         Ok((t1, t2, t3, t4, t5, t6, t7, t8))
+    }
+
+    fn hints() -> TypeHints {
+        TypeHints::any_of(&[EventType::ArrayStart])
     }
 }
 

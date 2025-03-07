@@ -1,6 +1,6 @@
 //! An experimental JSON deserializer implementation
 
-use merde_core::{ArrayStart, CowStr, Deserializer, Event, MapStart, MerdeError};
+use merde_core::{ArrayStart, CowStr, Deserializer, Event, MapStart, MerdeError, TypeHints};
 
 use crate::jiter_lite::{errors::JiterError, jiter::Jiter, parse::Peek};
 
@@ -53,7 +53,7 @@ fn jiter_error(source: &str, err: JiterError) -> MerdeError<'_> {
 }
 
 impl<'s> Deserializer<'s> for JsonDeserializer<'s> {
-    async fn next(&mut self) -> Result<Event<'s>, MerdeError<'s>> {
+    async fn next(&mut self, _hints: TypeHints) -> Result<Event<'s>, MerdeError<'s>> {
         if let Some(ev) = self.starter.take() {
             return Ok(ev);
         }
@@ -227,10 +227,12 @@ mod tests {
                 let mut height: Option<i64> = None;
                 let mut kind: Option<bool> = None;
 
-                de.next().await?.into_map_start()?;
+                de.next(TypeHints::any_of(&[EventType::MapStart]))
+                    .await?
+                    .into_map_start()?;
 
                 loop {
-                    match de.next().await? {
+                    match de.next(TypeHints::any()).await? {
                         // many different policies are possible here
                         Event::Str(k) => match k.as_ref() {
                             "height" => {
@@ -249,7 +251,7 @@ mod tests {
                         ev => {
                             return Err(MerdeError::UnexpectedEvent {
                                 got: EventType::from(&ev),
-                                expected: &[EventType::Str],
+                                expected: TypeHints::any_of(&[EventType::Str, EventType::MapEnd]),
                                 help: None,
                             })
                         }
@@ -261,6 +263,10 @@ mod tests {
                     kind: kind.ok_or_else(|| MerdeError::MissingProperty("kind".into()))?,
                 })
             }
+        }
+
+        fn hints() -> TypeHints {
+            TypeHints::any_of(&[EventType::MapStart])
         }
     }
 
