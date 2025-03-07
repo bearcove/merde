@@ -789,10 +789,16 @@ where
     T1: Deserialize<'s>,
 {
     async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
-        de.next().await?.into_array_start()?;
+        de.next(Self::hints()).await?.into_array_start()?;
         let t1 = de.t().await?;
-        de.next().await?.into_array_end()?;
+        de.next(TypeHints::any_of(&[EventType::ArrayEnd]))
+            .await?
+            .into_array_end()?;
         Ok((t1,))
+    }
+
+    fn hints() -> TypeHints {
+        TypeHints::any_of(&[EventType::ArrayStart])
     }
 }
 
@@ -802,11 +808,17 @@ where
     T2: Deserialize<'s>,
 {
     async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
-        de.next().await?.into_array_start()?;
+        de.next(Self::hints()).await?.into_array_start()?;
         let t1 = de.t().await?;
         let t2 = de.t().await?;
-        de.next().await?.into_array_end()?;
+        de.next(TypeHints::any_of(&[EventType::ArrayEnd]))
+            .await?
+            .into_array_end()?;
         Ok((t1, t2))
+    }
+
+    fn hints() -> TypeHints {
+        TypeHints::any_of(&[EventType::ArrayStart])
     }
 }
 
@@ -817,12 +829,18 @@ where
     T3: Deserialize<'s>,
 {
     async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
-        de.next().await?.into_array_start()?;
+        de.next(Self::hints()).await?.into_array_start()?;
         let t1 = de.t().await?;
         let t2 = de.t().await?;
         let t3 = de.t().await?;
-        de.next().await?.into_array_end()?;
+        de.next(TypeHints::any_of(&[EventType::ArrayEnd]))
+            .await?
+            .into_array_end()?;
         Ok((t1, t2, t3))
+    }
+
+    fn hints() -> TypeHints {
+        TypeHints::any_of(&[EventType::ArrayStart])
     }
 }
 
@@ -834,13 +852,19 @@ where
     T4: Deserialize<'s>,
 {
     async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
-        de.next().await?.into_array_start()?;
+        de.next(Self::hints()).await?.into_array_start()?;
         let t1 = de.t().await?;
         let t2 = de.t().await?;
         let t3 = de.t().await?;
         let t4 = de.t().await?;
-        de.next().await?.into_array_end()?;
+        de.next(TypeHints::any_of(&[EventType::ArrayEnd]))
+            .await?
+            .into_array_end()?;
         Ok((t1, t2, t3, t4))
+    }
+
+    fn hints() -> TypeHints {
+        TypeHints::any_of(&[EventType::ArrayStart])
     }
 }
 
@@ -853,14 +877,20 @@ where
     T5: Deserialize<'s>,
 {
     async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
-        de.next().await?.into_array_start()?;
+        de.next(Self::hints()).await?.into_array_start()?;
         let t1 = de.t().await?;
         let t2 = de.t().await?;
         let t3 = de.t().await?;
         let t4 = de.t().await?;
         let t5 = de.t().await?;
-        de.next().await?.into_array_end()?;
+        de.next(TypeHints::any_of(&[EventType::ArrayEnd]))
+            .await?
+            .into_array_end()?;
         Ok((t1, t2, t3, t4, t5))
+    }
+
+    fn hints() -> TypeHints {
+        TypeHints::any_of(&[EventType::ArrayStart])
     }
 }
 
@@ -874,15 +904,21 @@ where
     T6: Deserialize<'s>,
 {
     async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
-        de.next().await?.into_array_start()?;
+        de.next(Self::hints()).await?.into_array_start()?;
         let t1 = de.t().await?;
         let t2 = de.t().await?;
         let t3 = de.t().await?;
         let t4 = de.t().await?;
         let t5 = de.t().await?;
         let t6 = de.t().await?;
-        de.next().await?.into_array_end()?;
+        de.next(TypeHints::any_of(&[EventType::ArrayEnd]))
+            .await?
+            .into_array_end()?;
         Ok((t1, t2, t3, t4, t5, t6))
+    }
+
+    fn hints() -> TypeHints {
+        TypeHints::any_of(&[EventType::ArrayStart])
     }
 }
 
@@ -897,7 +933,7 @@ where
     T7: Deserialize<'s>,
 {
     async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
-        de.next().await?.into_array_start()?;
+        de.next(Self::hints()).await?.into_array_start()?;
         let t1 = de.t().await?;
         let t2 = de.t().await?;
         let t3 = de.t().await?;
@@ -905,8 +941,14 @@ where
         let t5 = de.t().await?;
         let t6 = de.t().await?;
         let t7 = de.t().await?;
-        de.next().await?.into_array_end()?;
+        de.next(TypeHints::any_of(&[EventType::ArrayEnd]))
+            .await?
+            .into_array_end()?;
         Ok((t1, t2, t3, t4, t5, t6, t7))
+    }
+
+    fn hints() -> TypeHints {
+        TypeHints::any_of(&[EventType::ArrayStart])
     }
 }
 
@@ -922,7 +964,7 @@ where
     T8: Deserialize<'s>,
 {
     async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
-        de.next().await?.into_array_start()?;
+        de.next(Self::hints()).await?.into_array_start()?;
         let t1 = de.t().await?;
         let t2 = de.t().await?;
         let t3 = de.t().await?;
@@ -931,8 +973,14 @@ where
         let t6 = de.t().await?;
         let t7 = de.t().await?;
         let t8 = de.t().await?;
-        de.next().await?.into_array_end()?;
+        de.next(TypeHints::any_of(&[EventType::ArrayEnd]))
+            .await?
+            .into_array_end()?;
         Ok((t1, t2, t3, t4, t5, t6, t7, t8))
+    }
+
+    fn hints() -> TypeHints {
+        TypeHints::any_of(&[EventType::ArrayStart])
     }
 }
 
