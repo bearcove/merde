@@ -726,18 +726,19 @@ impl<'s> Deserialize<'s> for Value<'s> {
                     None => Map::new(),
                 };
                 loop {
-                    match de.next().await? {
+                    match de
+                        .next(TypeHints::any_of(&[EventType::MapEnd, EventType::Str]))
+                        .await?
+                    {
                         Event::MapEnd => break,
                         Event::Str(key) => {
-                            let value: Value = <Value as Deserialize>::deserialize(de)
-                                .with_metastack_resume_point()
-                                .await?;
+                            let value: Value = Value::deserialize(de).await?;
                             map.insert(key, value);
                         }
                         ev => {
                             return Err(MerdeError::UnexpectedEvent {
                                 got: EventType::from(&ev),
-                                expected: &[EventType::Str, EventType::MapEnd],
+                                expected: TypeHints::any_of(&[EventType::Str, EventType::MapEnd]),
                                 help: None,
                             })
                         }
@@ -748,12 +749,11 @@ impl<'s> Deserialize<'s> for Value<'s> {
             Event::ArrayStart(_) => {
                 let mut vec = Array::new();
                 loop {
-                    match de.next(TypeHints::none()).await? {
+                    match de.next(TypeHints::any()).await? {
                         Event::ArrayEnd => break,
                         ev => {
                             de.put_back(ev)?;
-                            let item: Value =
-                                Value::deserialize(de).with_metastack_resume_point().await?;
+                            let item: Value = Value::deserialize(de).await?;
                             vec.push(item);
                         }
                     }
