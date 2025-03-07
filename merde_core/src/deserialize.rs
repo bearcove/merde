@@ -32,6 +32,13 @@ impl TypeHints {
         }
     }
 
+    fn any() -> Self {
+        Self {
+            optional: false,
+            types: &[],
+        }
+    }
+
     fn optional(self) -> Self {
         Self {
             optional: true,
@@ -567,7 +574,7 @@ impl<'s, T: Deserialize<'s>> Deserialize<'s> for Option<T> {
     }
 
     fn hints() -> TypeHints {
-        TypeHints::any_of(T::hints().types).optional()
+        T::hints().optional()
     }
 }
 
@@ -705,7 +712,7 @@ impl<'s> Deserialize<'s> for Array<'s> {
 
 impl<'s> Deserialize<'s> for Value<'s> {
     async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
-        match de.next().await? {
+        match de.next(TypeHints::any()).await? {
             Event::I64(i) => Ok(Value::I64(i)),
             Event::U64(u) => Ok(Value::U64(u)),
             Event::F64(f) => Ok(Value::Float(f.into())),
@@ -741,7 +748,7 @@ impl<'s> Deserialize<'s> for Value<'s> {
             Event::ArrayStart(_) => {
                 let mut vec = Array::new();
                 loop {
-                    match de.next().await? {
+                    match de.next(TypeHints::none()).await? {
                         Event::ArrayEnd => break,
                         ev => {
                             de.put_back(ev)?;
@@ -755,7 +762,7 @@ impl<'s> Deserialize<'s> for Value<'s> {
             }
             ev => Err(MerdeError::UnexpectedEvent {
                 got: EventType::from(&ev),
-                expected: &[
+                expected: TypeHints::any_of(&[
                     EventType::I64,
                     EventType::U64,
                     EventType::Float,
@@ -765,10 +772,15 @@ impl<'s> Deserialize<'s> for Value<'s> {
                     EventType::Null,
                     EventType::MapStart,
                     EventType::ArrayStart,
-                ],
+                ]),
                 help: Some("(While trying to deserialize a merde Value)".to_string()),
             }),
         }
+    }
+
+    fn hints() -> TypeHints {
+        // no hints, anything is good (and we have no preference)
+        TypeHints::any()
     }
 }
 
