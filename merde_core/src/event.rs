@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use crate::{CowBytes, CowStr, MerdeError};
+use crate::{deserialize::TypeHints, CowBytes, CowStr, MerdeError};
 
 #[derive(Debug)]
 pub enum Event<'s> {
@@ -150,7 +150,7 @@ impl<'s> Event<'s> {
             Event::I64(i) => Ok(i),
             _ => Err(MerdeError::UnexpectedEvent {
                 got: EventType::from(&self),
-                expected: &[EventType::I64],
+                expected: TypeHints::any_of(&[EventType::I64]),
                 help: None,
             }),
         }
@@ -161,7 +161,7 @@ impl<'s> Event<'s> {
             Event::U64(u) => Ok(u),
             _ => Err(MerdeError::UnexpectedEvent {
                 got: EventType::from(&self),
-                expected: &[EventType::U64],
+                expected: TypeHints::any_of(&[EventType::U64]),
                 help: None,
             }),
         }
@@ -172,7 +172,7 @@ impl<'s> Event<'s> {
             Event::F64(f) => Ok(f),
             _ => Err(MerdeError::UnexpectedEvent {
                 got: EventType::from(&self),
-                expected: &[EventType::Float],
+                expected: TypeHints::any_of(&[EventType::Float]),
                 help: None,
             }),
         }
@@ -183,7 +183,7 @@ impl<'s> Event<'s> {
             Event::Str(s) => Ok(s),
             _ => Err(MerdeError::UnexpectedEvent {
                 got: EventType::from(&self),
-                expected: &[EventType::Str],
+                expected: TypeHints::any_of(&[EventType::Str]),
                 help: None,
             }),
         }
@@ -194,7 +194,7 @@ impl<'s> Event<'s> {
             Event::Bytes(b) => Ok(b),
             _ => Err(MerdeError::UnexpectedEvent {
                 got: EventType::from(&self),
-                expected: &[EventType::Bytes],
+                expected: TypeHints::any_of(&[EventType::Bytes]),
                 help: None,
             }),
         }
@@ -205,7 +205,7 @@ impl<'s> Event<'s> {
             Event::Bool(b) => Ok(b),
             _ => Err(MerdeError::UnexpectedEvent {
                 got: EventType::from(&self),
-                expected: &[EventType::Bool],
+                expected: TypeHints::any_of(&[EventType::Bool]),
                 help: None,
             }),
         }
@@ -216,7 +216,7 @@ impl<'s> Event<'s> {
             Event::Null => Ok(()),
             _ => Err(MerdeError::UnexpectedEvent {
                 got: EventType::from(&self),
-                expected: &[EventType::Null],
+                expected: TypeHints::any_of(&[EventType::Null]),
                 help: None,
             }),
         }
@@ -227,7 +227,7 @@ impl<'s> Event<'s> {
             Event::MapStart(ms) => Ok(ms),
             _ => Err(MerdeError::UnexpectedEvent {
                 got: EventType::from(&self),
-                expected: &[EventType::MapStart],
+                expected: TypeHints::any_of(&[EventType::MapStart]),
                 help: None,
             }),
         }
@@ -238,7 +238,7 @@ impl<'s> Event<'s> {
             Event::MapEnd => Ok(()),
             _ => Err(MerdeError::UnexpectedEvent {
                 got: EventType::from(&self),
-                expected: &[EventType::MapEnd],
+                expected: TypeHints::any_of(&[EventType::MapEnd]),
                 help: None,
             }),
         }
@@ -249,7 +249,7 @@ impl<'s> Event<'s> {
             Event::ArrayStart(array_start) => Ok(array_start),
             _ => Err(MerdeError::UnexpectedEvent {
                 got: EventType::from(&self),
-                expected: &[EventType::ArrayStart],
+                expected: TypeHints::any_of(&[EventType::ArrayStart]),
                 help: None,
             }),
         }
@@ -260,7 +260,7 @@ impl<'s> Event<'s> {
             Event::ArrayEnd => Ok(()),
             _ => Err(MerdeError::UnexpectedEvent {
                 got: EventType::from(&self),
-                expected: &[EventType::ArrayEnd],
+                expected: TypeHints::any_of(&[EventType::ArrayEnd]),
                 help: None,
             }),
         }

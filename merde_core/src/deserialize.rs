@@ -25,21 +25,21 @@ pub struct TypeHints {
 }
 
 impl TypeHints {
-    fn any_of(types: &'static [EventType]) -> Self {
+    pub fn any_of(types: &'static [EventType]) -> Self {
         Self {
             optional: false,
             types,
         }
     }
 
-    fn any() -> Self {
+    pub fn any() -> Self {
         Self {
             optional: false,
             types: &[],
         }
     }
 
-    fn optional(self) -> Self {
+    pub fn optional(self) -> Self {
         Self {
             optional: true,
             ..self
@@ -732,7 +732,8 @@ impl<'s> Deserialize<'s> for Value<'s> {
                     {
                         Event::MapEnd => break,
                         Event::Str(key) => {
-                            let value: Value = Value::deserialize(de).await?;
+                            let value: Value =
+                                Value::deserialize(de).with_metastack_resume_point().await?;
                             map.insert(key, value);
                         }
                         ev => {
@@ -753,7 +754,8 @@ impl<'s> Deserialize<'s> for Value<'s> {
                         Event::ArrayEnd => break,
                         ev => {
                             de.put_back(ev)?;
-                            let item: Value = Value::deserialize(de).await?;
+                            let item: Value =
+                                Value::deserialize(de).with_metastack_resume_point().await?;
                             vec.push(item);
                         }
                     }
