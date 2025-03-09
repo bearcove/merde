@@ -15,7 +15,8 @@ pub use merde_core::*;
 #[cfg(feature = "deserialize")]
 #[macro_export]
 macro_rules! impl_deserialize {
-    // owned tuple struct (transparent)
+    // owned tuple struct (transparent), like:
+    //   struct MyStruct(String);
     (struct $struct_name:ident transparent) => {
         #[automatically_derived]
         impl<'s> $crate::Deserialize<'s> for $struct_name {
@@ -24,6 +25,11 @@ macro_rules! impl_deserialize {
                 use $crate::DynDeserializerExt;
 
                 Ok(Self(__de.t().await?))
+            }
+
+            #[inline]
+            fn hints() -> $crate::TypeHints {
+                $crate::hints_of(|i: Self| i.0)
             }
         }
     };
@@ -38,10 +44,16 @@ macro_rules! impl_deserialize {
 
                 Ok(Self(__de.t().await?))
             }
+
+            #[inline]
+            fn hints() -> $crate::TypeHints {
+                $crate::hints_of(|i: Self| i.0)
+            }
         }
     };
 
-    // owned struct
+    // owned struct, eg.
+    //   struct MyStruct { a: String, b: i32 }
     (struct $struct_name:ident { $($field:ident),* }) => {
         $crate::impl_deserialize! {
             struct $struct_name { $($field),* } via $crate::DefaultDeserOpinions
@@ -56,14 +68,14 @@ macro_rules! impl_deserialize {
                 use $crate::{DynDeserializerExt, DeserOpinions};
 
                 let __opinions = $opinions;
-                __de.next().await?.into_map_start()?;
+                __de.next($crate::TypeHints::any_of(&[$crate::EventType::MapStart])).await?.into_map_start()?;
 
                 $(
                     let mut $field = $crate::none_of(|i: $struct_name| i.$field);
                 )*
 
                 loop {
-                    match __de.next().await? {
+                    match __de.next($crate::TypeHints::any_of(&[$crate::EventType::MapEnd, $crate::EventType::Str])).await? {
                         $crate::Event::MapEnd => break,
                         $crate::Event::Str(__key) => {
                             let __key = __opinions.map_key_name(__key);
@@ -81,7 +93,7 @@ macro_rules! impl_deserialize {
                         ev => {
                             return Err($crate::MerdeError::UnexpectedEvent {
                                 got: $crate::EventType::from(&ev),
-                                expected: &[$crate::EventType::Str, $crate::EventType::MapEnd],
+                                expected: $crate::TypeHints::any_of(&[$crate::EventType::MapEnd, $crate::EventType::Str]),
                                 help: Some(format!("While deserializing {}", stringify!($struct_name))),
                             }
                             .into())
@@ -98,6 +110,11 @@ macro_rules! impl_deserialize {
                         $crate::Deserialize::from_option($field, stringify!($field).into())?
                     },)*
                 })
+            }
+
+            #[inline]
+            fn hints() -> $crate::TypeHints {
+                $crate::TypeHints::any_of(&[$crate::EventType::MapStart])
             }
         }
     };
@@ -124,7 +141,7 @@ macro_rules! impl_deserialize {
                 )+
 
                 loop {
-                    match __de.next().await? {
+                    match __de.next($crate::TypeHints::any_of(&[$crate::EventType::MapEnd, $crate::EventType::Str])).await? {
                         $crate::Event::MapEnd => break,
                         $crate::Event::Str(__key) => {
                             let __key = __opinions.map_key_name(__key);
@@ -142,7 +159,7 @@ macro_rules! impl_deserialize {
                         ev => {
                             return Err($crate::MerdeError::UnexpectedEvent {
                                 got: $crate::EventType::from(&ev),
-                                expected: &[$crate::EventType::Str, $crate::EventType::MapEnd],
+                                expected: $crate::TypeHints::any_of(&[$crate::EventType::Str, $crate::EventType::MapEnd]),
                                 help: Some(format!("While deserializing {}", stringify!($struct_name))),
                             }
                             .into())
@@ -160,10 +177,16 @@ macro_rules! impl_deserialize {
                     },)+
                 })
             }
+
+            #[inline]
+            fn hints() -> $crate::TypeHints {
+                $crate::TypeHints::any_of(&[$crate::EventType::MapStart])
+            }
         }
     };
 
     // owned enum (externally tagged)
+    //   enum MyEnum { Variant1(String), Variant2(i32) }
     (enum $enum_name:ident externally_tagged {
         $($variant_str:literal => $variant:ident),* $(,)?
     }) => {
@@ -187,7 +210,8 @@ macro_rules! impl_deserialize {
         }
     };
 
-    // lifetimed enum (externally tagged)
+    // lifetimed enum (externally tagged), e.g.
+    //    enum MyEnum<'a> { Variant1(String), Variant2(i32) }
     (enum $enum_name:ident <$lifetime:lifetime> externally_tagged {
         $($variant_str:literal => $variant:ident),* $(,)?
     }) => {
@@ -198,21 +222,33 @@ macro_rules! impl_deserialize {
                 #[allow(unused_imports)]
                 use $crate::{MerdeError, DynDeserializerExt};
 
-                __de.next().await?.into_map_start()?;
-                let key = __de.next().await?.into_str()?;
+                __de.next($crate::TypeHints::any_of(&[$crate::EventType::MapStart])).await?.into_map_start()?;
+                let key = __de.next($crate::TypeHints::any_of(&[$crate::EventType::Str])).await?.into_str()?;
                 match key.as_ref() {
                     $($variant_str => {
                         let value = __de.t().await?;
-                        __de.next().await?.into_map_end()?;
+                        let hints = $crate::hints_of(|i: $enum_name<$lifetime>|  {
+                            match i {
+                                $enum_name::$variant(value) => value,
+                                _ => unreachable!(),
+                            }
+                        });
+                        __de.next(hints).await?.into_map_end()?;
                         Ok($enum_name::$variant(value))
                     },)*
                     _ => Err(MerdeError::UnknownProperty(key).into()),
                 }
             }
+
+            #[inline]
+            fn hints() -> $crate::TypeHints {
+                $crate::TypeHints::any_of(&[$crate::EventType::MapStart])
+            }
         }
     };
 
     // owned enum (externally tagged, string-like)
+    //   enum MyEnum { Variant1, Variant2 }
     (enum $enum_name:ident string_like {
         $($variant_str:literal => $variant:ident),* $(,)?
     }) => {
@@ -739,6 +775,17 @@ macro_rules! derive {
 #[doc(hidden)]
 pub fn none_of<I, T>(_f: impl FnOnce(I) -> T) -> Option<T> {
     None
+}
+
+/// Returns the [`TypeHints`] for a given type `Inner` based on a closure that takes
+/// an `Outer` type and returns an `Inner` type. This is a type inference trick used
+/// when generating type hints for struct fields during deserialization.
+#[doc(hidden)]
+pub fn hints_of<'s, Outer, Inner>(_f: impl FnOnce(Outer) -> Inner) -> TypeHints
+where
+    Inner: Deserialize<'s>,
+{
+    <Inner as Deserialize>::hints()
 }
 
 #[doc(hidden)]
