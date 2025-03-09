@@ -15,7 +15,10 @@ check:
     popd
 
     pushd merde
-    EXAMPLES=($(cd examples && for i in *; do echo "${i%.rs}"; done))
+    EXAMPLES=()
+    for file in examples/*.rs; do
+      EXAMPLES+=($(basename "${file}" .rs))
+    done
     for example in "${EXAMPLES[@]}"; do
       cargo run --features full,ahash --example "$example"
     done
@@ -24,5 +27,6 @@ check:
     just miri
 
 miri:
+    rustup +nightly component add miri
     cargo +nightly miri run --example opinions -F deserialize,json
     cargo +nightly miri test -p merde_core fieldslot
