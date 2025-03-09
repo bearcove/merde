@@ -134,7 +134,7 @@ macro_rules! impl_deserialize {
                 use $crate::{DeserOpinions, DynDeserializerExt};
 
                 let __opinions = $opinions;
-                __de.next().await?.into_map_start()?;
+                __de.next($crate::TypeHints::any_of(&[$crate::EventType::MapStart])).await?.into_map_start()?;
 
                 $(
                     let mut $field = $crate::none_of(|i: $struct_name<$s>| i.$field);
@@ -259,11 +259,16 @@ macro_rules! impl_deserialize {
                 use $crate::MerdeError;
                 use $crate::DynDeserializerExt;
 
-                let s = __de.next().await?.into_str()?;
+                let s = __de.next(Self::hints()).await?.into_str()?;
                 match s.as_ref() {
                     $($variant_str => Ok($enum_name::$variant),)*
                     _ => Err(MerdeError::UnknownProperty(s).into()),
                 }
+            }
+
+            #[inline]
+            fn hints() -> $crate::TypeHints {
+                $crate::TypeHints::any_of(&[$crate::EventType::Str])
             }
         }
     };
@@ -781,6 +786,7 @@ pub fn none_of<I, T>(_f: impl FnOnce(I) -> T) -> Option<T> {
 /// an `Outer` type and returns an `Inner` type. This is a type inference trick used
 /// when generating type hints for struct fields during deserialization.
 #[doc(hidden)]
+#[cfg(feature = "core")]
 pub fn hints_of<'s, Outer, Inner>(_f: impl FnOnce(Outer) -> Inner) -> TypeHints
 where
     Inner: Deserialize<'s>,
