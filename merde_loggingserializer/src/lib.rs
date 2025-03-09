@@ -35,13 +35,16 @@ impl<'s, I> Deserializer<'s> for LoggingDeserializer<'s, I>
 where
     I: Deserializer<'s>,
 {
-    async fn next(&mut self) -> Result<Event<'s>, MerdeError<'s>> {
+    async fn next(
+        &mut self,
+        type_hints: merde_core::TypeHints,
+    ) -> Result<Event<'s>, MerdeError<'s>> {
         if let Some(ev) = self.starter.take() {
             eprintln!("> (from starter) {:?}", ev);
             return Ok(ev);
         }
 
-        let ev = self.inner.next().await?;
+        let ev = self.inner.next(type_hints).await?;
         eprintln!("> (from inner.next) {:?}", ev);
         Ok(ev)
     }

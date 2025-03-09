@@ -3,7 +3,7 @@
 
 use merde_core::{
     Deserialize, DeserializeOwned, Deserializer, DynDeserializerExt, Event, MapStart, MerdeError,
-    MetastackExt,
+    MetastackExt, TypeHints,
 };
 
 /// A MessagePack deserializer, that implements [`merde_core::Deserializer`].
@@ -42,7 +42,7 @@ impl std::fmt::Debug for MsgpackDeserializer<'_> {
 }
 
 impl<'s> Deserializer<'s> for MsgpackDeserializer<'s> {
-    async fn next(&mut self) -> Result<Event<'s>, MerdeError<'s>> {
+    async fn next(&mut self, _hints: TypeHints) -> Result<Event<'s>, MerdeError<'s>> {
         if let Some(ev) = self.starter.take() {
             return Ok(ev);
         }

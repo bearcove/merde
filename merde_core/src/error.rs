@@ -2,7 +2,7 @@
 // Error Handling and Field Type
 // -------------------------------------------------------------------------
 
-use crate::{CowStr, EventType, IntoStatic, Value};
+use crate::{deserialize::TypeHints, CowStr, EventType, IntoStatic, Value};
 
 /// A content-less variant of the [`Value`] enum, used for reporting errors, see [`MerdeError::MismatchedType`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -81,7 +81,7 @@ pub enum MerdeError<'s> {
 
     UnexpectedEvent {
         got: EventType,
-        expected: &'static [EventType],
+        expected: TypeHints,
         help: Option<String>,
     },
 
