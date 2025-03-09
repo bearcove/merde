@@ -5,7 +5,7 @@ use std::str::Chars;
 
 use merde_core::{
     ArrayStart, Deserialize, DeserializeOwned, Deserializer, DynDeserializerExt, Event, MapStart,
-    MerdeError,
+    MerdeError, TypeHints,
 };
 use yaml_rust2::{parser::Parser, scanner::TScalarStyle};
 
@@ -36,7 +36,7 @@ impl<'s> YamlDeserializer<'s> {
 }
 
 impl<'s> Deserializer<'s> for YamlDeserializer<'s> {
-    async fn next(&mut self) -> Result<Event<'s>, MerdeError<'s>> {
+    async fn next(&mut self, _hints: TypeHints) -> Result<Event<'s>, MerdeError<'s>> {
         loop {
             if let Some(starter) = self.starter.take() {
                 return Ok(starter);

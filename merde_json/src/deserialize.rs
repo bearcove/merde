@@ -211,7 +211,7 @@ mod tests {
     use super::JsonDeserializer;
     use merde_core::{
         Array, CowStr, Deserialize, DynDeserializer, DynDeserializerExt as _, Event, EventType,
-        Map, MerdeError,
+        Map, MerdeError, TypeHints,
     };
     use merde_loggingserializer::LoggingDeserializer;
 
