@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [10.0.3](https://github.com/bearcove/merde/compare/merde_core-v10.0.2...merde_core-v10.0.3) - 2025-04-16
+
+### Other
+
+- Add support for camino
+
 ## [10.0.2](https://github.com/bearcove/merde/compare/merde_core-v10.0.1...merde_core-v10.0.2) - 2025-03-06
 
 ### Fixed
