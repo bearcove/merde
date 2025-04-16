@@ -70,14 +70,15 @@ ahash = { version = "0.8.11", optional = true }
 [features]
 default = ["core"]
 full = [
-  "core",
-  "serialize",
-  "deserialize",
-  "json",
-  "yaml",
-  "msgpack",
-  "time",
-  "rusqlite",
+    "core",
+    "serialize",
+    "deserialize",
+    "json",
+    "yaml",
+    "msgpack",
+    "time",
+    "rusqlite",
+    "camino",
 ]
 core = ["dep:merde_core"]
 serialize = ["core"]
@@ -87,6 +88,7 @@ deserialize = ["core"]
 serde = ["merde_core/serde"]
 rusqlite = ["merde_core/rusqlite"]
 time = ["merde_core/time"]
+camino = ["merde_core/camino"]
 
 # non-core crates
 json = ["dep:merde_json"]

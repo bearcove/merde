@@ -18,6 +18,7 @@ ordered-float = "4.3.0"
 rusqlite = { version = "0.32.1", optional = true }
 serde = { version = "1", optional = true }
 time = { version = "0.3.36", optional = true, features = ["parsing", "formatting"] }
+camino = { version = "1", optional = true }
 
 [features]
 default = []
@@ -33,6 +34,7 @@ serde = ["dep:serde", "compact_str/serde"]
 time = ["dep:time"]
 # Add `merde` implementations for types of the `rusqlite` crate
 rusqlite = ["dep:rusqlite"]
+camino = ["dep:camino"]
 
 [dev-dependencies]
 insta = "1.40.0"

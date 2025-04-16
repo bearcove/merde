@@ -412,6 +412,14 @@ impl<'s> Deserialize<'s> for f32 {
     }
 }
 
+#[cfg(feature = "camino")]
+impl<'s> Deserialize<'s> for camino::Utf8PathBuf {
+    async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
+        let s: CowStr<'s> = CowStr::deserialize(de).await?;
+        Ok(camino::Utf8PathBuf::from(s.as_ref()))
+    }
+}
+
 impl<'s> Deserialize<'s> for String {
     async fn deserialize(de: &mut dyn DynDeserializer<'s>) -> Result<Self, MerdeError<'s>> {
         let cow: CowStr<'s> = CowStr::deserialize(de).await?;

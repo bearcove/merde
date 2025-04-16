@@ -116,6 +116,19 @@ impl_trivial_serialize! {
     bool,
 }
 
+#[cfg(feature = "camino")]
+impl Serialize for camino::Utf8PathBuf {
+    async fn serialize<'se>(
+        &'se self,
+        serializer: &'se mut dyn DynSerializer,
+    ) -> Result<(), MerdeError<'static>> {
+        use crate::CowStr;
+        serializer
+            .write(Event::Str(CowStr::Borrowed(self.as_str())))
+            .await
+    }
+}
+
 impl Serialize for String {
     async fn serialize<'se>(
         &'se self,
