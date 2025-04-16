@@ -1,6 +1,6 @@
 [package]
 name = "merde_yaml"
-version = "10.0.4"
+version = "10.0.5"
 edition = "2021"
 authors = ["Amos Wenger <amos@bearcove.net>"]
 description = "YAML deserialization for merde"
@@ -11,6 +11,6 @@ keywords = ["yaml", "serialization", "deserialization"]
 categories = ["encoding", "parser-implementations"]
 
 [dependencies]
-merde_core = { version = "10.0.4", path = "../merde_core" }
+merde_core = { version = "10.0.5", path = "../merde_core" }
 yaml-rust2 = { version = "0.8.1", default-features = false }
 
