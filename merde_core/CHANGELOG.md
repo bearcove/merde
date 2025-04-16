@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [10.0.4](https://github.com/bearcove/merde/compare/merde_core-v10.0.3...merde_core-v10.0.4) - 2025-04-16
+
+### Other
+
+- IntoStatic for Utf8PathBuf
+
 ## [10.0.3](https://github.com/bearcove/merde/compare/merde_core-v10.0.2...merde_core-v10.0.3) - 2025-04-16
 
 ### Other
