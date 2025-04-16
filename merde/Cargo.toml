@@ -1,6 +1,6 @@
 [package]
 name = "merde"
-version = "10.0.5"
+version = "10.0.6"
 edition = "2021"
 authors = ["Amos Wenger <amos@bearcove.net>"]
 description = "Serialize and deserialize with declarative macros"
@@ -61,10 +61,10 @@ path = "examples/mousedown.rs"
 required-features = ["json"]
 
 [dependencies]
-merde_core = { version = "10.0.4", path = "../merde_core", optional = true }
-merde_json = { version = "10.0.4", path = "../merde_json", optional = true }
-merde_yaml = { version = "10.0.4", path = "../merde_yaml", optional = true }
-merde_msgpack = { version = "10.0.4", path = "../merde_msgpack", optional = true }
+merde_core = { version = "10.0.5", path = "../merde_core", optional = true }
+merde_json = { version = "10.0.5", path = "../merde_json", optional = true }
+merde_yaml = { version = "10.0.5", path = "../merde_yaml", optional = true }
+merde_msgpack = { version = "10.0.5", path = "../merde_msgpack", optional = true }
 ahash = { version = "0.8.11", optional = true }
 
 [features]
