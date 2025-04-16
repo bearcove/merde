@@ -92,7 +92,14 @@ impl_into_static_passthru!(
 );
 
 #[cfg(feature = "camino")]
-impl_into_static_passthru!(camino::Utf8PathBuf);
+impl IntoStatic for camino::Utf8PathBuf {
+    type Output = camino::Utf8PathBuf;
+
+    #[inline(always)]
+    fn into_static(self) -> Self::Output {
+        self
+    }
+}
 
 impl<T: IntoStatic> IntoStatic for Box<T> {
     type Output = Box<T::Output>;
