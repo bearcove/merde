@@ -5,5 +5,5 @@ edition = "2021"
 publish = false
 
 [dependencies]
-merde_core = { version = "10.0.5", path = "../merde_core" }
+merde_core = { version = "10.0.6", path = "../merde_core" }
 
