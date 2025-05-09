@@ -73,6 +73,15 @@ println!("deserialized = {:?}", deserialized);
 This approach is less flexible, but because there's no proc-macro involved, or
 re-parsing of the struct definitions by the proc macro, it builds faster.
 
+### Enabling the `serialize` and/or `deserialize` features.
+
+If you use the `merde::derive!` macro and notice that it's actually _not_ implementing `Serialize` or
+`Deserialize` for your types, that's because the `serialize` and `deserialize` features of the `merde`
+crate are not enabled by default!
+
+The macro is a no-op by default, which makes it a cheap dependency. For use, enable the `merde/serialize`
+and `merde/deserialize` features respectively.
+
 ### Copy-on-write types
 
 Picture this: a large JSON documents, with large strings, that don't use escape sequences.
