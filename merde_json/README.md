@@ -14,6 +14,8 @@ Adds JSON serialization/deserialization support for
 You would normally add a dependency on [merde](https://crates.io/crates/merde)
 directly, enabling its `json` feature.
 
+Don't forget to enable the `serialize` and `deserialize` features as needed — those are opt-in.
+
 ## Implementation
 
 The underlying parser (including aarch64 SIMD support, bignum support, etc.) has been
