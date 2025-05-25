@@ -73,6 +73,7 @@ macro_rules! impl_deserialize {
                                     if __opinions.deny_unknown_fields() {
                                         return Err($crate::MerdeError::UnknownProperty(__key).into());
                                     }
+                                    $crate::Value::deserialize(__de).await?;
                                 }
                             }
                         }
@@ -134,6 +135,7 @@ macro_rules! impl_deserialize {
                                     if __opinions.deny_unknown_fields() {
                                         return Err($crate::MerdeError::UnknownProperty(__key).into());
                                     }
+                                    $crate::Value::deserialize(__de).await?;
                                 }
                             }
                         }

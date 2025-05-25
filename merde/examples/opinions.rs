@@ -16,7 +16,7 @@ fn main() {
     eprintln!("{o:#?}");
 
     let input_too_many_fields = r#"
-        { "foo_bar": "hello", "foo_bar2": "world" }
+        { "foo_bar": "hello", "foo_bar2": {"cruel": "world"} }
     "#;
     assert!(merde_json::from_str::<Owned>(input_too_many_fields).is_err());
     let o: OwnedRelaxed = merde_json::from_str(input_too_many_fields).unwrap();
